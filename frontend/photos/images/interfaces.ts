@@ -1,7 +1,7 @@
-import { TaggedImage, JobProgress, SyncStatus, Xyz } from "farmbot";
+import { TaggedImage, JobProgress, SyncStatus } from "farmbot";
 import { NetworkState } from "../../connectivity/interfaces";
-import { TimeSettings } from "../../interfaces";
-import { UserEnv } from "../../devices/interfaces";
+import { MovementState, TimeSettings } from "../../interfaces";
+import { BotPosition, UserEnv } from "../../devices/interfaces";
 import { GetWebAppConfigValue } from "../../config_storage/actions";
 import { DesignerState } from "../../farm_designer/interfaces";
 
@@ -18,6 +18,7 @@ export interface ImageFlipperProps {
   hover?(hovered: string | undefined): void;
   target?: Record<"x" | "y", number> | undefined;
   flipActionOverride?(nextIndex: number): void;
+  autoFocus?: boolean;
 }
 
 export interface ImageFlipperState {
@@ -36,6 +37,7 @@ export interface FlipperImageProps {
   onImageLoad(img: HTMLImageElement): void;
   hover?(hovered: string | undefined): void;
   target?: Record<"x" | "y", number> | undefined;
+  dark?: boolean;
 }
 
 export interface FlipperImageState {
@@ -48,6 +50,7 @@ export interface PlaceholderImgProps {
   textOverlay: string;
   width?: number;
   height?: number;
+  dark?: boolean;
 }
 
 export interface PhotosProps {
@@ -63,10 +66,12 @@ export interface PhotosProps {
   env: UserEnv;
   designer: DesignerState;
   getConfigValue: GetWebAppConfigValue;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
 }
 
 export interface PhotoButtonsProps {
-  takePhoto(): void;
   deletePhoto(): void;
   toggleCrop(): void;
   toggleRotation(): void;
@@ -74,10 +79,18 @@ export interface PhotoButtonsProps {
   canCrop: boolean;
   canTransform: boolean;
   imageUrl: string | undefined;
+  image: TaggedImage | undefined;
+  size: Record<"width" | "height", number | undefined>;
+  dispatch: Function;
+  flags: ImageShowFlags | undefined;
+}
+
+export interface NewPhotoButtonsProps {
+  takePhoto(): void;
   imageJobs: JobProgress[];
+  env: UserEnv;
   botToMqttStatus: NetworkState;
   syncStatus: SyncStatus | undefined;
-  env: UserEnv;
 }
 
 export interface ImageFilterProps {
@@ -111,17 +124,25 @@ export interface GetImageShownStatusFlagsProps {
 
 export interface PhotoFooterProps {
   image: TaggedImage | undefined;
-  size: Record<"width" | "height", number | undefined>;
   timeSettings: TimeSettings;
-  dispatch: Function;
-  flags: ImageShowFlags | undefined;
   botOnline: boolean;
   distance?: number;
+  children?: React.ReactNode;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  dispatch: Function;
+  movementState: MovementState;
 }
 
 export interface MoveToLocationProps {
   botOnline: boolean;
-  imageLocation: Record<Xyz, number | undefined>;
+  imageLocation: BotPosition;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  dispatch: Function;
+  movementState: MovementState;
 }
 
 export interface PhotosComponentState {

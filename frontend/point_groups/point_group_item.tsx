@@ -4,6 +4,8 @@ import { maybeGetCachedPlantIcon } from "../open_farm/cached_crop";
 import { setHoveredPlant } from "../farm_designer/map/actions";
 import {
   TaggedPointGroup, uuid, TaggedPoint, TaggedToolSlotPointer, TaggedTool,
+  TaggedPlantTemplate,
+  TaggedPlantPointer,
 } from "farmbot";
 import { error } from "../toast/toast";
 import { t } from "../i18next_wrapper";
@@ -11,15 +13,17 @@ import { uniq } from "lodash";
 import { overwriteGroup } from "./actions";
 import { ToolSlotSVG } from "../farm_designer/map/layers/tool_slots/tool_graphics";
 import { ToolTransformProps } from "../tools/interfaces";
-import { FilePath } from "../internal_urls";
+import { FilePath, Path } from "../internal_urls";
+import { push } from "../history";
 
 export interface PointGroupItemProps {
-  point: TaggedPoint;
-  group: TaggedPointGroup;
-  dispatch: Function;
-  hovered: boolean;
-  tools: TaggedTool[];
-  toolTransformProps: ToolTransformProps;
+  point: TaggedPoint | TaggedPlantTemplate;
+  group?: TaggedPointGroup;
+  dispatch?: Function;
+  hovered?: boolean;
+  tools?: TaggedTool[];
+  toolTransformProps?: ToolTransformProps;
+  navigate?: boolean;
 }
 
 interface PointGroupItemState { icon: string; }
@@ -53,11 +57,6 @@ export const genericWeedIcon = (color: string | undefined) =>
         fill='url(#WeedGradient)' opacity='0.5'></circle>
     </svg>`;
 
-export const OTHER_POINT_ICON =
-  `<svg xmlns='http://www.w3.org/2000/svg' fill='gray'>
-    <circle cx='15' cy='15' r='12' />
-    </svg>`;
-
 // The individual plants in the point group detail page.
 export class PointGroupItem
   extends React.Component<PointGroupItemProps, PointGroupItemState> {
@@ -66,36 +65,42 @@ export class PointGroupItem
 
   key = uuid();
 
-  enter = () => this.props.dispatch(
+  enter = () => this.props.dispatch?.(
     setHoveredPlant(this.props.point.uuid, this.state.icon));
 
-  leave = () => this.props.dispatch(setHoveredPlant(undefined));
+  leave = () => this.props.dispatch?.(setHoveredPlant(undefined));
 
   click = () => {
+    if (this.props.navigate) { push(Path.plants(this.props.point.body.id)); }
     if (this.criteriaIcon) {
       return error(t("Cannot remove points selected by filters."));
     }
-    this.props.dispatch(
-      removePoint(this.props.group, this.props.point.body.id || 0));
+    if (this.props.group && this.props.dispatch) {
+      this.props.dispatch(
+        removePoint(this.props.group, this.props.point.body.id || 0));
+    }
     this.leave();
   };
 
   setIconState = (icon: string) => this.setState({ icon });
 
   get criteriaIcon() {
-    return !this.props.group.body.point_ids
+    return this.props.group && !this.props.group.body.point_ids
       .includes(this.props.point.body.id || 0);
   }
 
   maybeGetCachedIcon = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    if (this.props.point.body.pointer_type == "Plant") {
-      const slug = this.props.point.body.openfarm_slug;
+    if (this.props.point.kind == "PlantTemplate"
+      || this.props.point.body.pointer_type == "Plant") {
+      const slug = (this.props.point as TaggedPlantPointer | TaggedPlantTemplate)
+        .body.openfarm_slug;
       maybeGetCachedPlantIcon(slug, img, this.setIconState);
     }
   };
 
   get initIcon() {
+    if (this.props.point.kind == "PlantTemplate") { return FilePath.DEFAULT_ICON; }
     switch (this.props.point.body.pointer_type) {
       case "Plant":
         return FilePath.DEFAULT_ICON;
@@ -111,14 +116,16 @@ export class PointGroupItem
   }
 
   ToolSlotGraphic = () => {
-    if (this.props.point.body.pointer_type !== "ToolSlot") {
+    if (this.props.point.kind == "PlantTemplate"
+      || this.props.point.body.pointer_type !== "ToolSlot"
+      || !this.props.tools || !this.props.toolTransformProps) {
       return <div className={"no-slot-icon"} />;
     }
     const { tool_id } = this.props.point.body;
     const toolName = this.props.tools
       .filter(tool => tool.body.id == tool_id)[0]?.body.name;
     return <div className={"slot-icon"} style={{ position: "absolute" }}>
-      <ToolSlotSVG
+      <ToolSlotSVG size={2}
         toolSlot={this.props.point as TaggedToolSlotPointer}
         toolName={tool_id ? toolName : "Empty"}
         toolTransformProps={this.props.toolTransformProps} />
@@ -126,24 +133,26 @@ export class PointGroupItem
   };
 
   render() {
+    const size = 20;
     return <span
       key={this.key}
       className={"group-item-icon"}
       onMouseEnter={this.enter}
       onMouseLeave={this.leave}
       onClick={this.click}>
-      {this.props.point.body.pointer_type == "Weed" &&
+      {this.props.point.kind != "PlantTemplate"
+        && this.props.point.body.pointer_type == "Weed" &&
         <img className={"weed-icon"}
           src={FilePath.DEFAULT_WEED_ICON}
-          width={32}
-          height={32} />}
+          width={size}
+          height={size} />}
       <this.ToolSlotGraphic />
       <img
         style={{ background: this.props.hovered ? "lightgray" : "none" }}
         src={this.initIcon}
         onLoad={this.maybeGetCachedIcon}
-        width={32}
-        height={32} />
+        width={size}
+        height={size} />
     </span>;
   }
 }

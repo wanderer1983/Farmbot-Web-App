@@ -1,7 +1,13 @@
-import { TaggedLog, ConfigurationName, ALLOWED_MESSAGE_TYPES } from "farmbot";
+import {
+  TaggedLog, ConfigurationName, ALLOWED_MESSAGE_TYPES, TaggedDevice,
+} from "farmbot";
 import { SourceFbosConfig, BotState } from "../devices/interfaces";
 import { GetWebAppConfigValue } from "../config_storage/actions";
 import { TimeSettings } from "../interfaces";
+
+export interface LogsPanelProps {
+  dispatch: Function;
+}
 
 export interface LogsProps {
   logs: TaggedLog[];
@@ -11,6 +17,7 @@ export interface LogsProps {
   getConfigValue: GetWebAppConfigValue;
   bot: BotState;
   fbosVersion: string | undefined;
+  device: TaggedDevice;
 }
 
 export type Filters = Record<ALLOWED_MESSAGE_TYPES, number>;
@@ -22,12 +29,16 @@ export interface LogsState extends Filters {
   currentFbosOnly: boolean;
 }
 
-export interface LogsTableProps {
+export interface FilterPopoverProps extends LogsFilterMenuProps {
+  filterActive: boolean;
+}
+
+export interface LogsTableProps extends FilterPopoverProps {
   logs: TaggedLog[];
   dispatch: Function;
-  state: LogsState;
   timeSettings: TimeSettings;
   fbosVersion: string | undefined;
+  device: TaggedDevice;
 }
 
 type ToggleEventHandler = (e: React.MouseEvent<HTMLButtonElement>) => void;

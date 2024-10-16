@@ -21,7 +21,7 @@ import { setWebAppConfigValue } from "../../config_storage/actions";
 describe("<PlainDesignerSettings />", () => {
   const fakeProps = (): DesignerSettingsPropsBase => ({
     dispatch: jest.fn(),
-    getConfigValue: jest.fn(),
+    getConfigValue: () => 0,
   });
 
   it("renders", () => {
@@ -38,7 +38,7 @@ describe("<PlainDesignerSettings />", () => {
 
   it("calls callback", () => {
     const wrapper = mount(<div>{PlainDesignerSettings(fakeProps())}</div>);
-    expect(wrapper.find("label").at(1).text()).toContain("trail");
+    expect(wrapper.find("label").at(1).text()).toContain("Trail");
     wrapper.find("button").at(1).simulate("click");
     expect(resetVirtualTrail).toHaveBeenCalled();
   });
@@ -47,7 +47,7 @@ describe("<PlainDesignerSettings />", () => {
 describe("<Setting />", () => {
   const fakeProps = (): SettingProps => ({
     dispatch: jest.fn(),
-    getConfigValue: jest.fn(),
+    getConfigValue: () => 0,
     setting: BooleanSetting.show_farmbot,
     title: DeviceSetting.showFarmbot,
     description: "description",

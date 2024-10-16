@@ -13,6 +13,7 @@ import { fakeLog } from "../../__test_support__/fake_state/resources";
 import { TickerListProps } from "../interfaces";
 import { MESSAGE_TYPES } from "../../sequences/interfaces";
 import { fakeTimeSettings } from "../../__test_support__/fake_time_settings";
+import { Actions } from "../../constants";
 
 describe("<TickerList />", () => {
   beforeEach(() => { mockDemo = false; });
@@ -25,9 +26,9 @@ describe("<TickerList />", () => {
   };
 
   const fakeProps = (): TickerListProps => ({
+    dispatch: jest.fn(),
     timeSettings: fakeTimeSettings(),
     logs: [fakeTaggedLog(), fakeTaggedLog()],
-    tickerListOpen: false,
     toggle: jest.fn(),
     getConfigValue: x => mockStorj[x],
     botOnline: true,
@@ -46,6 +47,16 @@ describe("<TickerList />", () => {
     expect(labels.at(0).text()).toContain("Farmbot is up and Running!");
     expect(labels.at(1).text()).toEqual("AUG 2, 7:50PM");
     expectLogOccurrences(wrapper.text(), 1);
+  });
+
+  it("opens logs popup", () => {
+    const p = fakeProps();
+    const wrapper = mount(<TickerList {...p} />);
+    wrapper.find(".ticker-list").simulate("click");
+    expect(p.dispatch).toHaveBeenCalledWith(
+      { type: Actions.TOGGLE_POPUP, payload: "jobs" });
+    expect(p.dispatch).toHaveBeenCalledWith(
+      { type: Actions.SET_JOBS_PANEL_OPTION, payload: "logs" });
   });
 
   it("shows bot offline log message", () => {
@@ -89,28 +100,6 @@ describe("<TickerList />", () => {
     expect(labels.length).toEqual(2);
     expect(labels.at(0).text()).toContain("Loading");
     expect(labels.at(1).text()).toEqual("");
-  });
-
-  it("opens ticker", () => {
-    const p = fakeProps();
-    p.tickerListOpen = true;
-    const wrapper = mount(<TickerList {...p} />);
-    const labels = wrapper.find("label");
-    expect(labels.length).toEqual(5);
-    expect(labels.at(0).text()).toContain("Farmbot is up and Running!");
-    expect(labels.at(1).text()).toEqual("AUG 2, 7:50PM");
-    expect(labels.at(2).text()).toContain("Farmbot is up and Running!");
-    expect(labels.at(1).text()).toEqual("AUG 2, 7:50PM");
-    expect(labels.at(4).text()).toEqual("View all logs");
-    expectLogOccurrences(wrapper.text(), 2);
-  });
-
-  it("opens ticker when offline", () => {
-    const p = fakeProps();
-    p.botOnline = false;
-    p.tickerListOpen = true;
-    const wrapper = mount(<TickerList {...p} />);
-    expectLogOccurrences(wrapper.text(), 2);
   });
 
   it("all logs filtered out", () => {

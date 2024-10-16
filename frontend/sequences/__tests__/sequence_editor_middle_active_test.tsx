@@ -31,11 +31,13 @@ jest.mock("../../devices/actions", () => ({
   execSequence: jest.fn()
 }));
 
+const mockCB = jest.fn();
 jest.mock("../locals_list/locals_list", () => ({
   LocalsList: () => <div />,
-  localListCallback: jest.fn(() => jest.fn()),
+  localListCallback: jest.fn(() => jest.fn(() => mockCB)),
   isParameterDeclaration: jest.fn(),
   removeVariable: jest.fn(),
+  generateNewVariableLabel: jest.fn(),
 }));
 
 jest.mock("../../config_storage/actions", () => ({
@@ -47,6 +49,15 @@ jest.mock("../panel/preview_support", () => ({
   License: () => <div />,
   loadSequenceVersion: jest.fn(),
   SequencePreviewContent: () => <div />,
+}));
+
+jest.mock("../request_auto_generation", () => ({
+  requestAutoGeneration: jest.fn(),
+}));
+
+import { PopoverProps } from "../../ui/popover";
+jest.mock("../../ui/popover", () => ({
+  Popover: ({ target, content }: PopoverProps) => <div>{target}{content}</div>,
 }));
 
 import React from "react";
@@ -68,9 +79,7 @@ import {
   SequenceSettingsMenuProps,
   SequenceShareMenuProps,
 } from "../interfaces";
-import {
-  FAKE_RESOURCES, buildResourceIndex,
-} from "../../__test_support__/resource_index_builder";
+import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import { fakeSequence } from "../../__test_support__/fake_state/resources";
 import { destroy, save, edit } from "../../api/crud";
 import {
@@ -87,7 +96,7 @@ import { execSequence } from "../../devices/actions";
 import { clickButton } from "../../__test_support__/helpers";
 import { fakeVariableNameSet } from "../../__test_support__/fake_variables";
 import { DropAreaProps } from "../../draggable/interfaces";
-import { Actions, DeviceSetting } from "../../constants";
+import { Actions, Content, DeviceSetting } from "../../constants";
 import { setWebAppConfigValue } from "../../config_storage/actions";
 import { BooleanSetting } from "../../session_keys";
 import { push } from "../../history";
@@ -96,20 +105,29 @@ import { error } from "../../toast/toast";
 import { API } from "../../api";
 import { loadSequenceVersion } from "../panel/preview_support";
 import { act } from "react-dom/test-utils";
+import { VariableType } from "../locals_list/locals_list_support";
+import { generateNewVariableLabel } from "../locals_list/locals_list";
+import { StepButtonCluster } from "../step_button_cluster";
+import { changeEvent } from "../../__test_support__/fake_html_events";
+import { requestAutoGeneration } from "../request_auto_generation";
+import { emptyState } from "../../resources/reducer";
 
 describe("<SequenceEditorMiddleActive />", () => {
+  API.setBaseUrl("");
+
   const fakeProps = (): ActiveMiddleProps => {
     const sequence = fakeSequence();
     sequence.specialStatus = SpecialStatus.DIRTY;
     return {
       dispatch: jest.fn(),
       sequence,
-      resources: buildResourceIndex(FAKE_RESOURCES).index,
+      sequences: [sequence],
+      resources: buildResourceIndex().index,
       syncStatus: "synced",
       hardwareFlags: fakeHardwareFlags(),
       farmwareData: fakeFarmwareData(),
       getWebAppConfigValue: jest.fn(),
-      menuOpen: undefined,
+      sequencesState: emptyState().consumers.sequences,
       showName: true,
     };
   };
@@ -128,7 +146,18 @@ describe("<SequenceEditorMiddleActive />", () => {
     p.sequence.body.sequence_versions = [];
     p.sequence.body.forked = false;
     const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
-    expect(wrapper.text().toLowerCase()).toContain("upgrade");
+    expect(wrapper.text().toLowerCase()).toContain("upgrade to latest");
+  });
+
+  it("shows revert available", () => {
+    const p = fakeProps();
+    p.sequence.body.id = 123;
+    p.sequence.body.sequence_version_id = 1;
+    p.sequence.body.sequence_versions = [1];
+    p.sequence.body.forked = true;
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    expect(wrapper.text().toLowerCase()).not.toContain("upgrade to latest");
+    expect(wrapper.text().toLowerCase()).toContain("revert changes");
   });
 
   it("upgrades sequence", () => {
@@ -182,7 +211,7 @@ describe("<SequenceEditorMiddleActive />", () => {
     const p = fakeProps();
     p.dispatch = () => Promise.resolve();
     const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
-    await clickButton(wrapper, 0, "Save * ");
+    await clickButton(wrapper, 0, "save");
     expect(save).toHaveBeenCalledWith(expect.stringContaining("Sequence"));
     expect(push).toHaveBeenCalledWith(Path.sequences("fake"));
   });
@@ -326,17 +355,6 @@ describe("<SequenceEditorMiddleActive />", () => {
       expect.objectContaining({ id: "3" }));
   });
 
-  it("sets description", () => {
-    mockPath = Path.mock(Path.sequences("1"));
-    const p = fakeProps();
-    p.sequence.body.description = "description";
-    const wrapper = mount<SequenceEditorMiddleActive>(
-      <SequenceEditorMiddleActive {...p} />);
-    expect(wrapper.state().description).toEqual("description");
-    wrapper.instance().setDescription("new description");
-    expect(wrapper.state().description).toEqual("new description");
-  });
-
   it("sets sequence preview", () => {
     mockPath = Path.mock(Path.sequences("1"));
     const p = fakeProps();
@@ -368,6 +386,21 @@ describe("<SequenceEditorMiddleActive />", () => {
     expect(wrapper.text()).not.toContain("upgrade your copy to this version");
     wrapper.setState({ view: "public" });
     expect(wrapper.text()).toContain("upgrade your copy to this version");
+    expect(wrapper.find(".public-copy-toolbar").find("a").first().props().href)
+      .toEqual("");
+  });
+
+  it("renders public view with id", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const sequence = fakeSequence();
+    sequence.body.id = 1;
+    const p = fakeProps();
+    const wrapper = mount<SequenceEditorMiddleActive>(
+      <SequenceEditorMiddleActive {...p} />);
+    wrapper.setState({ view: "public", sequencePreview: sequence });
+    expect(wrapper.text()).toContain("upgrade your copy to this version");
+    expect(wrapper.find(".public-copy-toolbar").find("a").first().props().href)
+      .toEqual(Path.sequenceVersion(1));
   });
 
   it("renders celery script view button: enabled", () => {
@@ -384,7 +417,7 @@ describe("<SequenceEditorMiddleActive />", () => {
       view: "public", sequencePreview: previewSequence,
       viewSequenceCeleryScript: true,
     });
-    expect(wrapper.find(".fa-code").hasClass("enabled")).toBeTruthy();
+    expect(wrapper.find(".fa-code").hasClass("inactive")).toBeFalsy();
     expect(wrapper.text()).toContain("upgrade");
   });
 
@@ -399,7 +432,7 @@ describe("<SequenceEditorMiddleActive />", () => {
       view: "public", sequencePreview: previewSequence,
       viewSequenceCeleryScript: false,
     });
-    expect(wrapper.find(".fa-code").hasClass("enabled")).toBeFalsy();
+    expect(wrapper.find(".fa-code").hasClass("inactive")).toBeTruthy();
   });
 
   it("makes selections", () => {
@@ -415,18 +448,36 @@ describe("<SequenceEditorMiddleActive />", () => {
     expect(wrapper.state().view).toEqual("public");
   });
 
+  it("shows warning", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const p = fakeProps();
+    p.sequence.body.sequence_version_id = 1;
+    p.sequence.body.body = [{ kind: "lua", args: { lua: "" } }];
+    maybeTagStep(p.sequence.body.body[0]);
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    expect(wrapper.text()).toContain(Content.INCLUDES_LUA_WARNING);
+  });
+
+  it("doesn't show warning", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const p = fakeProps();
+    p.sequence.body.sequence_version_id = 1;
+    p.sequence.body.body = [{ kind: "sync", args: {} }];
+    maybeTagStep(p.sequence.body.body[0]);
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    expect(wrapper.text()).not.toContain(Content.INCLUDES_LUA_WARNING);
+  });
+
   it("edits description", () => {
     mockPath = Path.mock(Path.sequences("1"));
     const p = fakeProps();
     p.sequence.body.description = "description";
-    const wrapper = mount<SequenceEditorMiddleActive>(
-      <SequenceEditorMiddleActive {...p} />);
-    wrapper.setState({ editingDescription: true });
-    wrapper.find("textarea").simulate("change",
-      { currentTarget: { value: "edit" } });
-    wrapper.setState({ description: "edit" });
-    expect(wrapper.state().description).toEqual("edit");
-    wrapper.find("textarea").simulate("blur");
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    wrapper.find(".fa-pencil").simulate("click");
+    const e = changeEvent("edit");
+    act(() => wrapper.find("textarea").props().onChange?.(e));
+    wrapper.update();
+    wrapper.find("textarea").props().onBlur?.({} as React.FocusEvent);
     expect(edit).toHaveBeenCalledWith(expect.any(Object), { description: "edit" });
   });
 
@@ -434,10 +485,101 @@ describe("<SequenceEditorMiddleActive />", () => {
     mockPath = Path.mock(Path.sequences("1"));
     const p = fakeProps();
     p.sequence.body.description = "";
-    const wrapper = mount<SequenceEditorMiddleActive>(
-      <SequenceEditorMiddleActive {...p} />);
-    wrapper.setState({ editingDescription: true });
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
     expect(wrapper.find("textarea").length).toEqual(0);
+    expect(wrapper.find(".sequence-description").length).toEqual(0);
+    wrapper.setState({ descriptionCollapsed: false });
+    expect(wrapper.find(".sequence-description").length).toEqual(1);
+  });
+
+  it("generates description", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const p = fakeProps();
+    p.sequence.body.description = "";
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    wrapper.setState({ descriptionCollapsed: false });
+    wrapper.find(".fa-magic").first().simulate("click");
+    expect(requestAutoGeneration).toHaveBeenCalled();
+    const { mock } = requestAutoGeneration as jest.Mock;
+    act(() => mock.calls[0][0].onUpdate("description"));
+    act(() => mock.calls[0][0].onSuccess("description"));
+    expect(edit).toHaveBeenCalledWith(p.sequence, { description: "description" });
+    act(() => mock.calls[0][0].onError());
+  });
+
+  it("doesn't generate description", () => {
+    const p = fakeProps();
+    const sequence = fakeSequence();
+    sequence.body.id = 0;
+    p.sequence = sequence;
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    wrapper.find(".fa-magic").first().simulate("click");
+    expect(requestAutoGeneration).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith("Save sequence first.");
+  });
+
+  it("shows add variable options", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const p = fakeProps();
+    const wrapper = mount(<SequenceEditorMiddleActive {...p} />);
+    expect(wrapper.find("Popover").length).toEqual(10);
+  });
+
+  it("opens add variable menu", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const wrapper = mount<SequenceEditorMiddleActive>(
+      <SequenceEditorMiddleActive {...fakeProps()} />);
+    expect(wrapper.state().addVariableMenuOpen).toEqual(false);
+    const e = { stopPropagation: jest.fn() } as unknown as React.MouseEvent;
+    wrapper.instance().openAddVariableMenu(e);
+    expect(e.stopPropagation).toHaveBeenCalled();
+    expect(wrapper.state().addVariableMenuOpen).toEqual(true);
+  });
+
+  it("adds new variable", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const wrapper = mount<SequenceEditorMiddleActive>(
+      <SequenceEditorMiddleActive {...fakeProps()} />);
+    wrapper.setState({ addVariableMenuOpen: true });
+    const e = {
+      stopPropagation: jest.fn()
+    } as unknown as React.MouseEvent<HTMLElement>;
+    const variableData = fakeVariableNameSet();
+    variableData["none"] = undefined;
+    wrapper.instance().addVariable(variableData,
+      [], VariableType.Location)(e);
+    expect(e.stopPropagation).toHaveBeenCalled();
+    expect(wrapper.state().addVariableMenuOpen).toEqual(false);
+    expect(mockCB).toHaveBeenCalledWith({
+      kind: "variable_declaration",
+      args: { label: undefined, data_value: { kind: "nothing", args: {} } }
+    }, undefined);
+    expect(generateNewVariableLabel).toHaveBeenCalled();
+  });
+
+  it("adds new resource variable", () => {
+    mockPath = Path.mock(Path.sequences("1"));
+    const wrapper = mount<SequenceEditorMiddleActive>(
+      <SequenceEditorMiddleActive {...fakeProps()} />);
+    wrapper.setState({ addVariableMenuOpen: true });
+    const e = {
+      stopPropagation: jest.fn()
+    } as unknown as React.MouseEvent<HTMLElement>;
+    const variableData = fakeVariableNameSet();
+    variableData["none"] = undefined;
+    wrapper.instance().addVariable(variableData,
+      [], VariableType.Resource)(e);
+    expect(e.stopPropagation).toHaveBeenCalled();
+    expect(wrapper.state().addVariableMenuOpen).toEqual(false);
+    expect(mockCB).toHaveBeenCalledWith({
+      kind: "parameter_declaration",
+      args: {
+        label: undefined, default_value: {
+          kind: "resource_placeholder", args: { resource_type: "Sequence" }
+        }
+      }
+    }, undefined);
+    expect(generateNewVariableLabel).toHaveBeenCalled();
   });
 });
 
@@ -445,22 +587,23 @@ describe("<SequenceBtnGroup />", () => {
   const fakeProps = (): SequenceBtnGroupProps => ({
     dispatch: jest.fn(),
     sequence: fakeSequence(),
-    resources: buildResourceIndex(FAKE_RESOURCES).index,
+    resources: buildResourceIndex().index,
     syncStatus: "synced",
     getWebAppConfigValue: jest.fn(),
     toggleViewSequenceCeleryScript: jest.fn(),
-    menuOpen: undefined,
+    sequencesState: emptyState().consumers.sequences,
     viewCeleryScript: true,
   });
 
   it("edits color", () => {
+    mockPath = Path.mock(Path.sequencePage("1"));
     const p = fakeProps();
-    const wrapper = shallow(<SequenceBtnGroup {...p} />);
-    wrapper.find("ColorPicker").simulate("change", "red");
+    const wrapper = mount(<SequenceBtnGroup {...p} />);
+    wrapper.find(".color-picker-item-wrapper").first().simulate("click");
     expect(editCurrentSequence).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({ uuid: p.sequence.uuid }),
-      { color: "red" });
+      { color: "blue" });
   });
 
   it("shows view celery script enabled", () => {
@@ -468,7 +611,7 @@ describe("<SequenceBtnGroup />", () => {
     p.getWebAppConfigValue = () => true;
     p.viewCeleryScript = true;
     const wrapper = shallow(<SequenceBtnGroup {...p} />);
-    expect(wrapper.find(".fa-code").hasClass("enabled")).toBeTruthy();
+    expect(wrapper.find(".fa-code").hasClass("inactive")).toBeFalsy();
   });
 
   it("shows publish menu", () => {
@@ -519,7 +662,7 @@ describe("onDrop()", () => {
     onDrop(dispatch, fakeSequence())(3, "fakeUuid");
     const nope = () => dispatch.mock.calls[0][0](() =>
       ({ value: 4, intent: "nope", draggerId: 5 }));
-    expect(nope).toThrowError("Got unexpected data transfer object.");
+    expect(nope).toThrow("Got unexpected data transfer object.");
   });
 });
 
@@ -546,6 +689,10 @@ describe("<AddCommandButton />", () => {
     dispatch: jest.fn(),
     index: 1,
     stepCount: 0,
+    sequence: fakeSequence(),
+    sequences: [],
+    farmwareData: undefined,
+    resources: buildResourceIndex().index,
   });
 
   it("dispatches new step position", () => {
@@ -560,13 +707,11 @@ describe("<AddCommandButton />", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("navigates", () => {
-    mockPath = Path.mock(Path.designerSequences("1"));
-    const p = fakeProps();
-    p.stepCount = 1;
-    const wrapper = shallow(<AddCommandButton {...p} />);
+  it("closes cluster", () => {
+    const wrapper = shallow(<AddCommandButton {...fakeProps()} />);
     wrapper.find("button").simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.designerSequences("commands"));
+    wrapper.find(StepButtonCluster).props().close();
+    expect(wrapper.html()).not.toContain("open");
   });
 });
 

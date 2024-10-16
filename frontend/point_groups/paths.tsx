@@ -2,13 +2,9 @@ import React from "react";
 import { sortGroupBy, sortOptionsTable } from "./point_group_sort";
 import { isUndefined, sortBy, uniq } from "lodash";
 import { PointGroupSortType } from "farmbot/dist/resources/api_resources";
-import { t } from "../i18next_wrapper";
 import { Actions } from "../constants";
 import { edit, save } from "../api/crud";
 import { TaggedPointGroup, TaggedPoint, TaggedSensorReading } from "farmbot";
-import { error } from "../toast/toast";
-import { shouldDisplayFeature } from "../devices/should_display";
-import { Feature } from "../devices/interfaces";
 
 export const convertToXY =
   (points: (TaggedPoint | TaggedSensorReading)[]): { x: number, y: number }[] =>
@@ -77,11 +73,10 @@ export const alternating = (pathPoints: TaggedPoint[], axis: "xy" | "yx") => {
   return ordered;
 };
 
-export type ExtendedPointGroupSortType = PointGroupSortType
-  | "nn" | "xy_alternating" | "yx_alternating";
+export type ExtendedPointGroupSortType = PointGroupSortType;
 
 const SORT_TYPES: ExtendedPointGroupSortType[] = [
-  "random", "xy_ascending", "xy_descending", "yx_ascending", "yx_descending"];
+  "random", "yx_descending", "yx_ascending", "xy_descending", "xy_ascending"];
 
 export interface PathInfoBarProps {
   sortTypeKey: ExtendedPointGroupSortType;
@@ -97,9 +92,6 @@ export const PathInfoBar = (props: PathInfoBarProps) => {
   const normalizedLength = pathLength / maxLength * 100;
   const sortLabel = () => {
     switch (sortTypeKey) {
-      case "nn": return t("Optimized");
-      case "xy_alternating": return t("X/Y Alternating");
-      case "yx_alternating": return t("Y/X Alternating");
       default: return sortOptionsTable()[sortTypeKey];
     }
   };
@@ -110,15 +102,8 @@ export const PathInfoBar = (props: PathInfoBarProps) => {
     onMouseLeave={() =>
       dispatch({ type: Actions.TRY_SORT_TYPE, payload: undefined })}
     onClick={() => {
-      if ((sortTypeKey == "nn"
-        && !shouldDisplayFeature(Feature.sort_type_optimized)) ||
-        ((sortTypeKey == "xy_alternating" || sortTypeKey == "yx_alternating")
-          && !shouldDisplayFeature(Feature.sort_type_alternating))) {
-        error(t("Not supported yet."));
-      } else {
-        dispatch(edit(group, { sort_type: sortTypeKey as PointGroupSortType }));
-        dispatch(save(group.uuid));
-      }
+      dispatch(edit(group, { sort_type: sortTypeKey }));
+      dispatch(save(group.uuid));
     }}>
     <div className={"sort-path-info-bar"}
       style={{ width: `${normalizedLength}%` }}>
@@ -154,11 +139,8 @@ export class Paths extends React.Component<PathsProps, PathsState> {
 
   render() {
     return <div className={"group-sort-types"}>
-      {SORT_TYPES
-        .concat(shouldDisplayFeature(Feature.sort_type_alternating)
-          ? ["xy_alternating", "yx_alternating"]
-          : [])
-        .concat(shouldDisplayFeature(Feature.sort_type_optimized) ? ["nn"] : [])
+      {SORT_TYPES.concat(["yx_alternating", "xy_alternating", "nn"])
+        .reverse()
         .map(sortType =>
           <PathInfoBar key={sortType}
             sortTypeKey={sortType}

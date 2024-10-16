@@ -7,23 +7,27 @@ import { BlurableInput, Row } from "../ui";
 import { edit, save } from "../api/crud";
 import { connect } from "react-redux";
 import {
-  selectAllPlantPointers, maybeFindSavedGardenById,
+  selectAllPlantPointers, maybeFindSavedGardenById, selectAllPlantTemplates,
 } from "../resources/selectors";
 import { Everything } from "../interfaces";
 import {
   DesignerPanel, DesignerPanelHeader, DesignerPanelContent,
 } from "../farm_designer/designer_panel";
 import { push } from "../history";
-import { isNumber } from "lodash";
+import { isNumber, take } from "lodash";
 import { ResourceIndex } from "../resources/interfaces";
 import { t } from "../i18next_wrapper";
 import { Panel } from "../farm_designer/panel_header";
 import { Path } from "../internal_urls";
+import { PointGroupItem } from "../point_groups/point_group_item";
+import {
+  calcMaxCount, MoreIndicatorIcon,
+} from "../point_groups/criteria/component";
 
 /** Open or close a SavedGarden. */
 const GardenViewButton = (props: GardenViewButtonProps) => {
-  const { dispatch, savedGarden, gardenIsOpen } = props;
-  const onClick = openOrCloseGarden({ savedGarden, gardenIsOpen, dispatch });
+  const { dispatch, savedGardenId, gardenIsOpen } = props;
+  const onClick = openOrCloseGarden({ savedGardenId, gardenIsOpen, dispatch });
   const btnText = gardenIsOpen
     ? t("exit")
     : t("view");
@@ -50,14 +54,11 @@ const ApplyGardenButton =
 
 const DestroyGardenButton =
   (props: { dispatch: Function, gardenUuid: string }) =>
-    <button
-      className="fb-button red"
+    <i className={"fa fa-trash fb-icon-button"}
       title={t("delete garden")}
-      onClick={() => props.dispatch(destroySavedGarden(props.gardenUuid))}>
-      {t("delete")}
-    </button>;
+      onClick={() => props.dispatch(destroySavedGarden(props.gardenUuid))} />;
 
-export const findSavedGardenByUrl = (ri: ResourceIndex) => {
+const findSavedGardenByUrl = (ri: ResourceIndex) => {
   const id = Path.getSlug(Path.savedGardens());
   const num = parseInt(id, 10);
   if (isNumber(num) && !isNaN(num)) {
@@ -70,25 +71,56 @@ export const mapStateToProps = (props: Everything): EditGardenProps => {
   const savedGarden = findSavedGardenByUrl(props.resources.index);
   return {
     savedGarden,
-    gardenIsOpen: !!(savedGarden?.uuid === openedSavedGarden),
+    gardenIsOpen: !!(savedGarden?.body.id === openedSavedGarden),
     dispatch: props.dispatch,
     plantPointerCount: selectAllPlantPointers(props.resources.index).length,
+    gardenPlants: selectAllPlantTemplates(props.resources.index)
+      .filter(p => p.body.saved_garden_id == savedGarden?.body.id),
   };
 };
 
-export class RawEditGarden extends React.Component<EditGardenProps, {}> {
+interface EditGardenState {
+  notes: string;
+  expand: boolean;
+}
+
+export class RawEditGarden
+  extends React.Component<EditGardenProps, EditGardenState> {
+  state: EditGardenState = {
+    notes: this.props.savedGarden?.body.notes || "",
+    expand: false,
+  };
+
+  toggleExpand = () => this.setState({ expand: !this.state.expand });
+
   render() {
     const { savedGarden } = this.props;
     const gardensPath = Path.savedGardens();
     const plantsPath = Path.plants();
     !savedGarden && Path.startsWith(gardensPath) && push(plantsPath);
+    const maxCount = this.state.expand ? 1000 : calcMaxCount(3);
     return <DesignerPanel panelName={"saved-garden-edit"}
       panel={Panel.SavedGardens}>
       <DesignerPanelHeader
         panelName={"saved-garden"}
         panel={Panel.SavedGardens}
         title={t("Edit garden")}
-        backTo={plantsPath} />
+        backTo={plantsPath}>
+        {savedGarden &&
+          <div className={"buttons"}>
+            <ApplyGardenButton
+              dispatch={this.props.dispatch}
+              plantPointerCount={this.props.plantPointerCount}
+              gardenId={savedGarden.body.id || -1} />
+            <DestroyGardenButton
+              dispatch={this.props.dispatch}
+              gardenUuid={savedGarden.uuid} />
+            <GardenViewButton
+              dispatch={this.props.dispatch}
+              savedGardenId={savedGarden.body.id}
+              gardenIsOpen={this.props.gardenIsOpen} />
+          </div>}
+      </DesignerPanelHeader>
       <DesignerPanelContent panelName={"saved-garden-edit"}>
         {savedGarden
           ? <div className={"saved-garden-content"}>
@@ -104,20 +136,25 @@ export class RawEditGarden extends React.Component<EditGardenProps, {}> {
                 }} />
             </Row>
             <Row>
-              <ApplyGardenButton
-                dispatch={this.props.dispatch}
-                plantPointerCount={this.props.plantPointerCount}
-                gardenId={savedGarden.body.id || -1} />
-              <DestroyGardenButton
-                dispatch={this.props.dispatch}
-                gardenUuid={savedGarden.uuid} />
-              <GardenViewButton
-                dispatch={this.props.dispatch}
-                savedGarden={savedGarden.uuid}
-                gardenIsOpen={this.props.gardenIsOpen} />
+              <label>{t("notes")}</label>
+              <textarea
+                value={this.state.notes}
+                onChange={e => this.setState({ notes: e.currentTarget.value })}
+                onBlur={() => {
+                  this.props.dispatch(edit(savedGarden, {
+                    notes: this.state.notes
+                  }));
+                  this.props.dispatch(save(savedGarden.uuid));
+                }} />
             </Row>
           </div>
           : <p>{t("Garden not found.")}</p>}
+        <div className={"point-list-wrapper"}>
+          {take(this.props.gardenPlants, maxCount).map(point =>
+            <PointGroupItem key={point.uuid} point={point} />)}
+          <MoreIndicatorIcon count={this.props.gardenPlants.length}
+            maxCount={maxCount} onClick={this.toggleExpand} />
+        </div>
       </DesignerPanelContent>
     </DesignerPanel>;
   }

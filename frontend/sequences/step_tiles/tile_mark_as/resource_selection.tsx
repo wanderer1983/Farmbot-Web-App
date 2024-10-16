@@ -10,7 +10,7 @@ import { DropDownItem } from "../../../ui/fb_select";
 import {
   selectAllPoints, maybeGetDevice, findPointerByTypeAndId,
 } from "../../../resources/selectors";
-import { formatPoint } from "../../locals_list/location_form_list";
+import { formatPoint } from "../../locals_list/variable_form_list";
 import {
   determineVarDDILabel, maybeFindVariable,
 } from "../../../resources/sequence_meta";
@@ -19,8 +19,10 @@ import {
   getFwHardwareValue, hasUTM,
 } from "../../../settings/firmware/firmware_hardware_support";
 import { getFbosConfig } from "../../../resources/getters";
-import { generateVariableListItems } from "../../locals_list/location_form";
-import { AllowedVariableNodes } from "../../locals_list/locals_list_support";
+import { generateVariableListItems } from "../../locals_list/variable_form";
+import {
+  AllowedVariableNodes, VariableType,
+} from "../../locals_list/locals_list_support";
 
 export const ResourceSelection = (props: ResourceSelectionProps) => {
   const selected = getSelectedResource(
@@ -65,6 +67,7 @@ const resourceList =
       ...generateVariableListItems({
         allowedVariableNodes: AllowedVariableNodes.identifier,
         resources, sequenceUuid, headingId: "Identifier",
+        variableType: VariableType.Location,
       }),
       { headingId: "Device", label: t("Device"), ...headingCommon },
       ...(utm

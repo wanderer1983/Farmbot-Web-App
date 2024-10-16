@@ -4,10 +4,10 @@ import { DeviceSetting, Content } from "../../constants";
 import { Header } from "../hardware_settings/header";
 import { Collapse, Slider } from "@blueprintjs/core";
 import { t } from "../../i18next_wrapper";
-import { BlurableInput, Help, Row, ToggleButton } from "../../ui";
+import { BlurableInput, Col, FBSelect, Help, Row, ToggleButton } from "../../ui";
 import { edit, save } from "../../api/crud";
 import { SettingDescriptionProps } from "../interfaces";
-import { BooleanSetting, NumericSetting } from "../../session_keys";
+import { BooleanSetting, NumericSetting, StringSetting } from "../../session_keys";
 import { Setting } from "../farm_designer_settings";
 import { resetAccount, deleteUser } from "./actions";
 import { requestAccountExport } from "./request_account_export";
@@ -21,6 +21,8 @@ import {
 import {
   getModifiedClassName, getModifiedClassNameDefaultFalse,
 } from "../default_values";
+import { PAGE_SLUGS } from "../../internal_urls";
+import { DevSettings } from "../dev/dev_support";
 
 export const AccountSettings = (props: AccountSettingsProps) =>
   <Highlight className={"section"}
@@ -38,7 +40,7 @@ export const AccountSettings = (props: AccountSettingsProps) =>
           </label>
           <BlurableInput
             type="text"
-            name="name"
+            name="userName"
             value={props.user.body.name || ""}
             onCommit={e => {
               props.dispatch(edit(
@@ -72,8 +74,30 @@ export const AccountSettings = (props: AccountSettingsProps) =>
       <Highlight settingName={DeviceSetting.changePassword}>
         <ChangePassword />
       </Highlight>
+      <Highlight settingName={DeviceSetting.language}>
+        <Row>
+          <Col xs={3}>
+            <label>
+              {t(DeviceSetting.language)}
+            </label>
+          </Col>
+          <Col xs={9}>
+            <BlurableInput
+              type="text"
+              name="language"
+              value={props.user.body.language || ""}
+              onCommit={e => {
+                props.dispatch(edit(
+                  props.user,
+                  { language: e.currentTarget.value }));
+                props.dispatch(save(props.user.uuid));
+              }} />
+          </Col>
+        </Row>
+      </Highlight>
       {APP_SETTINGS().map(setting => <Setting key={setting.title}
         {...setting} {...props} useToolTip={true} />)}
+      <LandingPageSetting {...props} />
       <ActivityBeepSetting {...props} />
       <Highlight settingName={DeviceSetting.resetAccount}>
         <DangerousDeleteWidget
@@ -101,7 +125,7 @@ export const AccountSettings = (props: AccountSettingsProps) =>
           </p>
           <button className="green fb-button"
             title={t("Export")}
-            onClick={requestAccountExport}>
+            onClick={() => { requestAccountExport(); }}>
             {t("Export")}
           </button>
         </Row>
@@ -127,14 +151,14 @@ const APP_SETTINGS = (): SettingDescriptionProps[] => ([
     setting: BooleanSetting.time_format_seconds,
   },
   {
-    title: DeviceSetting.hideWebcamWidget,
-    description: Content.HIDE_WEBCAM_WIDGET,
-    setting: BooleanSetting.hide_webcam_widget,
-  },
-  {
     title: DeviceSetting.hideSensorsPanel,
     description: Content.HIDE_SENSORS_WIDGET,
     setting: BooleanSetting.hide_sensors,
+  },
+  {
+    title: DeviceSetting.enable3dElectronicsBox,
+    description: Content.ENABLE_3D_ELECTRONICS_BOX_TOP,
+    setting: BooleanSetting.enable_3d_electronics_box_top,
   },
   {
     title: DeviceSetting.readSpeakLogsInBrowser,
@@ -183,6 +207,42 @@ export const ActivityBeepSetting = (props: ActivityBeepSettingProps) => {
         onChange={newValue => props.dispatch(setWebAppConfigValue(
           NumericSetting.beep_verbosity, newValue))}
         value={parseInt("" + value)} />
+    </Row>
+  </Highlight>;
+};
+
+export interface LandingPageSettingProps {
+  getConfigValue: GetWebAppConfigValue;
+  dispatch: Function;
+}
+
+export const LandingPageSetting = (props: LandingPageSettingProps) => {
+  const value = "" + props.getConfigValue(StringSetting.landing_page);
+  const change = (page: string) => props.dispatch(setWebAppConfigValue(
+    StringSetting.landing_page, page));
+  const [page, setPage] = React.useState(value);
+  return <Highlight settingName={DeviceSetting.landingPage}>
+    <Row className={"landing-page-setting"}>
+      <Col xs={5}>
+        <label>{t(DeviceSetting.landingPage)}</label>
+        <Help text={Content.LANDING_PAGE} />
+      </Col>
+      <Col xs={7}>
+        <FBSelect
+          key={value}
+          list={Object.entries(PAGE_SLUGS())
+            .map(([value, label]) => ({ label, value }))}
+          selectedItem={{ label: PAGE_SLUGS()[value] || t("Custom"), value }}
+          onChange={ddi => {
+            const newValue = "" + ddi.value;
+            change(newValue);
+            setPage(newValue);
+          }} />
+        {DevSettings.futureFeaturesEnabled() &&
+          <input value={page}
+            onBlur={() => change(page)}
+            onChange={e => setPage(e.currentTarget.value)} />}
+      </Col>
     </Row>
   </Highlight>;
 };

@@ -1,9 +1,8 @@
 import { Color } from "farmbot/dist/corpus";
-import { TaggedSequence } from "farmbot";
-import { DeepPartial } from "redux";
-import { Folder } from "farmbot/dist/resources/api_resources";
-import { VariableNameSet, UUID } from "../resources/interfaces";
+import { SyncStatus, TaggedSequence } from "farmbot";
+import { VariableNameSet, UUID, ResourceIndex } from "../resources/interfaces";
 import { GetWebAppConfigValue } from "../config_storage/actions";
+import { RunButtonMenuOpen } from "../sequences/interfaces";
 
 export interface FolderMeta {
   open: boolean;
@@ -66,12 +65,16 @@ export interface FolderProps {
   resourceUsage: Record<UUID, boolean | undefined>;
   sequenceMetas: Record<UUID, VariableNameSet | undefined>;
   getWebAppConfigValue: GetWebAppConfigValue;
+  resources: ResourceIndex;
+  menuOpen: RunButtonMenuOpen;
+  syncStatus: SyncStatus | undefined;
 }
 
 export interface FolderState {
   toggleDirection: boolean;
   movedSequenceUuid?: string;
   stashedUuid?: string;
+  dragging?: boolean;
 }
 
 export interface FolderPanelTopProps {
@@ -86,17 +89,24 @@ export interface FolderNodeProps {
   movedSequenceUuid: string | undefined;
   startSequenceMove(sequenceUuid: UUID): void;
   toggleSequenceMove(sequenceUuid?: UUID): void;
+  dragging: boolean | undefined;
   onMoveEnd(folderId: number): void;
   dispatch: Function;
   resourceUsage: Record<UUID, boolean | undefined>;
   sequenceMetas: Record<UUID, VariableNameSet | undefined>;
   getWebAppConfigValue: GetWebAppConfigValue;
+  resources: ResourceIndex;
+  menuOpen: RunButtonMenuOpen;
+  syncStatus: SyncStatus | undefined;
+  searchTerm: string | undefined;
 }
 
 export interface SequenceButtonClusterProps {
   sequence: TaggedSequence;
   getWebAppConfigValue: GetWebAppConfigValue;
   dispatch: Function;
+  startSequenceMove(sequenceUuid: UUID): void;
+  toggleSequenceMove(sequenceUuid?: UUID): void;
 }
 
 export interface FolderButtonClusterProps {
@@ -117,6 +127,10 @@ export interface FolderItemProps {
   variableData: VariableNameSet | undefined;
   inUse: boolean;
   getWebAppConfigValue: GetWebAppConfigValue;
+  resources: ResourceIndex;
+  menuOpen: RunButtonMenuOpen;
+  syncStatus: SyncStatus | undefined;
+  searchTerm: string | undefined;
 }
 
 export interface SequenceDropAreaProps {
@@ -129,16 +143,6 @@ export interface SequenceDropAreaProps {
 
 export interface SequenceDropAreaState {
   hovered: boolean;
-}
-
-export interface AddFolderBtnProps {
-  folder?: DeepPartial<Folder>;
-  close?(): void;
-}
-
-export interface AddSequenceProps {
-  folderId?: number;
-  close?(): void;
 }
 
 export interface ToggleFolderBtnProps {

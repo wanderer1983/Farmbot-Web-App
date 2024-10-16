@@ -3,19 +3,28 @@ class Device < ApplicationRecord
   DEFAULT_MAX_CONFIGS = 300
   DEFAULT_MAX_IMAGES = 100
   DEFAULT_MAX_LOGS = 1000
+  DEFAULT_MAX_TELEMETRY = 300
+  DEFAULT_MAX_LOG_AGE_IN_DAYS = 60
+  DEFAULT_MAX_SEQUENCE_COUNT = 75
+  DEFAULT_MAX_SEQUENCE_LENGTH = 30
 
   TIMEZONES = TZInfo::Timezone.all_identifiers
   BAD_TZ = "%{value} is not a valid timezone"
   BAD_OTA_HOUR = "must be a value from 0 to 23."
+  ORDER_NUMBER_TAKEN = "has already been taken. " \
+                       "If you purchased multiple FarmBots with the same " \
+                       "order number, you may add -1, -2, -3, etc. to " \
+                       "the end of the order number to register additional " \
+                       "FarmBots after the first one."
   THROTTLE_ON = "Device is sending too many logs (%s). " \
                 "Suspending log storage and display until %s."
   THROTTLE_OFF = "Cooldown period has ended. " \
                  "Resuming log storage."
 
-  PLURAL_RESOURCES = %i(alerts farm_events farmware_envs farmware_installations
+  PLURAL_RESOURCES = %i(ai_feedbacks alerts curves farm_events farmware_envs farmware_installations
                         folders fragments images logs peripherals pin_bindings plant_templates
                         point_groups points regimens saved_gardens sensor_readings sensors sequences
-                        token_issuances tools webcam_feeds wizard_step_results)
+                        telemetries token_issuances tools webcam_feeds wizard_step_results)
 
   PLURAL_RESOURCES.map { |resources| has_many resources, dependent: :destroy }
 
@@ -42,14 +51,40 @@ class Device < ApplicationRecord
                        }
   validates :ota_hour,
     inclusion: { in: [*0..23], message: BAD_OTA_HOUR, allow_nil: true }
-  validates :fb_order_number, uniqueness: true, allow_nil: true
+  validates :fb_order_number,
+    uniqueness: { message: ORDER_NUMBER_TAKEN, allow_nil: true }
   before_validation :perform_gradual_upgrade
+
+  def max_seq_count
+    if max_sequence_count > 0
+      max_sequence_count
+    else
+      DEFAULT_MAX_SEQUENCE_COUNT
+    end
+  end
+
+  def max_seq_length
+    if max_sequence_length > 0
+      max_sequence_length
+    else
+      DEFAULT_MAX_SEQUENCE_LENGTH
+    end
+  end
+
+  def max_log_age
+    if max_log_age_in_days > 0
+      max_log_age_in_days
+    else
+      DEFAULT_MAX_LOG_AGE_IN_DAYS
+    end
+  end
 
   # Give the user back the amount of logs they are allowed to view.
   def limited_log_list
     Log
       .order(created_at: :desc)
       .where(device_id: self.id)
+      .where("created_at > ?", max_log_age.days.ago)
       .limit(max_log_count || DEFAULT_MAX_LOGS)
   end
 
@@ -64,6 +99,25 @@ class Device < ApplicationRecord
     # Calls to `destroy_all` rather than `delete_all` can be
     # disastrous- this is a big table! RC
     excess_logs.delete_all
+  end
+
+  # Give the user back the amount of telemetry they are allowed to view.
+  def limited_telemetry_list
+    Telemetry
+      .order(created_at: :desc)
+      .where(device_id: self.id)
+      .limit(DEFAULT_MAX_TELEMETRY)
+  end
+
+  def excess_telemetry
+    Telemetry
+      .where
+      .not(id: limited_telemetry_list.pluck(:id))
+      .where(device_id: self.id)
+  end
+
+  def trim_excess_telemetry
+    excess_telemetry.delete_all
   end
 
   def self.current
@@ -173,8 +227,8 @@ class Device < ApplicationRecord
     Rollbar.error("Someone is creating a debug user token", { device: self.id })
     t = SessionToken.as_json(users.first, "staff", fbos_version)
     jti = t[:token].unencoded[:jti]
-    # Auto expire after 36 hours.
-    TokenIssuance.find_by!(jti: jti).update!(exp: (Time.now + 36.hours).to_i)
+    # Auto expire after 1 week.
+    TokenIssuance.find_by!(jti: jti).update!(exp: (Time.now + 168.hours).to_i)
     return "localStorage['session'] = JSON.stringify(#{t.to_json});"
   end
 
@@ -197,7 +251,7 @@ class Device < ApplicationRecord
 
   def self.get_utc_ota_hour(timezone, local_ota_hour)
     utc_offset = Time.now.in_time_zone(timezone).utc_offset / 60 / 60
-    (local_ota_hour + utc_offset) % 24
+    (local_ota_hour - utc_offset) % 24
   end
 
   # PROBLEM:  The device table has an `ota_hour` column. The

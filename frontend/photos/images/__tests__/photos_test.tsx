@@ -1,16 +1,19 @@
-const mockDevice = { takePhoto: jest.fn(() => Promise.resolve({})) };
-jest.mock("../../../device", () => ({ getDevice: () => mockDevice }));
+jest.mock("../../../devices/actions", () => ({
+  move: jest.fn(),
+  takePhoto: jest.fn(),
+}));
 
 jest.mock("../../../api/crud", () => ({ destroy: jest.fn() }));
 
 import React from "react";
 import { mount, shallow } from "enzyme";
-import { Photos, PhotoFooter, MoveToLocation } from "../photos";
-import { JobProgress } from "farmbot";
+import { Photos, MoveToLocation, PhotoButtons } from "../photos";
 import { fakeImages } from "../../../__test_support__/fake_state/images";
 import { destroy } from "../../../api/crud";
 import { clickButton } from "../../../__test_support__/helpers";
-import { PhotosProps, PhotoFooterProps, MoveToLocationProps } from "../interfaces";
+import {
+  PhotosProps, MoveToLocationProps, PhotoButtonsProps,
+} from "../interfaces";
 import { fakeTimeSettings } from "../../../__test_support__/fake_time_settings";
 import { success, error } from "../../../toast/toast";
 import { Content, ToolTips, Actions } from "../../../constants";
@@ -19,9 +22,11 @@ import {
 } from "../../../__test_support__/fake_state/resources";
 import { fakeImageShowFlags } from "../../../__test_support__/fake_camera_data";
 import { mockDispatch } from "../../../__test_support__/fake_dispatch";
-import { push } from "../../../history";
 import { fakeDesignerState } from "../../../__test_support__/fake_designer_state";
-import { Path } from "../../../internal_urls";
+import {
+  fakeMovementState, fakePercentJob,
+} from "../../../__test_support__/fake_bot_data";
+import { move, takePhoto } from "../../../devices/actions";
 
 describe("<Photos />", () => {
   const fakeProps = (): PhotosProps => ({
@@ -37,6 +42,9 @@ describe("<Photos />", () => {
     env: {},
     designer: fakeDesignerState(),
     getConfigValue: jest.fn(),
+    arduinoBusy: false,
+    currentBotLocation: { x: 0, y: 0, z: 0 },
+    movementState: fakeMovementState(),
   });
 
   it("shows photo", () => {
@@ -50,7 +58,7 @@ describe("<Photos />", () => {
     p.currentImage = images[1];
     const wrapper = mount(<Photos {...p} />);
     expect(wrapper.text()).toContain("June 1st, 2017");
-    expect(wrapper.text()).toContain("X:632Y:347Z:164");
+    expect(wrapper.text()).toContain("(632, 347, 164)");
     expect(wrapper.find(".fa-eye.green").length).toEqual(1);
   });
 
@@ -63,23 +71,21 @@ describe("<Photos />", () => {
     p.flags.zMatch = false;
     const wrapper = mount(<Photos {...p} />);
     expect(wrapper.text()).toContain("June 1st, 2017");
-    expect(wrapper.text()).toContain("X:632Y:347Z:100");
+    expect(wrapper.text()).toContain("(632, 347, 100)");
     expect(wrapper.find(".fa-eye-slash.gray").length).toEqual(1);
   });
 
   it("no photos", () => {
     const wrapper = mount(<Photos {...fakeProps()} />);
-    expect(wrapper.text()).toContain("Image:No meta data.");
+    expect(wrapper.text()).toContain("yet taken any photos");
   });
 
-  it("takes photo", async () => {
+  it("takes photo", () => {
     const wrapper = mount(<Photos {...fakeProps()} />);
     const btn = wrapper.find("button").first();
     expect(btn.props().title).not.toEqual(Content.NO_CAMERA_SELECTED);
-    await clickButton(wrapper, 0, "take photo");
-    expect(mockDevice.takePhoto).toHaveBeenCalled();
-    await expect(success).toHaveBeenCalled();
-    expect(error).not.toHaveBeenCalled();
+    clickButton(wrapper, 0, "take photo");
+    expect(takePhoto).toHaveBeenCalled();
   });
 
   it("shows disabled take photo button", () => {
@@ -92,15 +98,7 @@ describe("<Photos />", () => {
     btn.simulate("click");
     expect(error).toHaveBeenCalledWith(
       ToolTips.SELECT_A_CAMERA, { title: Content.NO_CAMERA_SELECTED });
-    expect(mockDevice.takePhoto).not.toHaveBeenCalled();
-  });
-
-  it("fails to take photo", async () => {
-    mockDevice.takePhoto = jest.fn(() => Promise.reject());
-    const wrapper = mount(<Photos {...fakeProps()} />);
-    await clickButton(wrapper, 0, "take photo");
-    await expect(mockDevice.takePhoto).toHaveBeenCalled();
-    await expect(error).toHaveBeenCalled();
+    expect(takePhoto).not.toHaveBeenCalled();
   });
 
   it("deletes photo", async () => {
@@ -109,8 +107,8 @@ describe("<Photos />", () => {
     const images = fakeImages;
     p.currentImage = images[1];
     const wrapper = mount(<Photos {...p} />);
-    const button = wrapper.find("button").at(1);
-    expect(button.find("i").hasClass("fa-trash")).toBeTruthy();
+    const button = wrapper.find("i").at(1);
+    expect(button.hasClass("fa-trash")).toBeTruthy();
     await button.simulate("click");
     expect(destroy).toHaveBeenCalledWith(p.currentImage.uuid);
     await expect(success).toHaveBeenCalled();
@@ -122,41 +120,30 @@ describe("<Photos />", () => {
     const images = fakeImages;
     p.currentImage = images[1];
     const wrapper = mount(<Photos {...p} />);
-    const button = wrapper.find("button").at(1);
-    expect(button.find("i").hasClass("fa-trash")).toBeTruthy();
+    const button = wrapper.find("i").at(1);
+    expect(button.hasClass("fa-trash")).toBeTruthy();
     await button.simulate("click");
     await expect(destroy).toHaveBeenCalledWith(p.currentImage.uuid);
     await expect(error).toHaveBeenCalled();
   });
 
   it("no photos to delete", () => {
-    const wrapper = mount(<Photos {...fakeProps()} />);
-    const button = wrapper.find("button").at(1);
-    expect(button.find("i").hasClass("fa-trash")).toBeTruthy();
-    button.simulate("click");
-    expect(destroy).not.toHaveBeenCalledWith();
+    const wrapper = mount<Photos>(<Photos {...fakeProps()} />);
+    expect(wrapper.html()).not.toContain("fa-trash");
+    wrapper.instance().deletePhoto();
+    expect(destroy).not.toHaveBeenCalled();
   });
 
   it("shows image download progress", () => {
     const p = fakeProps();
-    p.imageJobs = [{
-      status: "working",
-      percent: 15,
-      unit: "percent",
-      time: "2018-11-15 19:13:21.167440Z"
-    } as JobProgress];
+    p.imageJobs = [fakePercentJob({ percent: 15 })];
     const wrapper = mount(<Photos {...p} />);
     expect(wrapper.text()).toContain("uploading photo...15%");
   });
 
   it("doesn't show image download progress", () => {
     const p = fakeProps();
-    p.imageJobs = [{
-      status: "complete",
-      percent: 15,
-      unit: "percent",
-      time: "2018-11-15 19:13:21.167440Z"
-    } as JobProgress];
+    p.imageJobs = [fakePercentJob({ status: "complete" })];
     const wrapper = mount(<Photos {...p} />);
     expect(wrapper.text()).not.toContain("uploading");
   });
@@ -167,7 +154,7 @@ describe("<Photos />", () => {
     p.images[0].body.meta.x = undefined;
     p.currentImage = p.images[0];
     const wrapper = mount(<Photos {...p} />);
-    expect(wrapper.text()).toContain("X:---");
+    expect(wrapper.text()).toContain("(---");
   });
 
   it("toggles state", () => {
@@ -229,21 +216,26 @@ describe("<Photos />", () => {
   });
 });
 
-describe("<PhotoFooter />", () => {
-  const fakeProps = (): PhotoFooterProps => ({
+describe("<PhotoButtons />", () => {
+  const fakeProps = (): PhotoButtonsProps => ({
     image: undefined,
     dispatch: jest.fn(),
-    timeSettings: fakeTimeSettings(),
     flags: fakeImageShowFlags(),
     size: { width: 0, height: 0 },
-    botOnline: true,
+    deletePhoto: jest.fn(),
+    toggleCrop: jest.fn(),
+    toggleRotation: jest.fn(),
+    toggleFullscreen: jest.fn(),
+    canCrop: true,
+    canTransform: true,
+    imageUrl: undefined,
   });
 
   it("highlights map image", () => {
     const p = fakeProps();
     p.image = fakeImage();
     p.image.body.id = 1;
-    const wrapper = mount(<PhotoFooter {...p} />);
+    const wrapper = mount(<PhotoButtons {...p} />);
     wrapper.find("i").first().simulate("mouseEnter");
     expect(p.dispatch).toHaveBeenCalledWith({
       type: Actions.HIGHLIGHT_MAP_IMAGE, payload: 1,
@@ -253,17 +245,37 @@ describe("<PhotoFooter />", () => {
       type: Actions.HIGHLIGHT_MAP_IMAGE, payload: undefined,
     });
   });
+
+  it("toggles rotation", () => {
+    const p = fakeProps();
+    p.imageUrl = "fake url";
+    const wrapper = mount(<PhotoButtons {...p} />);
+    wrapper.find(".fa-repeat").simulate("click");
+    expect(p.toggleRotation).toHaveBeenCalled();
+  });
 });
 
 describe("<MoveToLocation />", () => {
   const fakeProps = (): MoveToLocationProps => ({
     imageLocation: { x: 0, y: 0, z: 0 },
     botOnline: true,
+    arduinoBusy: false,
+    currentBotLocation: { x: 0, y: 0, z: 0 },
+    dispatch: jest.fn(),
+    defaultAxes: "XY",
+    movementState: fakeMovementState(),
   });
 
   it("moves to location", () => {
     const wrapper = mount(<MoveToLocation {...fakeProps()} />);
-    clickButton(wrapper, 0, "move farmbot to location");
-    expect(push).toHaveBeenCalledWith(Path.location({ x: 0, y: 0, z: 0 }));
+    clickButton(wrapper, 0, "go (x, y)");
+    expect(move).toHaveBeenCalledWith({ x: 0, y: 0, z: 0 });
+  });
+
+  it("handles missing location", () => {
+    const p = fakeProps();
+    p.imageLocation.x = undefined;
+    const wrapper = mount(<MoveToLocation {...p} />);
+    expect(wrapper.html()).toEqual("<div></div>");
   });
 });

@@ -17,8 +17,7 @@ export class GardenPlant extends
   state: GardenPlantState = { icon: FilePath.DEFAULT_ICON, hover: false };
 
   fetchIcon = () => {
-    const OFS = this.props.plant.body.openfarm_slug;
-    cachedCrop(OFS)
+    cachedCrop(this.props.plant.body.openfarm_slug)
       .then(({ svg_icon }) => {
         this.setState({ icon: svgToUrl(svg_icon) });
       });
@@ -50,11 +49,17 @@ export class GardenPlant extends
     return maybeGrayscale;
   }
 
+  // eslint-disable-next-line complexity
   render() {
-    const { current, selected, dragging, plant, mapTransformProps,
-      activeDragXY, zoomLvl, animate, editing, hovered } = this.props;
-    const { id, radius, x, y } = plant.body;
+    const {
+      current, selected, dragging, plant, mapTransformProps,
+      activeDragXY, zoomLvl, animate, editing, hovered, hoveredSpread,
+    } = this.props;
+    const { id, x, y } = plant.body;
     const { icon, hover } = this.state;
+    const radius = (current || selected) && hoveredSpread
+      ? hoveredSpread / 2
+      : plant.body.radius;
     const plantIconSize = scaleIcon(radius);
     const iconRadius = hover ? plantIconSize * 1.1 : plantIconSize;
     const { qx, qy } = transformXY(x, y, mapTransformProps);

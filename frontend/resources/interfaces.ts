@@ -1,12 +1,12 @@
 import { SequenceReducerState } from "../sequences/interfaces";
 import { DesignerState } from "../farm_designer/interfaces";
-import { CowardlyDictionary } from "../util";
 import {
   Dictionary,
   TaggedResource,
   ResourceName,
   TaggedToolSlotPointer,
   TaggedTool,
+  RestResource,
 } from "farmbot";
 import { RegimenState } from "../regimens/reducer";
 import { FarmwareState } from "../farmware/interfaces";
@@ -16,6 +16,7 @@ import { SequenceMeta } from "./sequence_meta";
 import { AlertReducerState } from "../messages/interfaces";
 import { RootFolderNode, FolderMeta } from "../folders/interfaces";
 import { PhotosState } from "../photos/reducer";
+import { PointGroup } from "farmbot/dist/resources/api_resources";
 
 export type UUID = string;
 export type VariableNameSet = Record<string, SequenceMeta | undefined>;
@@ -24,7 +25,7 @@ export type UUIDSet = Record<UUID, true>;
 export interface ResourceIndex {
   all: UUIDSet;
   byKind: Record<ResourceName, Record<UUID, UUID>>;
-  byKindAndId: CowardlyDictionary<UUID>;
+  byKindAndId: Dictionary<UUID | undefined>;
   references: Dictionary<TaggedResource | undefined>;
   /**
    * PROBLEM: _efficiently_ tracking variable declarations across all sequences.
@@ -81,6 +82,7 @@ export interface ResourceIndex {
     localMetaAttributes: Record<number, FolderMeta>;
     searchTerm?: string;
     filteredFolders?: RootFolderNode | undefined;
+    stashedOpenState?: Record<number, boolean>;
   }
 }
 
@@ -103,3 +105,8 @@ export interface SlotWithTool {
   toolSlot: TaggedToolSlotPointer;
   tool: TaggedTool | undefined;
 }
+
+interface PointGroupPlus extends PointGroup {
+  member_count?: number;
+}
+export type TaggedPointGroup = RestResource<"PointGroup", PointGroupPlus>;

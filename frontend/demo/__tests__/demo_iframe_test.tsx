@@ -17,7 +17,7 @@ import React from "react";
 import axios from "axios";
 import { shallow } from "enzyme";
 import { DemoIframe, WAITING_ON_API, EASTER_EGG, MQTT_CHAN } from "../demo_iframe";
-import { MqttClient } from "mqtt";
+import { IConnackPacket } from "mqtt";
 import { tourPath } from "../../help/tours";
 import { Path } from "../../internal_urls";
 
@@ -27,9 +27,9 @@ describe("<DemoIframe />", () => {
     const el = shallow<DemoIframe>(<DemoIframe />);
     expect(el.text()).toContain("DEMO THE APP");
     el.instance().connectMqtt = () =>
-      Promise.resolve() as unknown as Promise<MqttClient>;
+      Promise.resolve() as unknown as Promise<IConnackPacket>;
     await el.instance().requestAccount();
-    expect(axios.post).toHaveBeenCalled();
+    await expect(axios.post).toHaveBeenCalled();
     expect(el.state().stage).toContain(WAITING_ON_API);
   });
 
@@ -41,6 +41,13 @@ describe("<DemoIframe />", () => {
     expect(axios.post).toHaveBeenCalled();
     expect(el.state().error).toBe(mockResponse);
     expect(console.error).toHaveBeenCalledWith(mockResponse);
+  });
+
+  it("changes model", () => {
+    const wrapper = shallow<DemoIframe>(<DemoIframe />);
+    expect(wrapper.state().productLine).toEqual("genesis_1.7");
+    wrapper.find("FBSelect").simulate("change", { value: "express_1.2" });
+    expect(wrapper.state().productLine).toEqual("express_1.2");
   });
 
   it("handles MQTT messages", () => {

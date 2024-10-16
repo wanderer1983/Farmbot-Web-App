@@ -59,6 +59,7 @@ function route<T, U>(info: UnboundRouteConfig<T, U>) {
     const { $ } = info;
     return {
       $,
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       enter: async () => {
         try {
           const comp = (await info.getModule())[info.key];
@@ -79,17 +80,27 @@ function route<T, U>(info: UnboundRouteConfig<T, U>) {
   };
 }
 
-/** The 404 handler. All unresolved routes end up here. MUST BE LAST ITEM IN
- * ROUTE CONFIG!!! */
-export const NOT_FOUND_ROUTE = route({
-  children: false,
-  $: "*",
-  getModule: () => import("./404"),
-  key: "FourOhFour"
-});
-
 const getModule = () => import("./farm_designer");
 const key = "FarmDesigner";
+
+/** The 404 handler. All unresolved routes end up here. MUST BE LAST ITEM IN
+ * ROUTE CONFIG!!! */
+const NOT_FOUND_ROUTES = [
+  route({
+    children: true,
+    $: "*",
+    getModule,
+    key,
+    getChild: () => import("./404"),
+    childKey: "FourOhFour"
+  }),
+  route({
+    children: false,
+    $: "*",
+    getModule: () => import("./404"),
+    key: "FourOhFour"
+  }),
+];
 
 /** Bind the route to a callback by calling in a function that passes the
   callback in as the first argument.
@@ -209,6 +220,22 @@ export const UNBOUND_ROUTES = [
     key,
     getChild: () => import("./points/point_info"),
     childKey: "EditPoint"
+  }),
+  route({
+    children: true,
+    $: Path.route(Path.curves()),
+    getModule,
+    key,
+    getChild: () => import("./curves/curves_inventory"),
+    childKey: "Curves"
+  }),
+  route({
+    children: true,
+    $: Path.route(Path.curves(":curve_id")),
+    getModule,
+    key,
+    getChild: () => import("./curves/edit_curve"),
+    childKey: "EditCurve"
   }),
   route({
     children: true,
@@ -348,19 +375,19 @@ export const UNBOUND_ROUTES = [
   }),
   route({
     children: true,
-    $: Path.route(Path.designerSequences("commands")),
-    getModule,
-    key,
-    getChild: () => import("./sequences/panel/commands"),
-    childKey: "DesignerSequenceCommands"
-  }),
-  route({
-    children: true,
     $: Path.route(Path.designerSequences(":sequence_name")),
     getModule,
     key,
     getChild: () => import("./sequences/panel/editor"),
     childKey: "DesignerSequenceEditor"
+  }),
+  route({
+    children: true,
+    $: Path.route(Path.sequenceVersion()),
+    getModule,
+    key,
+    getChild: () => import("./sequences/panel/preview"),
+    childKey: "DesignerSequencePreview"
   }),
   route({
     children: true,
@@ -586,4 +613,4 @@ export const UNBOUND_ROUTES = [
     getChild: () => import("./zones/edit_zone"),
     childKey: "EditZone"
   }),
-].concat([NOT_FOUND_ROUTE]);
+].concat(NOT_FOUND_ROUTES);

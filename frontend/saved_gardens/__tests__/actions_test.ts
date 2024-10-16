@@ -34,9 +34,9 @@ describe("snapshotGarden", () => {
   });
 
   it("calls with garden name", () => {
-    snapshotGarden("new saved garden");
+    snapshotGarden("new saved garden", "notes");
     expect(axios.post).toHaveBeenCalledWith(
-      API.current.snapshotPath, { name: "new saved garden" });
+      API.current.snapshotPath, { name: "new saved garden", notes: "notes" });
   });
 });
 
@@ -73,12 +73,12 @@ describe("closeSavedGarden", () => {
 describe("openSavedGarden", () => {
   it("opens garden", () => {
     const dispatch = jest.fn();
-    const uuid = "SavedGardenUuid.1.0";
-    openSavedGarden(uuid)(dispatch);
+    const id = 1;
+    openSavedGarden(id)(dispatch);
     expect(push).toHaveBeenCalledWith(Path.savedGardens(1));
     expect(dispatch).toHaveBeenCalledWith({
       type: Actions.CHOOSE_SAVED_GARDEN,
-      payload: uuid
+      payload: id,
     });
   });
 });
@@ -86,7 +86,7 @@ describe("openSavedGarden", () => {
 describe("openOrCloseGarden", () => {
   it("opens garden", () => {
     const props = {
-      savedGarden: "SavedGardenUuid.1.0",
+      savedGardenId: 1,
       dispatch: jest.fn(),
       gardenIsOpen: false,
     };
@@ -96,7 +96,7 @@ describe("openOrCloseGarden", () => {
 
   it("closes garden", () => {
     const props = {
-      savedGarden: "SavedGardenUuid.1.0",
+      savedGardenId: 1,
       dispatch: jest.fn(),
       gardenIsOpen: true,
     };
@@ -107,15 +107,15 @@ describe("openOrCloseGarden", () => {
 
 describe("newSavedGarden", () => {
   it("creates a new saved garden", () => {
-    newSavedGarden("my saved garden")(jest.fn(() => Promise.resolve()));
+    newSavedGarden("my saved garden", "notes")(jest.fn(() => Promise.resolve()));
     expect(initSave).toHaveBeenCalledWith(
-      "SavedGarden", { name: "my saved garden" });
+      "SavedGarden", { name: "my saved garden", notes: "notes" });
   });
 
   it("creates a new saved garden with default name", () => {
-    newSavedGarden("")(jest.fn(() => Promise.resolve()));
+    newSavedGarden("", "")(jest.fn(() => Promise.resolve()));
     expect(initSave).toHaveBeenCalledWith(
-      "SavedGarden", { name: "Untitled Garden" });
+      "SavedGarden", { name: "Untitled Garden", notes: "" });
   });
 });
 

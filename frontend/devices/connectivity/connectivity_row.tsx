@@ -1,9 +1,9 @@
 import React from "react";
-import { CowardlyDictionary } from "../../util";
 import { Row, Col } from "../../ui";
 import { t } from "../../i18next_wrapper";
 import { syncText } from "../../nav/sync_text";
 import { SyncStatus } from "farmbot";
+import { isMobile } from "../../screen_size";
 
 /** Data model for a single row within the <ConnectivityPanel /> */
 export interface StatusRowProps {
@@ -18,16 +18,16 @@ export interface StatusRowProps {
   syncStatus?: SyncStatus;
 }
 
-const colorLookup: CowardlyDictionary<string> = {
+const colorLookup: Record<string, string> = {
   true: "green",
   false: "red",
   undefined: "gray"
 };
 
-const iconLookup: CowardlyDictionary<string> = {
-  true: "check",
-  false: "times",
-  undefined: "question"
+const iconLookup: Record<string, string> = {
+  true: "fa-check",
+  false: "fa-times",
+  undefined: "fa-question"
 };
 
 export function ConnectivityRow(props: StatusRowProps) {
@@ -45,7 +45,7 @@ export function ConnectivityRow(props: StatusRowProps) {
     ? "saucer active grey"
     : `diagnosis-indicator saucer active ${colorClass} ${hoverClass}`;
   const icon = iconLookup["" + connectionStatus];
-  const iconClass = syncStatus == "syncing" ? "spinner fa-pulse" : icon;
+  const iconClass = syncStatus == "syncing" ? "fa-spinner fa-pulse" : icon;
 
   const getTitle = (header?: boolean) => {
     if (header) { return t("Status"); }
@@ -56,7 +56,7 @@ export function ConnectivityRow(props: StatusRowProps) {
     }
   };
 
-  const browserFrom = window.innerWidth <= 450
+  const browserFrom = isMobile()
     ? t("This phone")
     : t("This computer");
 
@@ -66,7 +66,7 @@ export function ConnectivityRow(props: StatusRowProps) {
         title={syncStatus ? syncText(syncStatus) : getTitle(props.header)}
         onMouseEnter={hoverOver(connectionName)}
         onMouseLeave={hoverOver(undefined)}>
-        {!props.header && <i className={`fa fa-${iconClass}`} />}
+        {!props.header && <i className={`fa ${iconClass}`} />}
       </div>
       {!props.header &&
         <div className={`saucer-connector ${connectorColorClass}`} />}

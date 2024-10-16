@@ -21,20 +21,23 @@ import {
   PlantDateBulkUpdate, PlantSlugBulkUpdate, PlantStatusBulkUpdate,
   PointColorBulkUpdate,
   PointSizeBulkUpdate,
+  PlantDepthBulkUpdate,
+  PlantCurvesBulkUpdate,
 } from "./edit_plant_status";
 import { FBSelect, DropDownItem } from "../ui";
 import {
   PointType, TaggedPoint, TaggedGenericPointer, TaggedToolSlotPointer,
   TaggedTool,
   TaggedWeedPointer,
-  TaggedPointGroup,
   SpecialStatus,
+  TaggedCurve,
 } from "farmbot";
-import { UUID } from "../resources/interfaces";
+import { TaggedPointGroup, UUID } from "../resources/interfaces";
 import {
   selectAllActivePoints, selectAllToolSlotPointers, selectAllTools,
   selectAllPointGroups,
   maybeGetTimeSettings,
+  selectAllCurves,
 } from "../resources/selectors";
 import { PointInventoryItem } from "../points/point_inventory_item";
 import { ToolSlotInventoryItem } from "../tools";
@@ -52,6 +55,10 @@ import { ToolTransformProps } from "../tools/interfaces";
 import { betterCompact } from "../util";
 import { savePoints } from "../farm_designer/map/layers/plants/plant_actions";
 import { Path } from "../internal_urls";
+import { getFbosConfig } from "../resources/getters";
+import {
+  getFwHardwareValue, hasUTM,
+} from "../settings/firmware/firmware_hardware_support";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isPointType = (x: any): x is PointType =>
@@ -59,8 +66,7 @@ export const isPointType = (x: any): x is PointType =>
 
 export const validPointTypes =
   (pointerTypes: unknown[] | undefined): PointType[] | undefined => {
-    const validValues = (pointerTypes || [])
-      .filter(x => isPointType(x)).map(x => x as PointType);
+    const validValues = (pointerTypes || []).filter(x => isPointType(x));
     return validValues.length > 0 ? validValues : undefined;
   };
 
@@ -69,6 +75,10 @@ export const pointGroupSubset =
     groups.filter(p =>
       (validPointTypes(p.body.criteria.string_eq.pointer_type) || [])
         .includes(pointerType));
+
+export const uncategorizedGroupSubset = (groups: TaggedPointGroup[]) =>
+  groups.filter(p =>
+    (validPointTypes(p.body.criteria.string_eq.pointer_type) || []).length < 1);
 
 export const setSelectionPointType = (payload: PointType[] | undefined) =>
   (dispatch: Function) =>
@@ -105,13 +115,15 @@ export const mapStateToProps = (props: Everything): SelectPlantsProps => {
     plants: getPlants(props.resources),
     allPoints: selectAllActivePoints(props.resources.index),
     dispatch: props.dispatch,
-    gardenOpen: openedSavedGarden,
+    gardenOpenId: openedSavedGarden,
     tools: selectAllTools(props.resources.index),
     groups: selectAllPointGroups(props.resources.index),
     isActive: isActive(selectAllToolSlotPointers(props.resources.index)),
     toolTransformProps: { xySwap, quadrant },
     timeSettings: maybeGetTimeSettings(props.resources.index),
     bulkPlantSlug,
+    noUTM: !hasUTM(getFwHardwareValue(getFbosConfig(props.resources.index))),
+    curves: selectAllCurves(props.resources.index),
   };
 };
 
@@ -122,13 +134,15 @@ export interface SelectPlantsProps {
   selected: UUID[] | undefined;
   selectionPointType: PointType[] | undefined;
   getConfigValue: GetWebAppConfigValue;
-  gardenOpen: string | undefined;
+  gardenOpenId: number | undefined;
   toolTransformProps: ToolTransformProps;
   isActive(id: number | undefined): boolean;
   tools: TaggedTool[];
   groups: TaggedPointGroup[];
   timeSettings: TimeSettings;
   bulkPlantSlug: string | undefined;
+  noUTM: boolean;
+  curves: TaggedCurve[];
 }
 
 interface SelectPlantsState {
@@ -182,7 +196,7 @@ export class RawSelectPlants
     this.props.groups.map(group => {
       const { id } = group.body;
       const groupName = group.body.name;
-      const count = pointsSelectedByGroup(group, this.props.allPoints).length;
+      const count = group.body.member_count || 0;
       const label = `${groupName} (${t("{{count}} items", { count })})`;
       id && (lookup[id] = { label, value: id });
     });
@@ -210,21 +224,29 @@ export class RawSelectPlants
     const unsavedPoints = betterCompact(this.selected.map(uuid =>
       this.props.allPoints.filter(p => p.uuid == uuid)[0])
       .filter(p => p?.specialStatus == SpecialStatus.DIRTY));
+    const bulkUpdateProps = {
+      pointerType: this.selectionPointType,
+      allPoints: this.props.allPoints,
+      selected: this.selected,
+      dispatch: this.props.dispatch,
+    };
     return <div className={["panel-action-buttons",
       this.state.moreSelections ? "more-select" : "",
       this.state.moreActions ? "more-action" : "",
     ].join(" ")}>
-      <label>{t("selection type")}</label>
-      <FBSelect key={this.selectionPointType}
-        list={POINTER_TYPE_LIST()}
-        selectedItem={POINTER_TYPE_DDI_LOOKUP()[this.selectionPointType]}
-        onChange={ddi => {
-          this.props.dispatch(selectPoint(undefined));
-          this.setState({ group_id: undefined });
-          this.props.dispatch(setSelectionPointType(
-            ddi.value == "All" ? POINTER_TYPES : validPointTypes([ddi.value])));
-        }} />
-      <div className="button-row">
+      <div className={"selection-type"}>
+        <label>{t("selection type")}</label>
+        <FBSelect key={this.selectionPointType}
+          list={POINTER_TYPE_LIST()}
+          selectedItem={POINTER_TYPE_DDI_LOOKUP()[this.selectionPointType]}
+          onChange={ddi => {
+            this.props.dispatch(selectPoint(undefined));
+            this.setState({ group_id: undefined });
+            this.props.dispatch(setSelectionPointType(
+              ddi.value == "All" ? POINTER_TYPES : validPointTypes([ddi.value])));
+          }} />
+      </div>
+      <div className="button-row group-select">
         <button className="fb-button gray"
           title={t("Select none")}
           onClick={() => {
@@ -242,9 +264,11 @@ export class RawSelectPlants
           {t("Select all")}
         </button>
         <More className={"more-select"} isOpen={this.state.moreSelections}
+          customText={{
+            more: t("Select all in group"), less: t("Select all in group"),
+          }}
           toggleOpen={() =>
             this.setState({ moreSelections: !this.state.moreSelections })}>
-          <label>{t("select all in group")}</label>
           <FBSelect key={`${this.selectionPointType}-${this.state.group_id}`}
             list={Object.values(this.groupDDILookup)}
             selectedItem={this.state.group_id
@@ -255,7 +279,7 @@ export class RawSelectPlants
         </More>
       </div>
       <label>{t("SELECTION ACTIONS")}</label>
-      <div className="button-row">
+      <div className="buttons">
         <button className="fb-button red"
           title={t("Delete")}
           onClick={() => this.destroySelected(this.props.selected)}>
@@ -263,7 +287,7 @@ export class RawSelectPlants
         </button>
         <button className="fb-button dark-blue"
           title={t("Create group")}
-          onClick={() => !this.props.gardenOpen
+          onClick={() => !this.props.gardenOpenId
             ? this.props.dispatch(createGroup({ pointUuids: this.selected }))
             : error(t(Content.ERROR_PLANT_TEMPLATE_GROUP))}>
           {t("Create group")}
@@ -277,41 +301,34 @@ export class RawSelectPlants
             })}>
             {t("save")}
           </button>}
+      </div>
+      <div className="button-row bulk-update">
         <More className={"more-action"} isOpen={this.state.moreActions}
           toggleOpen={() =>
             this.setState({ moreActions: !this.state.moreActions })}>
           {(this.selectionPointType == "Plant" ||
             this.selectionPointType == "Weed") &&
-            <PlantStatusBulkUpdate
-              pointerType={this.selectionPointType}
-              allPoints={this.props.allPoints}
-              selected={this.selected}
-              dispatch={this.props.dispatch} />}
+            <PlantStatusBulkUpdate {...bulkUpdateProps}
+              pointerType={this.selectionPointType} />}
           {["Plant"].includes(this.selectionPointType) &&
-            <PlantDateBulkUpdate
-              allPoints={this.props.allPoints}
-              selected={this.selected}
-              timeSettings={this.props.timeSettings}
-              dispatch={this.props.dispatch} />}
+            <PlantDateBulkUpdate {...bulkUpdateProps}
+              timeSettings={this.props.timeSettings} />}
           {["Plant", "Weed", "GenericPointer"]
             .includes(this.selectionPointType) &&
-            <PointSizeBulkUpdate
-              allPoints={this.props.allPoints}
-              selected={this.selected}
-              dispatch={this.props.dispatch} />}
-          {["Weed", "GenericPointer"]
-            .includes(this.selectionPointType) &&
-            <PointColorBulkUpdate
-              allPoints={this.props.allPoints}
-              selected={this.selected}
-              dispatch={this.props.dispatch} />}
+            <PointSizeBulkUpdate {...bulkUpdateProps} />}
           {["Plant"]
             .includes(this.selectionPointType) &&
-            <PlantSlugBulkUpdate
-              allPoints={this.props.allPoints}
-              selected={this.selected}
-              bulkPlantSlug={this.props.bulkPlantSlug}
-              dispatch={this.props.dispatch} />}
+            <PlantDepthBulkUpdate {...bulkUpdateProps} />}
+          {["Plant"].includes(this.selectionPointType) &&
+            <PlantCurvesBulkUpdate {...bulkUpdateProps}
+              curves={this.props.curves} />}
+          {["Weed", "GenericPointer"]
+            .includes(this.selectionPointType) &&
+            <PointColorBulkUpdate {...bulkUpdateProps} />}
+          {["Plant"]
+            .includes(this.selectionPointType) &&
+            <PlantSlugBulkUpdate {...bulkUpdateProps}
+              bulkPlantSlug={this.props.bulkPlantSlug} />}
         </More>
       </div>
     </div>;
@@ -400,6 +417,7 @@ export class RawSelectPlants
                   toolSlot={p as TaggedToolSlotPointer}
                   isActive={this.props.isActive}
                   tools={this.props.tools}
+                  noUTM={this.props.noUTM}
                   toolTransformProps={this.props.toolTransformProps}
                   hideDropdown={true} />;
             }
@@ -416,21 +434,25 @@ interface MoreProps {
   className: string;
   isOpen: boolean;
   toggleOpen(): void;
-  children: (React.ReactChild | false)[];
+  customText?: { more: string, less: string };
+  children: JSX.Element | (JSX.Element | false)[];
 }
 
-const More = (props: MoreProps) =>
-  <div className={"more"}>
+const More = (props: MoreProps) => {
+  const more = props.customText?.more || t("More");
+  const less = props.customText?.less || t("Less");
+  return <div className={"more"}>
     <div className={"more-button"}
       onClick={props.toggleOpen}>
-      <p>{props.isOpen ? t("Less") : t("More")}</p>
+      <p>{props.isOpen ? less : more}</p>
       <i className={`fa fa-caret-${props.isOpen ? "up" : "down"}`}
-        title={props.isOpen ? t("less") : t("more")} />
+        title={props.isOpen ? less : more} />
     </div>
     <div className={"more-content"} hidden={!props.isOpen}>
       {props.children}
     </div>
   </div>;
+};
 
 export interface GetFilteredPointsProps {
   selectionPointType: PointType[] | undefined;
@@ -458,7 +480,7 @@ interface GetSelectedPointsProps extends GetFilteredPointsProps {
   selected: UUID[];
 }
 
-export const getSelectedPoints = (props: GetSelectedPointsProps) =>
+const getSelectedPoints = (props: GetSelectedPointsProps) =>
   props.selected
     .map(uuid => getFilteredPoints(props).filter(p => p.uuid == uuid)[0])
     .filter(p => p);

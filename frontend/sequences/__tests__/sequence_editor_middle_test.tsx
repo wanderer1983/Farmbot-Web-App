@@ -2,25 +2,25 @@ import React from "react";
 import { SequenceEditorMiddle } from "../sequence_editor_middle";
 import { mount } from "enzyme";
 import { SequenceEditorMiddleProps } from "../interfaces";
-import {
-  FAKE_RESOURCES, buildResourceIndex,
-} from "../../__test_support__/resource_index_builder";
+import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import { fakeSequence } from "../../__test_support__/fake_state/resources";
 import {
   fakeHardwareFlags, fakeFarmwareData,
 } from "../../__test_support__/fake_sequence_step_data";
+import { emptyState } from "../../resources/reducer";
 
 describe("<SequenceEditorMiddle/>", () => {
   function fakeProps(): SequenceEditorMiddleProps {
     return {
       dispatch: jest.fn(),
       sequence: fakeSequence(),
-      resources: buildResourceIndex(FAKE_RESOURCES).index,
+      sequences: [],
+      resources: buildResourceIndex().index,
       syncStatus: "synced",
       hardwareFlags: fakeHardwareFlags(),
       farmwareData: fakeFarmwareData(),
       getWebAppConfigValue: jest.fn(),
-      menuOpen: undefined,
+      sequencesState: emptyState().consumers.sequences,
     };
   }
 

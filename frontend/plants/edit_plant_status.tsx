@@ -1,9 +1,12 @@
 import React from "react";
-import { FBSelect, DropDownItem, ColorPicker, BlurableInput } from "../ui";
+import {
+  FBSelect, DropDownItem, ColorPicker, BlurableInput, NULL_CHOICE,
+} from "../ui";
 import { PlantOptions } from "../farm_designer/interfaces";
 import {
   PlantStage, TaggedWeedPointer, PointType, TaggedPoint, TaggedPlantPointer,
   TaggedGenericPointer,
+  TaggedCurve,
 } from "farmbot";
 import moment from "moment";
 import { t } from "../i18next_wrapper";
@@ -16,6 +19,10 @@ import { Link } from "../link";
 import { Path } from "../internal_urls";
 import { push } from "../history";
 import { Actions } from "../constants";
+import { CurveType } from "../curves/templates";
+import { curveToDdi, CURVE_KEY_LOOKUP } from "./curve_info";
+import { CURVE_TYPES } from "../curves/curves_inventory";
+import { betterCompact } from "../util";
 
 export const PLANT_STAGE_DDI_LOOKUP = (): { [x: string]: DropDownItem } => ({
   planned: { label: t("Planned"), value: "planned" },
@@ -77,7 +84,7 @@ const getUpdateByPlantStage = (plant_stage: PlantStage): PlantOptions => {
       update.planted_at = undefined;
       break;
     case "planted":
-      update.planted_at = moment().toISOString();
+      update.planted_at = "" + moment().toISOString();
   }
   return update;
 };
@@ -105,7 +112,7 @@ export interface PlantStatusBulkUpdateProps extends BulkUpdateBaseProps {
 /** Update `plant_stage` for multiple plants at once. */
 export const PlantStatusBulkUpdate = (props: PlantStatusBulkUpdateProps) =>
   <div className="plant-status-bulk-update">
-    <p>{t("update status to")}</p>
+    <p>{t("Update status to")}</p>
     <FBSelect
       key={JSON.stringify(props.selected)}
       list={props.pointerType == "Plant"
@@ -145,7 +152,7 @@ export const PlantDateBulkUpdate = (props: PlantDateBulkUpdateProps) => {
     point.body.pointer_type == "Plant")
     .map((p: TaggedPlantPointer) => p);
   return <div className={"plant-date-bulk-update"}>
-    <p>{t("update start to")}</p>
+    <p>{t("Update start to")}</p>
     <BlurableInput
       type="date"
       value={moment().format("YYYY-MM-DD")}
@@ -157,7 +164,7 @@ export const PlantDateBulkUpdate = (props: PlantDateBulkUpdateProps) => {
           }))
           && plants.map(plant => {
             props.dispatch(edit(plant, {
-              planted_at: moment(e.currentTarget.value)
+              planted_at: "" + moment(e.currentTarget.value)
                 .utcOffset(props.timeSettings.utcOffset).toISOString()
             }));
             props.dispatch(save(plant.uuid));
@@ -166,7 +173,7 @@ export const PlantDateBulkUpdate = (props: PlantDateBulkUpdateProps) => {
   </div>;
 };
 
-/** Update `radius` for multiple points at once. */
+/** Update `radius` for multiple plants at once. */
 export const PointSizeBulkUpdate = (props: BulkUpdateBaseProps) => {
   const points = props.allPoints.filter(point =>
     props.selected.includes(point.uuid) && point.kind === "Point" &&
@@ -175,9 +182,10 @@ export const PointSizeBulkUpdate = (props: BulkUpdateBaseProps) => {
   const averageSize = round(mean(points.map(p => p.body.radius)));
   const [radius, setRadius] = React.useState("" + (averageSize || 25));
   return <div className={"point-size-bulk-update"}>
-    <p>{t("update radius to")}</p>
+    <p>{t("Update radius to")}</p>
     <input
       value={radius}
+      min={0}
       onChange={e => setRadius(e.currentTarget.value)}
       onBlur={() => {
         const radiusNum = parseInt(radius);
@@ -192,6 +200,81 @@ export const PointSizeBulkUpdate = (props: BulkUpdateBaseProps) => {
   </div>;
 };
 
+/** Update `depth` for multiple points at once. */
+export const PlantDepthBulkUpdate = (props: BulkUpdateBaseProps) => {
+  const points = props.allPoints.filter(point =>
+    props.selected.includes(point.uuid) && point.kind === "Point" &&
+    point.body.pointer_type == "Plant")
+    .map((p: TaggedPlantPointer) => p);
+  const averageDepth = round(mean(points.map(p => p.body.depth)));
+  const [depth, setDepth] = React.useState("" + (averageDepth || 0));
+  return <div className={"plant-depth-bulk-update"}>
+    <p>{t("Update depth to")}</p>
+    <input
+      value={depth}
+      min={0}
+      onChange={e => setDepth(e.currentTarget.value)}
+      onBlur={() => {
+        const depthNum = parseFloat(depth);
+        isFinite(depthNum) && points.length > 0 && confirm(
+          t("Change depth to {{ depth }}mm for {{ num }} items?",
+            { depth: depthNum, num: points.length }))
+          && points.map(point => {
+            props.dispatch(edit(point, { depth: depthNum }));
+            props.dispatch(save(point.uuid));
+          });
+      }} />
+  </div>;
+};
+
+export interface PlantCurvesBulkUpdateProps extends BulkUpdateBaseProps {
+  curves: TaggedCurve[];
+}
+
+export interface PlantCurveBulkUpdateProps extends PlantCurvesBulkUpdateProps {
+  curveType: CurveType;
+}
+
+export const PlantCurveBulkUpdate = (props: PlantCurveBulkUpdateProps) => {
+  const points = props.allPoints.filter(point =>
+    props.selected.includes(point.uuid) && point.kind === "Point" &&
+    point.body.pointer_type == "Plant")
+    .map((p: TaggedPlantPointer) => p);
+  const curveName = CURVE_TYPES()[props.curveType];
+  const curveKey = CURVE_KEY_LOOKUP[props.curveType];
+  return <div className={"plant-curve-bulk-update"}>
+    <p>{t("Update {{ curveName }} curve to", { curveName })}</p>
+    <FBSelect
+      key={JSON.stringify(props.selected)}
+      list={([NULL_CHOICE] as DropDownItem[])
+        .concat(betterCompact(props.curves
+          .filter(curve => curve.body.type == props.curveType)
+          .map(curve => curveToDdi(curve))))}
+      selectedItem={undefined}
+      customNullLabel={t("Select a curve")}
+      onChange={ddi => {
+        const id = parseInt("" + ddi.value);
+        ((id && isFinite(id)) || ddi.isNull) && points.length > 0 && confirm(
+          t("Change {{ curveName }} curve for {{ num }} items?",
+            { curveName, num: points.length }))
+          && points.map(point => {
+            props.dispatch(edit(point, {
+              [curveKey]: ddi.isNull ? undefined : id,
+            }));
+            props.dispatch(save(point.uuid));
+          });
+      }} />
+  </div>;
+};
+
+/** Update curves for multiple points at once. */
+export const PlantCurvesBulkUpdate = (props: PlantCurvesBulkUpdateProps) => {
+  return <div className={"plant-curves-bulk-update"}>
+    {[CurveType.water, CurveType.spread, CurveType.height].map(curveType =>
+      <PlantCurveBulkUpdate key={curveType} {...props} curveType={curveType} />)}
+  </div>;
+};
+
 /** Update `meta.color` for multiple points at once. */
 export const PointColorBulkUpdate = (props: BulkUpdateBaseProps) => {
   const points = props.allPoints.filter(point =>
@@ -199,7 +282,7 @@ export const PointColorBulkUpdate = (props: BulkUpdateBaseProps) => {
     point.body.pointer_type != "ToolSlot")
     .map((p: TaggedWeedPointer | TaggedGenericPointer) => p);
   return <div className={"point-color-bulk-update"}>
-    <p>{t("update color to")}</p>
+    <p>{t("Update color to")}</p>
     <ColorPicker
       current={"green"}
       onChange={color => {
@@ -226,13 +309,13 @@ export const PlantSlugBulkUpdate = (props: PlantSlugBulkUpdateProps) => {
     .map((p: TaggedPlantPointer) => p);
   const slug = props.bulkPlantSlug || plants[0]?.body.openfarm_slug;
   return <div className={"plant-slug-bulk-update"}>
-    <p>{t("update type to")}</p>
+    <p>{t("Update type to")}</p>
     <Link
       title={t("View crop info")}
       to={Path.cropSearch(slug)}>
       {startCase(slug)}
     </Link>
-    <i className={"fa fa-pencil"}
+    <i className={"fa fa-pencil fb-icon-button"}
       onClick={() => {
         props.dispatch({ type: Actions.SET_SLUG_BULK, payload: slug });
         push(Path.cropSearch());
@@ -267,6 +350,7 @@ export interface EditWeedStatusProps {
 /** Select a `plant_stage` for a weed. */
 export const EditWeedStatus = (props: EditWeedStatusProps) =>
   <FBSelect
+    key={props.weed.uuid}
     list={WEED_STAGE_LIST()}
     selectedItem={WEED_STAGE_DDI_LOOKUP()[props.weed.body.plant_stage]}
     onChange={ddi =>

@@ -5,7 +5,7 @@ export interface SavedGardensProps {
   plantTemplates: TaggedPlantTemplate[];
   dispatch: Function;
   plantPointerCount: number;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
 }
 
 export interface SavedGardenListProps extends SavedGardensProps {
@@ -18,7 +18,7 @@ export interface SavedGardensState {
 
 export interface GardenViewButtonProps {
   dispatch: Function;
-  savedGarden: string | undefined;
+  savedGardenId: number | undefined;
   gardenIsOpen: boolean;
 }
 
@@ -41,4 +41,5 @@ export interface EditGardenProps {
   gardenIsOpen: boolean;
   dispatch: Function;
   plantPointerCount: number;
+  gardenPlants: TaggedPlantTemplate[];
 }

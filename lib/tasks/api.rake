@@ -25,11 +25,11 @@ rescue => exception
 end
 
 def rebuild_deps
-  sh "sudo docker-compose run web bundle install"
-  sh "sudo docker-compose run web npm install"
-  sh "sudo docker-compose run web bundle exec rails db:setup"
-  sh "sudo docker-compose run web rake keys:generate"
-  sh "sudo docker-compose run web npm run build"
+  sh "sudo docker compose run web bundle install"
+  sh "sudo docker compose run web npm install"
+  sh "sudo docker compose run web bundle exec rails db:setup"
+  sh "sudo docker compose run web rake keys:generate"
+  sh "sudo docker compose run web npm run build"
 end
 
 def user_typed?(word)
@@ -47,7 +47,7 @@ namespace :api do
 
   desc "Run Rails _ONLY_. No parcel."
   task only: :environment do
-    sh "sudo docker-compose up --scale parcel=0"
+    sh "sudo docker compose up --scale parcel=0"
   end
 
   def parcel(cmd, opts = " ")
@@ -108,6 +108,7 @@ namespace :api do
     Device
       .where(id: users.pluck(:device_id))
       .update_all(mounted_tool_id: nil)
+    users.map { |u| u.device.folders.update_all(parent_id: nil) }
     users.destroy_all
   end
 
@@ -135,8 +136,8 @@ namespace :api do
     # 60 days is the current policy.
     cutoff = 60.days.ago
     # Download release data from github
-    string_page_1 = URI.open("#{RELEASES_URL}?per_page=100&page=1").read
-    string_page_2 = URI.open("#{RELEASES_URL}?per_page=100&page=2").read
+    string_page_1 = URI.parse("#{RELEASES_URL}?per_page=100&page=1").open.read
+    string_page_2 = URI.parse("#{RELEASES_URL}?per_page=100&page=2").open.read
     data = JSON.parse(string_page_1).push(*JSON.parse(string_page_2))
       .map { |x| x.slice(VERSION, TIMESTAMP, PRERELEASE) } # Only grab keys that matter
       .reject { |x| x.fetch(VERSION).include?("-") } # Remove RC/Beta releases
@@ -163,10 +164,15 @@ namespace :api do
     end
   end
 
+  def trim_logs
+    Device.all.map{ |device| device.trim_excess_logs }
+  end
+
   desc "Deprecate old FBOS version, delete inactive accounts, etc.."
   task tidy: :environment do
     deprecate!
     InactiveAccountJob.perform_later
+    trim_logs
   end
 end
 Rake::Task["assets:precompile"].enhance ["api:parcel_compile"]

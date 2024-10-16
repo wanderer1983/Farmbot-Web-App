@@ -4,18 +4,20 @@ import { success, info } from "../toast/toast";
 import { push } from "../history";
 import { Actions } from "../constants";
 import { destroy, initSave, initSaveGetId } from "../api/crud";
-import { unpackUUID } from "../util";
-import { isString } from "lodash";
 import { TaggedSavedGarden, TaggedPlantTemplate } from "farmbot";
 import { t } from "../i18next_wrapper";
 import { stopTracking } from "../connectivity/data_consistency";
 import { Path } from "../internal_urls";
 
 /** Save all Plant to PlantTemplates in a new SavedGarden. */
-export const snapshotGarden = (gardenName?: string | undefined) =>
-  axios.post<void>(API.current.snapshotPath, gardenName
-    ? { name: gardenName }
-    : {})
+export const snapshotGarden = (
+  gardenName?: string | undefined,
+  gardenNotes?: string,
+) =>
+  axios.post<void>(API.current.snapshotPath,
+    gardenName
+      ? { name: gardenName, notes: gardenNotes }
+      : {})
     .then(() => {
       success(t("Garden Saved."));
       push(Path.plants());
@@ -30,7 +32,7 @@ export const unselectSavedGarden = {
 export const applyGarden = (gardenId: number) => (dispatch: Function) => axios
   .patch<void>(API.current.applyGardenPath(gardenId))
   .then(data => {
-    stopTracking(data.headers["x-farmbot-rpc-id"]);
+    stopTracking(data.headers["x-farmbot-rpc-id"] as string);
     push(Path.plants());
     dispatch(unselectSavedGarden);
     const busyToastTitle = t("Please wait");
@@ -49,27 +51,30 @@ export const closeSavedGarden = () => {
     dispatch(unselectSavedGarden);
 };
 
-export const openSavedGarden = (savedGarden: string) => {
-  push(Path.savedGardens(unpackUUID(savedGarden).remoteId));
+export const openSavedGarden = (savedGardenId: number | undefined) => {
+  push(Path.savedGardens(savedGardenId));
   return (dispatch: Function) =>
-    dispatch({ type: Actions.CHOOSE_SAVED_GARDEN, payload: savedGarden });
+    dispatch({ type: Actions.CHOOSE_SAVED_GARDEN, payload: savedGardenId });
 };
 
 /** Open a SavedGarden if it is closed, otherwise close it. */
 export const openOrCloseGarden = (props: {
-  savedGarden: string | undefined,
+  savedGardenId: number | undefined,
   gardenIsOpen: boolean,
   dispatch: Function
 }) =>
   () =>
-    !props.gardenIsOpen && isString(props.savedGarden)
-      ? props.dispatch(openSavedGarden(props.savedGarden))
+    !props.gardenIsOpen && props.savedGardenId
+      ? props.dispatch(openSavedGarden(props.savedGardenId))
       : props.dispatch(closeSavedGarden());
 
 /** Create a new SavedGarden with the chosen name. */
-export const newSavedGarden = (gardenName: string) =>
+export const newSavedGarden = (gardenName: string, gardenNotes: string) =>
   (dispatch: Function) => {
-    dispatch(initSave("SavedGarden", { name: gardenName || "Untitled Garden" }))
+    dispatch(initSave("SavedGarden", {
+      name: gardenName || "Untitled Garden",
+      notes: gardenNotes,
+    }))
       .then(() => {
         success(t("Garden Saved."));
         push(Path.plants());

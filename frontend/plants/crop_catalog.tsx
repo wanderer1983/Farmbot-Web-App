@@ -18,6 +18,7 @@ import { Panel } from "../farm_designer/panel_header";
 import { SearchField } from "../ui/search_field";
 import { Path } from "../internal_urls";
 import { maybeFindPlantById } from "../resources/selectors_by_id";
+import { Row } from "../ui";
 
 export function mapStateToProps(props: Everything): CropCatalogProps {
   const {
@@ -84,7 +85,7 @@ export class RawCropCatalog extends React.Component<CropCatalogProps, {}> {
         title={t("Choose a crop")}
         backTo={Path.plants()} />
       <DesignerPanelTop panel={Panel.Plants}>
-        <SearchField
+        <SearchField nameKey={"crops"}
           searchTerm={this.cropSearchQuery}
           placeholder={t("Search OpenFarm...")}
           onChange={this.handleChange}
@@ -95,7 +96,7 @@ export class RawCropCatalog extends React.Component<CropCatalogProps, {}> {
             : undefined} />
       </DesignerPanelTop>
       <DesignerPanelContent panelName={"crop-catalog"}>
-        <div className="crop-search-result-wrapper row">
+        <Row className={"crop-search-result-wrapper"}>
           <EmptyStateWrapper
             notEmpty={this.validSearchTerm}
             graphic={EmptyStateGraphic.crops}
@@ -112,7 +113,7 @@ export class RawCropCatalog extends React.Component<CropCatalogProps, {}> {
               bulkPlantSlug={this.props.bulkPlantSlug}
               dispatch={this.props.dispatch} />
           </EmptyStateWrapper>
-        </div>
+        </Row>
       </DesignerPanelContent>
     </DesignerPanel>;
   }

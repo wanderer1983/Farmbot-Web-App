@@ -1,5 +1,7 @@
 import { TaggedPointGroup, PointType, TaggedPoint, TaggedTool } from "farmbot";
-import { PointGroup } from "farmbot/dist/resources/api_resources";
+import {
+  PointGroup, PointGroupSortType,
+} from "farmbot/dist/resources/api_resources";
 import { BotSize } from "../../farm_designer/map/interfaces";
 import { UUID } from "../../resources/interfaces";
 import { ToolTransformProps } from "../../tools/interfaces";
@@ -54,6 +56,7 @@ export interface GroupPointCountBreakdownProps {
   hovered: UUID | undefined;
   tools: TaggedTool[];
   toolTransformProps: ToolTransformProps;
+  tryGroupSortType: PointGroupSortType | undefined;
 }
 
 export interface PointTypeSelectionProps {
@@ -119,20 +122,6 @@ export interface PointSubCriteriaProps extends SubCriteriaProps {
 
 export interface PlantSubCriteriaProps extends SubCriteriaProps {
   slugs: string[];
-}
-
-export interface CheckboxSelectionsProps {
-  dispatch: Function;
-  group: TaggedPointGroup;
-  slugs: string[];
-  pointerTypes: PointType[] | undefined;
-}
-
-export interface CheckboxSelectionsState {
-  Plant: boolean;
-  GenericPointer: boolean;
-  ToolSlot: boolean;
-  Weed: boolean;
 }
 
 export interface NumberLtGtInputProps {

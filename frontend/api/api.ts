@@ -156,6 +156,8 @@ export class API {
   get exportDataPath() { return `${this.baseUrl}/api/export_data`; }
   /** /api/plant_templates/:id */
   get plantTemplatePath() { return `${this.baseUrl}/api/plant_templates/`; }
+  /** /api/telemetry/ */
+  get telemetryPath() { return `${this.baseUrl}/api/telemetries/`; }
   /** /api/farmware_installations/:id */
   get farmwareInstallationPath() {
     return `${this.baseUrl}/api/farmware_installations/`;
@@ -175,6 +177,14 @@ export class API {
   get releasesPath() { return `${this.baseUrl}/api/releases?platform=`; }
   /** /api/feedback */
   get feedbackPath() { return `${this.baseUrl}/api/feedback`; }
+  /** /api/ai_feedbacks */
+  get aiFeedbacksPath() { return `${this.baseUrl}/api/ai_feedbacks`; }
+  /** /api/featured_sequences */
+  get featuredSequencesPath() { return `${this.baseUrl}/api/featured_sequences`; }
   /** /api/wizard_step_results/:id */
   get wizardStepResultsPath() { return `${this.baseUrl}/api/wizard_step_results/`; }
+  /** /api/curves/:id */
+  get curvesPath() { return `${this.baseUrl}/api/curves/`; }
+  /** /api/ai */
+  get aiPath() { return `${this.baseUrl}/api/ai`; }
 }

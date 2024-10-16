@@ -1,4 +1,4 @@
-import { ResourceIndex } from "./interfaces";
+import { ResourceIndex, TaggedPointGroup } from "./interfaces";
 import {
   TaggedResource,
   SpecialStatus,
@@ -20,9 +20,10 @@ import {
   TaggedFarmwareEnv,
   TaggedFarmwareInstallation,
   TaggedAlert,
-  TaggedPointGroup,
   TaggedFolder,
   TaggedWizardStepResult,
+  TaggedTelemetry,
+  TaggedCurve,
 } from "farmbot";
 import {
   isTaggedResource,
@@ -56,8 +57,7 @@ export const findTool = resourceFinder<TaggedTool>("Tool");
 export const findSequence = resourceFinder<TaggedSequence>("Sequence");
 export const findRegimen = resourceFinder<TaggedRegimen>("Regimen");
 export const findFarmEvent = resourceFinder<TaggedFarmEvent>("FarmEvent");
-export const findPoints = resourceFinder<TaggedPoint>("Point");
-export const findPointGroup = resourceFinder<TaggedPoint>("Point");
+export const findPointGroup = resourceFinder<TaggedPointGroup>("PointGroup");
 export const findSavedGarden = resourceFinder<TaggedSavedGarden>("SavedGarden");
 
 export const selectAllCrops =
@@ -79,6 +79,8 @@ export const selectAllPointGroups =
   (i: ResourceIndex) => findAll<TaggedPointGroup>(i, "PointGroup");
 export const selectAllActivePoints = (input: ResourceIndex) =>
   selectAllPoints(input).filter(x => x);
+export const selectAllCurves =
+  (i: ResourceIndex) => findAll<TaggedCurve>(i, "Curve");
 
 export const selectAllFarmwareEnvs =
   (i: ResourceIndex) => findAll<TaggedFarmwareEnv>(i, "FarmwareEnv");
@@ -106,5 +108,7 @@ export const selectAllSavedPeripherals =
   (input: ResourceIndex) => selectAllPeripherals(input).filter(isSaved);
 export const selectAllAlerts =
   (i: ResourceIndex) => findAll<TaggedAlert>(i, "Alert");
+export const selectAllTelemetry =
+  (i: ResourceIndex) => findAll<TaggedTelemetry>(i, "Telemetry");
 export const selectAllFolders =
   (i: ResourceIndex) => findAll<TaggedFolder>(i, "Folder");

@@ -101,6 +101,7 @@ import {
   fakeMapTransformProps,
 } from "../../../__test_support__/map_transform_props";
 import { keyboardEvent } from "../../../__test_support__/fake_html_events";
+import { times } from "lodash";
 
 const DEFAULT_EVENT = { preventDefault: jest.fn(), pageX: NaN, pageY: NaN };
 
@@ -129,7 +130,7 @@ const fakeProps = (): GardenMapProps => ({
   zoomLvl: 1,
   mapTransformProps: fakeMapTransformProps(),
   gridOffset: { x: 100, y: 100 },
-  peripherals: [],
+  peripheralValues: [],
   eStopStatus: false,
   latestImages: [],
   cameraCalibrationData: fakeCameraCalibrationData(),
@@ -143,6 +144,7 @@ const fakeProps = (): GardenMapProps => ({
   logs: [],
   deviceTarget: "",
   farmwareEnvs: [],
+  curves: [],
 });
 
 describe("<GardenMap/>", () => {
@@ -191,6 +193,18 @@ describe("<GardenMap/>", () => {
     document.onkeyup?.(e as never);
     expect(savePoints).not.toHaveBeenCalled();
     expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("doesn't animate", () => {
+    mockGroup = fakePointGroup();
+    mockGroup.body.criteria.string_eq = { pointer_type: ["Plant"] };
+    const p = fakeProps();
+    p.getConfigValue = () => false;
+    const wrapper = mount<GardenMap>(<GardenMap {...p} />);
+    expect(wrapper.instance().animate).toBeTruthy();
+    p.allPoints = times(101, fakePlant);
+    wrapper.setProps(p);
+    expect(wrapper.instance().animate).toBeFalsy();
   });
 
   it("starts drag: move plant", () => {
@@ -428,6 +442,15 @@ describe("<GardenMap/>", () => {
     }));
   });
 
+  it("sets cursor position", () => {
+    const wrapper = shallow<GardenMap>(<GardenMap {...fakeProps()} />);
+    mockMode = Mode.clickToAdd;
+    wrapper.find(".drop-area-svg").simulate("mouseMove", {
+      pageX: 10, pageY: 20
+    });
+    expect(wrapper.state().cursorPosition).toEqual({ x: 100, y: 200 });
+  });
+
   it("lays eggs", () => {
     setEggStatus(EggKeys.BRING_ON_THE_BUGS, "");
     setEggStatus(EggKeys.BUGS_ARE_STILL_ALIVE, "");
@@ -634,24 +657,6 @@ describe("<GardenMap/>", () => {
     const wrapper = mount<GardenMap>(<GardenMap {...p} />);
     const allowed = wrapper.instance().interactions("Weed");
     expect(allowed).toBeFalsy();
-  });
-
-  it("unswapped height and width", () => {
-    const p = fakeProps();
-    p.mapTransformProps.xySwap = false;
-    const wrapper = shallow(<GardenMap {...p} />);
-    const svg = wrapper.find(".drop-area-svg");
-    expect(svg.props().width).toEqual(3000);
-    expect(svg.props().height).toEqual(1500);
-  });
-
-  it("swapped height and width", () => {
-    const p = fakeProps();
-    p.mapTransformProps.xySwap = true;
-    const wrapper = shallow(<GardenMap {...p} />);
-    const svg = wrapper.find(".drop-area-svg");
-    expect(svg.props().width).toEqual(1500);
-    expect(svg.props().height).toEqual(3000);
   });
 
   it("gets group points", () => {

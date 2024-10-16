@@ -20,11 +20,10 @@ import {
 } from "../../../__test_support__/resource_index_builder";
 import { LocalsListProps, AllowedVariableNodes } from "../locals_list_support";
 import { VariableNameSet } from "../../../resources/interfaces";
-import { LocationForm } from "../location_form";
+import { VariableForm } from "../variable_form";
 import { error } from "../../../toast/toast";
 import { overwrite } from "../../../api/crud";
 import { fakeVariableNameSet } from "../../../__test_support__/fake_variables";
-import { NOTHING_SELECTED } from "../handle_select";
 import { cloneDeep } from "lodash";
 
 describe("<LocalsList/>", () => {
@@ -58,14 +57,14 @@ describe("<LocalsList/>", () => {
 
   it("doesn't have any variables to render", () => {
     const wrapper = shallow(<LocalsList {...fakeProps()} />);
-    expect(wrapper.find(LocationForm).length).toBe(0);
+    expect(wrapper.find(VariableForm).length).toBe(0);
   });
 
   it("shows all variables", () => {
     const p = fakeProps();
     p.variableData = variableData;
     const wrapper = shallow(<LocalsList {...p} />);
-    expect(wrapper.find(LocationForm).length).toBe(1);
+    expect(wrapper.find(VariableForm).length).toBe(1);
   });
 
   it("hides already assigned variables", () => {
@@ -74,23 +73,7 @@ describe("<LocalsList/>", () => {
     p.bodyVariables = [];
     p.variableData = variableData;
     const wrapper = shallow(<LocalsList {...p} />);
-    expect(wrapper.find(LocationForm).length).toBe(0);
-  });
-
-  it("adds new variable", () => {
-    const p = fakeProps();
-    p.variableData = variableData;
-    variableData["other"] = undefined;
-    p.hideGroups = true;
-    const wrapper = shallow(<LocalsList {...p} />);
-    wrapper.find(".add-variable").simulate("click");
-    expect(p.onChange).toHaveBeenCalledWith({
-      kind: "variable_declaration",
-      args: {
-        label: "Location variable 1",
-        data_value: NOTHING_SELECTED,
-      }
-    }, "Location variable 1");
+    expect(wrapper.find(VariableForm).length).toBe(0);
   });
 });
 
@@ -255,18 +238,18 @@ describe("removeVariable()", () => {
 
 describe("generateNewVariableLabel()", () => {
   it("generates new first label", () => {
-    expect(generateNewVariableLabel([])).toEqual("Location variable 1");
+    expect(generateNewVariableLabel([], n => "" + n)).toEqual("1");
   });
 
   it("generates new label", () => {
     const variables = Object.values(fakeVariableNameSet()).map(v => v?.celeryNode);
-    expect(generateNewVariableLabel(variables)).toEqual("Location variable 1");
+    expect(generateNewVariableLabel(variables, n => "" + n)).toEqual("1");
   });
 
   it("generates new unique label", () => {
     const variables = Object.values(fakeVariableNameSet()).map(v => v?.celeryNode);
     variables.push(cloneDeep(variables[0]));
-    variables[1] && (variables[1].args.label = "Location variable 1");
-    expect(generateNewVariableLabel(variables)).toEqual("Location variable 2");
+    variables[1] && (variables[1].args.label = "1");
+    expect(generateNewVariableLabel(variables, n => "" + n)).toEqual("2");
   });
 });

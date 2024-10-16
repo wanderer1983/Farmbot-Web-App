@@ -5,7 +5,10 @@ jest.mock("../edit", () => ({ togglePointTypeCriteria: jest.fn() }));
 import React from "react";
 import { mount, shallow } from "enzyme";
 import {
-  GroupCriteria, GroupPointCountBreakdown, PointTypeSelection,
+  calcMaxCount,
+  GroupCriteria, GroupPointCountBreakdown,
+  MoreIndicatorIcon, MoreIndicatorIconProps,
+  PointTypeSelection,
   togglePointTypeCriteria,
 } from "..";
 import {
@@ -15,7 +18,7 @@ import {
 import {
   fakePointGroup, fakePoint,
 } from "../../../__test_support__/fake_state/resources";
-import { cloneDeep } from "lodash";
+import { cloneDeep, times } from "lodash";
 import { Checkbox } from "../../../ui";
 import { Actions } from "../../../constants";
 import { overwriteGroup } from "../../actions";
@@ -87,6 +90,7 @@ describe("<GroupPointCountBreakdown />", () => {
     hovered: undefined,
     tools: [],
     toolTransformProps: fakeToolTransformProps(),
+    tryGroupSortType: undefined,
   });
 
   it("renders point counts", () => {
@@ -153,6 +157,63 @@ describe("<GroupPointCountBreakdown />", () => {
     window.confirm = () => false;
     wrapper.find("button").last().simulate("click");
     expect(overwriteGroup).not.toHaveBeenCalled();
+  });
+
+  it("updates", () => {
+    const p = fakeProps();
+    const wrapper = mount<GroupPointCountBreakdown>(
+      <GroupPointCountBreakdown {...p} />);
+    expect(wrapper.instance().shouldComponentUpdate(p, { maxCount: 0 }))
+      .toBeTruthy();
+    p.pointsSelectedByGroup = times(51, fakePoint);
+    wrapper.setProps(p);
+    expect(wrapper.instance().shouldComponentUpdate(p, { maxCount: 41 }))
+      .toBeFalsy();
+  });
+
+  it("expands", () => {
+    const wrapper = mount<GroupPointCountBreakdown>(
+      <GroupPointCountBreakdown {...fakeProps()} />);
+    expect(wrapper.state().maxCount).not.toEqual(1000);
+    wrapper.instance().toggleExpand();
+    expect(wrapper.state().maxCount).toEqual(1000);
+  });
+
+  it("collapses", () => {
+    const wrapper = mount<GroupPointCountBreakdown>(
+      <GroupPointCountBreakdown {...fakeProps()} />);
+    wrapper.setState({ maxCount: 1000 });
+    wrapper.instance().toggleExpand();
+    expect(wrapper.state().maxCount).not.toEqual(1000);
+  });
+});
+
+describe("calcMaxCount()", () => {
+  it("calculates max count", () => {
+    Object.defineProperty(document, "querySelector", {
+      value: () => ({ clientWidth: 400 }), configurable: true
+    });
+    expect(calcMaxCount()).toEqual(39);
+  });
+
+  it("handles null", () => {
+    Object.defineProperty(document, "querySelector", {
+      value: () => undefined, configurable: true
+    });
+    expect(calcMaxCount()).toEqual(41);
+  });
+});
+
+describe("<MoreIndicatorIcon />", () => {
+  const fakeProps = (): MoreIndicatorIconProps => ({
+    count: 100,
+    maxCount: 50,
+    onClick: jest.fn(),
+  });
+
+  it("returns indicator", () => {
+    const wrapper = mount(<MoreIndicatorIcon {...fakeProps()} />);
+    expect(wrapper.text()).toEqual("+50");
   });
 });
 

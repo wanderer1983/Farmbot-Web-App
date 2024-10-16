@@ -15,7 +15,7 @@ import { TaggedResource, SpecialStatus } from "farmbot";
 import { Actions } from "../constants";
 import { EditResourceParams } from "../api/interfaces";
 import { defensiveClone, equals } from "../util";
-import { merge } from "lodash";
+import { isUndefined, merge } from "lodash";
 import { SyncBodyContents } from "../sync/actions";
 import { GeneralizedError } from "./actions";
 import { initialState as helpState } from "../help/reducer";
@@ -25,9 +25,13 @@ import { initialState as regimenState } from "../regimens/reducer";
 import { initialState as sequenceState } from "../sequences/reducer";
 import { initialState as alertState } from "../messages/reducer";
 import { ingest } from "../folders/data_transfer";
-import { searchFolderTree } from "../folders/search_folder_tree";
+import {
+  isSearchMatchFolder,
+  searchFolderTree, sequenceSearchMatch,
+} from "../folders/search_folder_tree";
 import { photosState } from "../photos/reducer";
 import { SequenceResource } from "farmbot/dist/resources/api_resources";
+import { FolderUnion } from "../folders/interfaces";
 
 export const emptyState = (): RestResources => {
   return {
@@ -46,6 +50,7 @@ export const emptyState = (): RestResources => {
       byKind: {
         Alert: {},
         Crop: {},
+        Curve: {},
         Device: {},
         FarmEvent: {},
         FarmwareEnv: {},
@@ -71,6 +76,7 @@ export const emptyState = (): RestResources => {
         WebAppConfig: {},
         WebcamFeed: {},
         WizardStepResult: {},
+        Telemetry: {},
       },
       byKindAndId: {},
       references: {},
@@ -81,7 +87,8 @@ export const emptyState = (): RestResources => {
         "Sequence.Regimen": {},
         "Sequence.Sequence": {},
         "Sequence.PinBinding": {},
-        "Sequence.FbosConfig": {}
+        "Sequence.FbosConfig": {},
+        "Curve.Point": {},
       },
       sequenceFolders: {
         localMetaAttributes: {},
@@ -109,6 +116,14 @@ export const resourceReducer =
       const target = findByUuid(s.index, payload.uuid);
       const before = defensiveClone(target.body);
       merge(target, { body: update });
+      // apply non-nested undefined values in update that merge() ignores
+      Object.entries(update)
+        .map(([key, value]: [keyof typeof target.body, unknown]) => {
+          if (isUndefined(value)) {
+            // eslint-disable-next-line no-null/no-null
+            target.body[key] = null as unknown as undefined;
+          }
+        });
       const didChange = !equals(before, target.body);
       if (didChange) {
         mutateSpecialStatus(target.uuid, s.index, SpecialStatus.DIRTY);
@@ -199,35 +214,55 @@ export const resourceReducer =
       if (payload) {
         const folders = searchFolderTree({
           references: s.index.references,
-          input: payload,
+          searchTerm: payload,
           root: s.index.sequenceFolders.folders
         });
         const { localMetaAttributes } = s.index.sequenceFolders;
-        Object /** Expand all folders when searching. */
-          .keys(localMetaAttributes)
-          .map(x => {
-            s
-              .index
-              .sequenceFolders
-              .localMetaAttributes[x as unknown as number]
-              .open = true;
+        const folderIds = Object.keys(localMetaAttributes) as unknown as number[];
+        /** Stash folder expansion state upon search start. */
+        if (!s.index.sequenceFolders.stashedOpenState) {
+          const stashedOpenState: Record<number, boolean> = {};
+          folderIds.map(id => {
+            stashedOpenState[id] =
+              !!s.index.sequenceFolders.localMetaAttributes[id].open;
           });
+          s.index.sequenceFolders.stashedOpenState = stashedOpenState;
+        }
+        /** Expand all folders when searching. */
+        folderIds.map(id => {
+          s.index.sequenceFolders.localMetaAttributes[id].open = true;
+        });
         const nextFolder = ingest({
           localMetaAttributes,
           folders
         });
-        nextFolder.noFolder = nextFolder.noFolder.filter(uuid => {
-          const sq = s.index.references[uuid];
-          if (sq && sq.kind === "Sequence") {
-            const n = sq.body.name.toLowerCase();
-            return n.includes(payload);
-          } else {
-            return false;
-          }
+        const match = (folders?: FolderUnion[]) =>
+          (folders && isSearchMatchFolder(payload, folders))
+            ? () => true
+            : sequenceSearchMatch(payload, s.index);
+        nextFolder.noFolder = nextFolder.noFolder.filter(match());
+        /** `ingest` overwrites `content` set by `searchFolderTree`.
+         *  Filter sequences here instead. */
+        nextFolder.folders.map(lvl1 => {
+          lvl1.content = lvl1.content.filter(match([lvl1]));
+          lvl1.children.map(lvl2 => {
+            lvl2.content = lvl2.content.filter(match([lvl1, lvl2]));
+            lvl2.children.map(lvl3 => {
+              lvl3.content = lvl3.content.filter(match([lvl1, lvl2, lvl3]));
+            });
+          });
         });
         s.index.sequenceFolders.filteredFolders = nextFolder;
       } else {
         s.index.sequenceFolders.filteredFolders = undefined;
+        /** Restore pre-search folder open state. */
+        const stashed = Object.entries(
+          s.index.sequenceFolders.stashedOpenState || {},
+        ) as unknown as [number, boolean][];
+        stashed.map(([id, open]) => {
+          s.index.sequenceFolders.localMetaAttributes[id].open = open;
+        });
+        s.index.sequenceFolders.stashedOpenState = undefined;
       }
       reindexFolders(s.index);
       return s;

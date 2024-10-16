@@ -1,5 +1,5 @@
 import {
-  boardType, getFwHardwareValue, getBoardCategory, hasSensors, isExpress,
+  boardType, getFwHardwareValue, getBoardCategory, hasSensors, isExpress, isUpgrade,
 } from "../firmware_hardware_support";
 import { fakeFbosConfig } from "../../../__test_support__/fake_state/resources";
 
@@ -20,12 +20,20 @@ describe("boardType()", () => {
     expect(boardType("5.0.3.I")).toEqual("farmduino_k16");
   });
 
+  it("returns Farmduino k1.7", () => {
+    expect(boardType("5.0.3.J")).toEqual("farmduino_k17");
+  });
+
   it("returns Farmduino Express k1.0", () => {
     expect(boardType("5.0.3.E")).toEqual("express_k10");
   });
 
   it("returns Farmduino Express k1.1", () => {
     expect(boardType("5.0.3.D")).toEqual("express_k11");
+  });
+
+  it("returns Farmduino Express k1.2", () => {
+    expect(boardType("5.0.3.C")).toEqual("express_k12");
   });
 
   it("returns Arduino/RAMPS", () => {
@@ -88,5 +96,14 @@ describe("isExpress()", () => {
     expect(isExpress(undefined)).toEqual(false);
     expect(isExpress("arduino")).toEqual(false);
     expect(isExpress("farmduino")).toEqual(false);
+  });
+});
+
+describe("isUpgrade()", () => {
+  it("returns result", () => {
+    expect(isUpgrade("arduino", "farmduino")).toBeTruthy();
+    expect(isUpgrade("arduino", "farmduino_k16")).toBeTruthy();
+    expect(isUpgrade("farmduino_k16", "arduino")).toBeFalsy();
+    expect(isUpgrade(undefined, "farmduino_k16")).toBeFalsy();
   });
 });

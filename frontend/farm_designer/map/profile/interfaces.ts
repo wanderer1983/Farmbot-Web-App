@@ -1,10 +1,13 @@
-import { TaggedFarmwareEnv, TaggedPoint, TaggedTool, Xyz } from "farmbot";
+import { TaggedFarmwareEnv, TaggedPoint, TaggedTool } from "farmbot";
 import { ToolPulloutDirection } from "farmbot/dist/resources/api_resources";
 import { GetWebAppConfigValue } from "../../../config_storage/actions";
-import { BotPosition, SourceFbosConfig } from "../../../devices/interfaces";
+import {
+  BotLocationData, BotPosition, SourceFbosConfig,
+} from "../../../devices/interfaces";
 import { Color } from "../../../ui";
 import { DesignerState, MountedToolInfo } from "../../interfaces";
 import { BotSize, AxisNumberProperty, MapTransformProps } from "../interfaces";
+import { PeripheralValues } from "../layers/farmbot/bot_trail";
 
 export interface ProfileViewerProps {
   getConfigValue: GetWebAppConfigValue;
@@ -12,7 +15,8 @@ export interface ProfileViewerProps {
   designer: DesignerState;
   allPoints: TaggedPoint[];
   botSize: BotSize;
-  botPosition: BotPosition;
+  botLocationData: BotLocationData;
+  peripheralValues: PeripheralValues;
   negativeZ: boolean;
   sourceFbosConfig: SourceFbosConfig;
   mountedToolInfo: MountedToolInfo;
@@ -36,21 +40,18 @@ export interface ProfileLineProps {
 
 export interface ProfileOptionsProps {
   dispatch: Function;
-  axis: "x" | "y";
-  selectionWidth: number;
-  followBot: boolean;
+  designer: DesignerState;
   expanded: boolean;
   setExpanded(expanded: boolean): void;
 }
 
 export interface ProfileSvgProps {
   allPoints: TaggedPoint[];
-  axis: "x" | "y";
-  selectionWidth: number;
+  designer: DesignerState;
   position: AxisNumberProperty;
   expanded: boolean;
   botSize: BotSize;
-  botPosition: BotPosition;
+  botLocationData: BotLocationData;
   negativeZ: boolean;
   sourceFbosConfig: SourceFbosConfig;
   mountedToolInfo: MountedToolInfo;
@@ -58,6 +59,7 @@ export interface ProfileSvgProps {
   mapTransformProps: MapTransformProps;
   getConfigValue: GetWebAppConfigValue;
   farmwareEnvs: TaggedFarmwareEnv[];
+  peripheralValues: PeripheralValues;
 }
 
 export interface LabeledHorizontalLineProps {
@@ -86,7 +88,7 @@ export interface SelectPointsProps {
   botPositionX: number | undefined;
 }
 
-export type GetProfileX = (coordinate: Record<Xyz, number | undefined>) => number;
+export type GetProfileX = (coordinate: BotPosition) => number;
 export type GetProfileXFromNumber = (number: number) => number;
 
 export interface GetProfileXProps {
@@ -109,6 +111,9 @@ export interface ProfileUtmProps {
   mountedToolInfo: MountedToolInfo;
   getX: GetProfileX;
   reversed: boolean;
+  hidePositionIndicator?: boolean;
+  profileWidth?: number;
+  gantryHeight: number;
 }
 
 export interface PlantPointState {
@@ -124,6 +129,7 @@ export interface ProfilePointProps<T = TaggedPoint> {
   profileAxis: "x" | "y";
   reversed: boolean;
   getConfigValue: GetWebAppConfigValue;
+  designer: DesignerState;
 }
 
 export interface ProfileToolProps {
@@ -139,6 +145,7 @@ export interface ProfileToolProps {
   reversed: boolean;
   toolFlipped: boolean;
   coordinate?: boolean;
+  hidePositionIndicator?: boolean;
 }
 
 export interface SlotProfileProps {

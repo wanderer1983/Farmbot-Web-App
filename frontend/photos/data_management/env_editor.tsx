@@ -1,10 +1,12 @@
-import { some, sortBy } from "lodash";
 import React from "react";
+import { t } from "../../i18next_wrapper";
+import { TaggedFarmwareEnv } from "farmbot";
+import { some, sortBy } from "lodash";
 import { destroy, edit, initSave, save } from "../../api/crud";
 import { Content } from "../../constants";
-import { t } from "../../i18next_wrapper";
+import { DevSettings } from "../../settings/dev/dev_support";
 import { error } from "../../toast/toast";
-import { Row, Col, ToggleButton, Help } from "../../ui";
+import { Row, Col, Help } from "../../ui";
 import { ClearFarmwareData } from "./clear_farmware_data";
 import { EnvEditorProps } from "./interfaces";
 
@@ -27,26 +29,16 @@ const HIDDEN_PREFIXES = [
 export const EnvEditor = (props: EnvEditorProps) => {
   const [newKey, setNewKey] = React.useState("");
   const [newValue, setNewValue] = React.useState("");
-  const [hidden, setHidden] = React.useState(true);
+  const sortedFarmware = sortBy(props.farmwareEnvs, "body.id").reverse();
   return <div className={"farmware-env-editor"}>
-    <label>{props.title || t("env editor")}</label>
-    <Help text={Content.FARMWARE_ENV_EDITOR_INFO} />
-    <ClearFarmwareData farmwareEnvs={props.farmwareEnvs}>
-      {t("delete all")}
-    </ClearFarmwareData>
-    <div className={"env-hide-toggle"}>
-      <label>{t("hide internal envs")}</label>
-      <ToggleButton toggleValue={hidden} toggleAction={() => setHidden(!hidden)} />
-    </div>
-    {!hidden &&
-      <div className={"env-editor-warning"}>
-        <p>{t(Content.FARMWARE_ENV_EDITOR_WARNING)}</p>
-      </div>}
+    <label>{props.title}</label>
+    {props.title && <Help text={Content.FARMWARE_ENV_EDITOR_INFO} />}
+    <Row className={"no-margin"} />
     <Row>
       <Col xs={ColumnWidth.key}>
         <input
           value={newKey}
-          placeholder={t("key")}
+          placeholder={t("Setting name (key)")}
           onChange={e => setNewKey(e.currentTarget.value)} />
       </Col>
       <Col xs={ColumnWidth.value}>
@@ -60,6 +52,9 @@ export const EnvEditor = (props: EnvEditorProps) => {
           title={t("add")}
           onClick={() => {
             if (!newKey) { return error(t("Key cannot be blank.")); }
+            if (props.farmwareEnvs.map(x => x.body.key).includes(newKey)) {
+              return error(t("Key has already been taken."));
+            }
             props.dispatch(initSave("FarmwareEnv",
               { key: newKey, value: newValue }));
             setNewKey("");
@@ -70,31 +65,64 @@ export const EnvEditor = (props: EnvEditorProps) => {
       </Col>
     </Row>
     <hr />
-    {sortBy(props.farmwareEnvs, "body.id").reverse()
-      .filter(farmwareEnv => !hidden || !some(HIDDEN_PREFIXES.map(prefix =>
+    {sortedFarmware
+      .filter(farmwareEnv => !some(HIDDEN_PREFIXES.map(prefix =>
         farmwareEnv.body.key.startsWith(prefix))))
       .map(farmwareEnv =>
-        <Row key={farmwareEnv.uuid}>
-          <Col xs={ColumnWidth.key}>
-            <input value={farmwareEnv.body.key}
-              onChange={e =>
-                props.dispatch(edit(farmwareEnv, { key: e.currentTarget.value }))}
-              onBlur={() => props.dispatch(save(farmwareEnv.uuid))} />
-          </Col>
-          <Col xs={ColumnWidth.value}>
-            <input value={"" + farmwareEnv.body.value}
-              onChange={e =>
-                props.dispatch(edit(farmwareEnv, { value: e.currentTarget.value }))}
-              onBlur={() => props.dispatch(save(farmwareEnv.uuid))} />
-          </Col>
-          <Col xs={ColumnWidth.button}>
-            <button
-              className={"fb-button red"}
-              title={t("delete")}
-              onClick={() => props.dispatch(destroy(farmwareEnv.uuid))}>
-              <i className={"fa fa-times"} />
-            </button>
-          </Col>
-        </Row>)}
+        <FarmwareEnvRow key={farmwareEnv.uuid + farmwareEnv.body.value}
+          dispatch={props.dispatch} farmwareEnv={farmwareEnv} />)}
+    {DevSettings.showInternalEnvsEnabled() && <label>{t("internal envs")}</label>}
+    {DevSettings.showInternalEnvsEnabled() &&
+      <ClearFarmwareData farmwareEnvs={props.farmwareEnvs}>
+        {t("delete all")}
+      </ClearFarmwareData>}
+    {DevSettings.showInternalEnvsEnabled() &&
+      <div className={"env-editor-warning"}>
+        <p>{t(Content.FARMWARE_ENV_EDITOR_WARNING)}</p>
+      </div>}
+    {DevSettings.showInternalEnvsEnabled() &&
+      sortedFarmware
+        .filter(farmwareEnv => some(HIDDEN_PREFIXES.map(prefix =>
+          farmwareEnv.body.key.startsWith(prefix))))
+        .map(farmwareEnv =>
+          <FarmwareEnvRow key={farmwareEnv.uuid + farmwareEnv.body.value}
+            dispatch={props.dispatch} farmwareEnv={farmwareEnv} />)}
   </div>;
+};
+
+interface FarmwareEnvRowProps {
+  dispatch: Function;
+  farmwareEnv: TaggedFarmwareEnv;
+}
+
+const FarmwareEnvRow = (props: FarmwareEnvRowProps) => {
+  const { dispatch, farmwareEnv } = props;
+  const [key, setKey] = React.useState(farmwareEnv.body.key);
+  const [value, setValue] = React.useState("" + farmwareEnv.body.value);
+  return <Row>
+    <Col xs={ColumnWidth.key}>
+      <input value={key}
+        onChange={e => setKey(e.currentTarget.value)}
+        onBlur={() => {
+          dispatch(edit(farmwareEnv, { key }));
+          dispatch(save(farmwareEnv.uuid));
+        }} />
+    </Col>
+    <Col xs={ColumnWidth.value}>
+      <input value={value}
+        onChange={e => setValue(e.currentTarget.value)}
+        onBlur={() => {
+          dispatch(edit(farmwareEnv, { value }));
+          dispatch(save(farmwareEnv.uuid));
+        }} />
+    </Col>
+    <Col xs={ColumnWidth.button}>
+      <button
+        className={"fb-button red"}
+        title={t("delete")}
+        onClick={() => dispatch(destroy(farmwareEnv.uuid))}>
+        <i className={"fa fa-times"} />
+      </button>
+    </Col>
+  </Row>;
 };

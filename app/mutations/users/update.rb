@@ -1,6 +1,7 @@
 module Users
   class Update < Mutations::Command
-    PASSWORD_PROBLEMS = "Password and confirmation(s) must match."
+    PASSWORD_PROBLEMS = "Password and confirmation(s) do not match " +
+                        "or is less than 8 characters."
     EMAIL_IN_USE = "That email is already registered"
 
     required { model :user, class: User }
@@ -11,6 +12,7 @@ module Users
       string :password
       string :new_password
       string :new_password_confirmation
+      string :language
     end
 
     def validate
@@ -81,7 +83,7 @@ module Users
       valid_pw = user.valid_password?(password)
       has_new_pw = new_password && new_password_confirmation
       pws_match = new_password == new_password_confirmation
-      invalid = !(valid_pw && has_new_pw && pws_match)
+      invalid = !(valid_pw && has_new_pw && pws_match && new_password.length > 7)
       if invalid
         add_error :password, :*, PASSWORD_PROBLEMS
       else

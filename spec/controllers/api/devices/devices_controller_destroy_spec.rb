@@ -35,7 +35,7 @@ describe Api::DevicesController do
         .map do |resource|
         count = device.send(resource.pluralize).reload.count
         if count > 0
-          did_not_delete = "Epected #{resource} count to be 0 but got #{count}"
+          did_not_delete = "Expected #{resource} count to be 0 but got #{count}"
           fail(did_not_delete)
         end
       end
@@ -51,15 +51,6 @@ describe Api::DevicesController do
       run_jobs_now { post :reset, body: {}.to_json }
       expect(response.status).to eq(422)
       expect(json.fetch(:password)).to eq("Password is required")
-    end
-
-    it "destroys a Device" do
-      sign_in user
-      old_bot = user.device
-      delete :destroy, params: { id: user.device.id }
-      user.reload
-      expect(user.device.id).not_to eq(old_bot.id)
-      expect(response.status).to eq(204)
     end
   end
 end

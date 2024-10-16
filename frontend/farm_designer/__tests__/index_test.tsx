@@ -56,7 +56,7 @@ describe("<FarmDesigner />", () => {
     botLocationData: fakeBotLocationData(),
     botMcuParams: bot.hardware.mcu_params,
     botSize: fakeBotSize(),
-    peripherals: [],
+    peripheralValues: [],
     eStopStatus: false,
     latestImages: [],
     cameraCalibrationData: fakeCameraCalibrationData(),
@@ -71,6 +71,7 @@ describe("<FarmDesigner />", () => {
     deviceTarget: "",
     sourceFbosConfig: jest.fn(),
     farmwareEnvs: [],
+    curves: [],
   });
 
   it("loads default map settings", () => {
@@ -125,9 +126,10 @@ describe("<FarmDesigner />", () => {
 
   it("renders saved garden indicator", () => {
     const p = fakeProps();
-    p.designer.openedSavedGarden = "SavedGardenUuid";
+    p.designer.openedSavedGarden = 1;
     const wrapper = mount(<FarmDesigner {...p} />);
     expect(wrapper.text().toLowerCase()).toContain("viewing saved garden");
+    expect(wrapper.html()).not.toContain("three-d-garden");
   });
 
   it("toggles setting", () => {
@@ -155,6 +157,13 @@ describe("<FarmDesigner />", () => {
     p.getConfigValue = () => 1;
     const i = new FarmDesigner(p);
     expect(i.getBotOriginQuadrant()).toEqual(1);
+  });
+
+  it("renders 3D garden", () => {
+    const p = fakeProps();
+    p.getConfigValue = () => true;
+    const wrapper = mount(<FarmDesigner {...p} />);
+    expect(wrapper.html()).toContain("three-d-garden");
   });
 });
 

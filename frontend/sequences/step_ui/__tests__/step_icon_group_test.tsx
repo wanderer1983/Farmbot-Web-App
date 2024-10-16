@@ -11,6 +11,8 @@ import { fakeSequence } from "../../../__test_support__/fake_state/resources";
 import { splice, remove, move } from "../../step_tiles";
 import { push } from "../../../history";
 import { Path } from "../../../internal_urls";
+import { emptyState } from "../../../resources/reducer";
+import { StateToggleKey } from "../step_wrapper";
 
 describe("<StepIconGroup />", () => {
   const fakeProps = (): StepIconBarProps => ({
@@ -20,15 +22,14 @@ describe("<StepIconGroup />", () => {
     step: { kind: "wait", args: { milliseconds: 100 } },
     sequence: fakeSequence(),
     executeSequenceName: undefined,
-    pinnedView: undefined,
-    togglePinnedView: undefined,
     viewRaw: undefined,
     toggleViewRaw: undefined,
-    monacoEditor: undefined,
-    toggleMonacoEditor: undefined,
     links: undefined,
     helpText: "helpful text",
     confirmStepDeletion: false,
+    isProcessing: false,
+    togglePrompt: jest.fn(),
+    sequencesState: emptyState().consumers.sequences,
   });
 
   it("renders", () => {
@@ -38,34 +39,40 @@ describe("<StepIconGroup />", () => {
 
   it("renders monaco editor enabled", () => {
     const p = fakeProps();
-    p.monacoEditor = true;
-    p.toggleMonacoEditor = () => false;
+    p.stateToggles = {
+      [StateToggleKey.monacoEditor]: { enabled: true, toggle: () => false }
+    };
     const wrapper = mount(<StepIconGroup {...p} />);
     expect(wrapper.find(".fa-font").hasClass("enabled")).toEqual(true);
   });
 
   it("renders monaco editor disabled", () => {
     const p = fakeProps();
-    p.monacoEditor = false;
-    p.toggleMonacoEditor = () => true;
+    p.stateToggles = {
+      [StateToggleKey.monacoEditor]: { enabled: false, toggle: () => true }
+    };
     const wrapper = mount(<StepIconGroup {...p} />);
     expect(wrapper.find(".fa-font").hasClass("enabled")).toEqual(false);
   });
 
-  it("renders pinned view enabled", () => {
+  it("renders expanded editor enabled", () => {
     const p = fakeProps();
-    p.pinnedView = true;
-    p.togglePinnedView = () => false;
+    p.stateToggles = {
+      [StateToggleKey.luaExpanded]: { enabled: true, toggle: () => false }
+    };
     const wrapper = mount(<StepIconGroup {...p} />);
-    expect(wrapper.find(".fa-thumb-tack").hasClass("enabled")).toEqual(true);
+    expect(wrapper.find(".fa-expand").length).toEqual(0);
+    expect(wrapper.find(".fa-compress").length).toEqual(1);
   });
 
-  it("renders pinned view disabled", () => {
+  it("renders expanded editor disabled", () => {
     const p = fakeProps();
-    p.pinnedView = false;
-    p.togglePinnedView = () => true;
+    p.stateToggles = {
+      [StateToggleKey.luaExpanded]: { enabled: false, toggle: () => true }
+    };
     const wrapper = mount(<StepIconGroup {...p} />);
-    expect(wrapper.find(".fa-thumb-tack").hasClass("enabled")).toEqual(false);
+    expect(wrapper.find(".fa-expand").length).toEqual(1);
+    expect(wrapper.find(".fa-compress").length).toEqual(0);
   });
 
   it("renders celery script view enabled", () => {
@@ -74,6 +81,15 @@ describe("<StepIconGroup />", () => {
     p.toggleViewRaw = () => false;
     const wrapper = mount(<StepIconGroup {...p} />);
     expect(wrapper.find(".fa-code").hasClass("enabled")).toEqual(true);
+  });
+
+  it("renders prompt", () => {
+    const p = fakeProps();
+    p.step.kind = "lua";
+    p.readOnly = false;
+    p.isProcessing = false;
+    const wrapper = mount(<StepIconGroup {...p} />);
+    expect(wrapper.find(".fa-magic").length).toEqual(1);
   });
 
   it("renders celery script view disabled", () => {
@@ -115,6 +131,6 @@ describe("<StepIconGroup />", () => {
     p.executeSequenceName = "My Sequence";
     const wrapper = mount(<StepIconGroup {...p} />);
     wrapper.find(".fa-external-link").simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.sequences("my_sequence"));
+    expect(push).toHaveBeenCalledWith(Path.sequences("My_Sequence"));
   });
 });

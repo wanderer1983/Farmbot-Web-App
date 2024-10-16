@@ -27,12 +27,14 @@ describe("<BotPositionRows />", () => {
 
   const fakeProps = (): BotPositionRowsProps => ({
     getConfigValue: jest.fn(key => mockConfig[key]),
+    sourceFwConfig: () => ({ value: 0, consistent: true }),
     locationData: bot.hardware.location_data,
     arduinoBusy: false,
     firmwareSettings: {},
     firmwareHardware: undefined,
     botOnline: true,
     locked: false,
+    dispatch: jest.fn(),
   });
 
   it("inputs axis destination", () => {

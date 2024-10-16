@@ -1,32 +1,32 @@
-import { Content } from "../../../../constants";
+import { Actions, Content } from "../../../../constants";
 import { initSave, edit, save } from "../../../../api/crud";
 import {
   AxisNumberProperty, TaggedPlant, MapTransformProps,
 } from "../../interfaces";
 import { Plant, DEFAULT_PLANT_RADIUS } from "../../../plant";
-import moment from "moment";
-import { unpackUUID } from "../../../../util";
-import { isNumber, isString } from "lodash";
+import { isNumber } from "lodash";
 import {
-  CropLiveSearchResult, GardenMapState, MovePointsProps,
+  DesignerState, GardenMapState, MovePointsProps,
 } from "../../../interfaces";
 import { findBySlug } from "../../../search_selectors";
-import {
-  transformXY, round, getZoomLevelFromMap, defaultSpreadCmDia,
-} from "../../util";
-import { movePoints } from "../../actions";
+import { round, defaultSpreadCmDia } from "../../util";
+import { movePointTo, movePoints } from "../../actions";
 import { cachedCrop } from "../../../../open_farm/cached_crop";
 import { t } from "../../../../i18next_wrapper";
 import { error } from "../../../../toast/toast";
-import { TaggedPlantTemplate, TaggedPoint } from "farmbot";
+import { TaggedCurve, TaggedPlantTemplate, TaggedPoint } from "farmbot";
 import { Path } from "../../../../internal_urls";
+import { GetWebAppConfigValue } from "../../../../config_storage/actions";
+import { NumericSetting } from "../../../../session_keys";
 
 export interface NewPlantKindAndBodyProps {
   x: number;
   y: number;
   slug: string;
   cropName: string;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
+  depth: number;
+  designer: DesignerState;
 }
 
 /** Return a new plant or plantTemplate object. */
@@ -34,9 +34,7 @@ export const newPlantKindAndBody = (props: NewPlantKindAndBodyProps): {
   kind: TaggedPlant["kind"],
   body: TaggedPlant["body"],
 } => {
-  const savedGardenId = isString(props.openedSavedGarden)
-    ? unpackUUID(props.openedSavedGarden).remoteId
-    : undefined;
+  const savedGardenId = props.openedSavedGarden || undefined;
   return isNumber(savedGardenId)
     ? {
       kind: "PlantTemplate",
@@ -57,8 +55,13 @@ export const newPlantKindAndBody = (props: NewPlantKindAndBodyProps): {
         y: props.y,
         openfarm_slug: props.slug,
         name: props.cropName,
-        created_at: moment().toISOString(),
-        radius: DEFAULT_PLANT_RADIUS
+        radius: DEFAULT_PLANT_RADIUS,
+        depth: props.depth,
+        plant_stage: props.designer.cropStage,
+        planted_at: props.designer.cropPlantedAt,
+        water_curve_id: props.designer.cropWaterCurveId,
+        spread_curve_id: props.designer.cropSpreadCurveId,
+        height_curve_id: props.designer.cropHeightCurveId,
       })
     };
 };
@@ -69,12 +72,16 @@ export interface CreatePlantProps {
   gardenCoords: AxisNumberProperty;
   gridSize: AxisNumberProperty | undefined;
   dispatch: Function;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
+  depth: number;
+  designer: DesignerState;
 }
 
 /** Create a new plant in the garden map. */
 export const createPlant = (props: CreatePlantProps): void => {
-  const { cropName, slug, gardenCoords, gridSize, openedSavedGarden } = props;
+  const {
+    cropName, slug, gardenCoords, gridSize, openedSavedGarden, depth, designer,
+  } = props;
   const { x, y } = gardenCoords;
   const tooLow = x < 0 || y < 0; // negative (beyond grid start)
   const tooHigh = gridSize
@@ -84,7 +91,9 @@ export const createPlant = (props: CreatePlantProps): void => {
   if (outsideGrid) {
     error(t(Content.OUTSIDE_PLANTING_AREA));
   } else {
-    const p = newPlantKindAndBody({ x, y, slug, cropName, openedSavedGarden });
+    const p = newPlantKindAndBody({
+      x, y, slug, cropName, openedSavedGarden, depth, designer,
+    });
     // Stop non-plant objects from creating generic plants in the map
     if (p.body.name != "name" && p.body.openfarm_slug != "slug") {
       // Create and save a new plant in the garden map
@@ -95,19 +104,27 @@ export const createPlant = (props: CreatePlantProps): void => {
 
 export interface DropPlantProps {
   gardenCoords: AxisNumberProperty | undefined;
-  cropSearchResults: CropLiveSearchResult[];
-  openedSavedGarden: string | undefined;
   gridSize: AxisNumberProperty;
   dispatch: Function;
+  getConfigValue: GetWebAppConfigValue;
+  plants: TaggedPlant[];
+  curves: TaggedCurve[];
+  designer: DesignerState;
 }
 
 /** Create a plant upon drop. */
 export const dropPlant = (props: DropPlantProps) => {
-  const { gardenCoords, openedSavedGarden, gridSize, dispatch } = props;
+  const {
+    gardenCoords, gridSize, dispatch, getConfigValue,
+  } = props;
+  const { companionIndex, cropSearchResults, openedSavedGarden } = props.designer;
   if (gardenCoords) {
     const slug = Path.getSlug(Path.plants(1));
-    if (!slug) { return; }
-    const { crop } = findBySlug(props.cropSearchResults, slug);
+    if (!slug) { console.log("Missing slug."); return; }
+    const crop = isNumber(companionIndex)
+      ? cropSearchResults[0]?.companions[companionIndex]
+      : findBySlug(cropSearchResults, slug).crop;
+    if (!crop) { console.log("Missing crop."); return; }
     createPlant({
       cropName: crop.name,
       slug: crop.slug,
@@ -115,7 +132,10 @@ export const dropPlant = (props: DropPlantProps) => {
       gridSize,
       dispatch,
       openedSavedGarden,
+      depth: parseInt("" + getConfigValue(NumericSetting.default_plant_depth)),
+      designer: props.designer,
     });
+    dispatch({ type: Actions.SET_COMPANION_INDEX, payload: undefined });
   } else {
     throw new Error(`Missing 'drop-area-svg', 'farm-designer-map', or
         'farm-designer' while trying to add a plant.`);
@@ -128,31 +148,21 @@ export interface DragPlantProps {
   isDragging: boolean | undefined;
   dispatch: Function;
   setMapState(x: Partial<GardenMapState>): void;
-  pageX: number;
-  pageY: number;
-  qPageX: number | undefined;
-  qPageY: number | undefined;
+  gardenCoords: AxisNumberProperty | undefined;
 }
 
 /** Move a plant in the garden map. */
 export const dragPlant = (props: DragPlantProps) => {
   const plant = props.getPlant();
-  const map = document.querySelector(".farm-designer-map");
-  const { isDragging, pageX, pageY, qPageX, qPageY } = props;
-  const { quadrant, xySwap, gridSize } = props.mapTransformProps;
-  if (isDragging && plant && map) {
-    const zoomLvl = getZoomLevelFromMap(map);
-    const { qx, qy } = transformXY(pageX, pageY, props.mapTransformProps);
-    const deltaX = Math.round((qx - (qPageX || qx)) / zoomLvl);
-    const deltaY = Math.round((qy - (qPageY || qy)) / zoomLvl);
-    const dX = xySwap && (quadrant % 2 === 1) ? -deltaX : deltaX;
-    const dY = xySwap && (quadrant % 2 === 1) ? -deltaY : deltaY;
+  const { isDragging, gardenCoords } = props;
+  const { gridSize } = props.mapTransformProps;
+  if (isDragging && plant && gardenCoords) {
+    const newX = gardenCoords.x;
+    const newY = gardenCoords.y;
     props.setMapState({
-      qPageX: qx, qPageY: qy,
-      activeDragXY: { x: plant.body.x + dX, y: plant.body.y + dY, z: 0 }
+      activeDragXY: { x: newX, y: newY, z: plant.body.z }
     });
-    const points = [plant];
-    props.dispatch(movePoints({ deltaX: dX, deltaY: dY, points, gridSize }));
+    props.dispatch(movePointTo({ x: newX, y: newY, point: plant, gridSize }));
   }
 };
 

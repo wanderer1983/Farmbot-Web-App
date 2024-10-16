@@ -35,7 +35,7 @@ import {
   SavePointsProps, savePoints,
 } from "./layers/plants/plant_actions";
 import { chooseLocation } from "../move_to";
-import { GroupOrder, NNPath } from "./group_order_visual";
+import { GroupOrder } from "./group_order_visual";
 import { push } from "../../history";
 import { ErrorBoundary } from "../../error_boundary";
 import { TaggedPoint, TaggedPointGroup, PointType } from "farmbot";
@@ -48,6 +48,7 @@ import { SequenceVisualization } from "./sequence_visualization";
 import { chooseProfile, ProfileLine } from "./profile";
 import { betterCompact } from "../../util";
 import { Path } from "../../internal_urls";
+import { AddPlantIcon } from "./active_plant/add_plant_icon";
 
 const BOUND_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
 
@@ -74,21 +75,20 @@ export class GardenMap extends
     return this.props.mapTransformProps;
   }
 
-  get gridSize() { return this.mapTransformProps.gridSize; }
+  get gridSize() { return getMapSize(this.mapTransformProps); }
 
   get mapSize() {
     return getMapSize(this.mapTransformProps, this.props.gridOffset);
   }
-  get xySwap() { return this.mapTransformProps.xySwap; }
-  get gridWidth() { return this.xySwap ? this.gridSize.y : this.gridSize.x; }
-  get gridHeight() { return this.xySwap ? this.gridSize.x : this.gridSize.y; }
 
   /** Currently editing a plant? */
   get isEditing(): boolean { return getMode() === Mode.editPlant; }
 
   /** Display plant animations? */
   get animate(): boolean {
-    return !this.props.getConfigValue(BooleanSetting.disable_animations);
+    return this.pointsSelectedByGroup.length > 100
+      ? false
+      : !this.props.getConfigValue(BooleanSetting.disable_animations);
   }
   get group(): TaggedPointGroup | undefined {
     return findGroupFromUrl(this.props.groups);
@@ -119,10 +119,11 @@ export class GardenMap extends
       boxSelected: this.props.designer.selectedPoints,
     });
     this.setState({
-      isDragging: false, qPageX: 0, qPageY: 0,
+      isDragging: false,
       activeDragXY: { x: undefined, y: undefined, z: undefined },
       activeDragSpread: undefined,
       selectionBox: undefined,
+      cursorPosition: undefined,
       previousSelectionBoxArea: getSelectionBoxArea(this.state.selectionBox),
     });
   }, 400);
@@ -296,10 +297,12 @@ export class GardenMap extends
       e.preventDefault();
       dropPlant({
         gardenCoords: this.getGardenCoordinates(e),
-        cropSearchResults: this.props.designer.cropSearchResults,
-        openedSavedGarden: this.props.designer.openedSavedGarden,
         gridSize: this.mapTransformProps.gridSize,
         dispatch: this.props.dispatch,
+        getConfigValue: this.props.getConfigValue,
+        plants: this.props.plants,
+        curves: this.props.curves,
+        designer: this.props.designer,
       });
     };
 
@@ -311,7 +314,7 @@ export class GardenMap extends
         break;
       case Mode.locationInfo:
         e.preventDefault();
-        chooseLocation({
+        !this.state.toLocation && chooseLocation({
           gardenCoords: this.getGardenCoordinates(e),
           dispatch: this.props.dispatch
         });
@@ -337,10 +340,7 @@ export class GardenMap extends
           isDragging: this.state.isDragging,
           dispatch: this.props.dispatch,
           setMapState: this.setMapState,
-          qPageX: this.state.qPageX,
-          qPageY: this.state.qPageY,
-          pageX: e.pageX,
-          pageY: e.pageY,
+          gardenCoords: this.getGardenCoordinates(e),
         });
         break;
       case Mode.createPoint:
@@ -373,6 +373,9 @@ export class GardenMap extends
           dispatch: this.props.dispatch,
           plantActions: !this.props.designer.editGroupAreaInMap,
         });
+        break;
+      case Mode.clickToAdd:
+        this.setState({ cursorPosition: this.getGardenCoordinates(e) });
         break;
       case Mode.boxSelect:
       default:
@@ -487,15 +490,15 @@ export class GardenMap extends
   svgDropAreaProps = () => ({
     x: this.props.gridOffset.x,
     y: this.props.gridOffset.y,
-    width: this.gridWidth,
-    height: this.gridHeight,
+    width: this.gridSize.w,
+    height: this.gridSize.h,
     onMouseUp: this.endDrag,
     onMouseDown: this.startDrag,
     onMouseMove: this.drag,
     onClick: this.click,
   });
   ClipPath = () => <clipPath id={"map-grid-clip-path"}>
-    <rect x={0} y={0} width={this.gridWidth} height={this.gridHeight} />
+    <rect x={0} y={0} width={this.gridSize.w} height={this.gridSize.h} />
   </clipPath>;
   ImageLayer = () => <ImageLayer
     images={this.props.latestImages}
@@ -516,6 +519,7 @@ export class GardenMap extends
   Grid = () => <Grid
     onClick={this.closePanel()}
     onMouseDown={this.startDragOnBackground}
+    templateView={!!this.props.designer.openedSavedGarden}
     mapTransformProps={this.mapTransformProps}
     zoomLvl={this.props.zoomLvl} />;
   ZonesLayer = () => <ZonesLayer
@@ -548,12 +552,15 @@ export class GardenMap extends
     zoomLvl={this.props.zoomLvl}
     activeDragXY={this.state.activeDragXY}
     activeDragSpread={this.state.activeDragSpread}
+    hoveredSpread={this.props.designer.hoveredSpread}
     editing={this.isEditing}
     animate={this.animate} />;
   PlantRadiusLayer = () => <PlantRadiusLayer
     visible={!!this.props.showPlants}
     mapTransformProps={this.mapTransformProps}
     plants={this.props.plants}
+    currentPlant={this.getPlant()}
+    hoveredSpread={this.props.designer.hoveredSpread}
     animate={this.animate} />;
   PointLayer = () => <PointLayer
     mapTransformProps={this.mapTransformProps}
@@ -565,8 +572,11 @@ export class GardenMap extends
       !!this.props.getConfigValue(BooleanSetting.show_soil_interpolation_map)}
     cameraCalibrationData={this.props.cameraCalibrationData}
     cropPhotos={!!this.props.getConfigValue(BooleanSetting.crop_images)}
+    showUncroppedArea={!!this.props.getConfigValue(
+      BooleanSetting.show_uncropped_camera_view_area)}
     interactions={this.interactions("GenericPointer")}
     farmwareEnvs={this.props.farmwareEnvs}
+    animate={this.animate}
     genericPoints={this.props.genericPoints} />;
   WeedLayer = () => <WeedLayer
     mapTransformProps={this.mapTransformProps}
@@ -587,6 +597,7 @@ export class GardenMap extends
     plants={this.props.plants}
     currentPlant={this.getPlant()}
     hoveredPlant={this.props.hoveredPlant}
+    hoveredSpread={this.props.designer.hoveredSpread}
     dragging={!!this.state.isDragging}
     editing={this.isEditing}
     boxSelected={this.props.designer.selectedPoints}
@@ -600,8 +611,10 @@ export class GardenMap extends
     visible={!!this.props.showFarmbot}
     dispatch={this.props.dispatch}
     hoveredToolSlot={this.props.designer.hoveredToolSlot}
+    currentPoint={this.currentPoint}
     botPositionX={this.props.botLocationData.position.x}
     interactions={this.interactions("ToolSlot")}
+    animate={this.animate}
     slots={this.props.toolSlots} />;
   FarmBotLayer = () => <FarmBotLayer
     mapTransformProps={this.mapTransformProps}
@@ -610,7 +623,7 @@ export class GardenMap extends
     stopAtHome={this.props.stopAtHome}
     botSize={this.props.botSize}
     plantAreaOffset={this.props.gridOffset}
-    peripherals={this.props.peripherals}
+    peripheralValues={this.props.peripheralValues}
     eStopStatus={this.props.eStopStatus}
     mountedToolInfo={this.props.mountedToolInfo}
     cameraCalibrationData={this.props.cameraCalibrationData}
@@ -645,7 +658,6 @@ export class GardenMap extends
       image.uuid == this.props.designer.hoveredImage)[0]}
     hoveredPoint={this.props.allPoints.filter(point =>
       point.uuid == this.props.designer.hoveredPoint)[0]}
-    plantAreaOffset={this.props.gridOffset}
     zoomLvl={this.props.zoomLvl}
     mapTransformProps={this.mapTransformProps} />;
   DrawnPoint = () => <DrawnPoint
@@ -658,6 +670,7 @@ export class GardenMap extends
     group={this.group}
     groupPoints={this.pointsSelectedByGroup}
     zoomLvl={this.props.zoomLvl}
+    tryGroupSortType={this.props.designer.tryGroupSortType}
     mapTransformProps={this.mapTransformProps} />;
   SequenceVisualization = () => <SequenceVisualization
     botPosition={this.props.botLocationData.position}
@@ -667,11 +680,15 @@ export class GardenMap extends
     hoveredSequenceStep={this.props.designer.hoveredSequenceStep}
     dispatch={this.props.dispatch}
     mapTransformProps={this.mapTransformProps} />;
-  NNPath = () => <NNPath pathPoints={this.props.allPoints}
-    mapTransformProps={this.mapTransformProps} />;
   Bugs = () => showBugs()
     ? <Bugs mapTransformProps={this.mapTransformProps}
       botSize={this.props.botSize} />
+    : <g />;
+  AddPlantIcon = () => getMode() == Mode.clickToAdd
+    ? <AddPlantIcon
+      cursorPosition={this.state.cursorPosition}
+      cropSearchResults={this.props.designer.cropSearchResults}
+      mapTransformProps={this.mapTransformProps} />
     : <g />;
 
   /** Render layers in order from back to front. */
@@ -703,8 +720,8 @@ export class GardenMap extends
             <this.DrawnWeed />
             <this.GroupOrder />
             <this.SequenceVisualization />
-            <this.NNPath />
             <this.Bugs />
+            <this.AddPlantIcon />
           </svg>
         </svg>
       </ErrorBoundary>

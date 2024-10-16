@@ -55,7 +55,7 @@ export function overwrite<T extends TaggedResource>(tr: T,
   };
 }
 
-export interface EditStepProps {
+interface EditStepProps {
   step: Readonly<SequenceBodyItem>;
   sequence: Readonly<TaggedSequence>;
   index: number;
@@ -166,7 +166,8 @@ export function refreshOK(payload: TaggedResource): ReduxAction<TaggedResource> 
   return { type: Actions.REFRESH_RESOURCE_OK, payload };
 }
 
-export function refreshNO(payload: GeneralizedError): ReduxAction<GeneralizedError> {
+export function refreshNO(payload: GeneralizedError):
+  ReduxAction<GeneralizedError> {
   return { type: Actions.REFRESH_RESOURCE_NO, payload };
 }
 
@@ -261,6 +262,7 @@ export function saveAll(input: TaggedResource[],
 export function urlFor(tag: ResourceName) {
   const OPTIONS: Partial<Record<ResourceName, string>> = {
     Alert: API.current.alertPath,
+    Curve: API.current.curvesPath,
     Device: API.current.devicePath,
     FarmEvent: API.current.farmEventsPath,
     FarmwareEnv: API.current.farmwareEnvPath,
@@ -277,7 +279,9 @@ export function urlFor(tag: ResourceName) {
     Regimen: API.current.regimensPath,
     SavedGarden: API.current.savedGardensPath,
     Sensor: API.current.sensorPath,
+    SensorReading: API.current.sensorReadingPath,
     Sequence: API.current.sequencesPath,
+    Telemetry: API.current.telemetryPath,
     Tool: API.current.toolsPath,
     User: API.current.usersPath,
     WebAppConfig: API.current.webAppConfigPath,
@@ -340,7 +344,7 @@ const MUST_CONFIRM_LIST: ResourceName[] = [
   "PointGroup",
 ];
 
-const confirmationChecker = (resourceName: ResourceName, force = false) =>
+const confirmationChecker = (resourceName: ResourceName, force: boolean) =>
   <T>(proceed: () => T): T | undefined => {
     if (MUST_CONFIRM_LIST.includes(resourceName)) {
       if (force || confirm(t("Are you sure you want to delete this item?"))) {

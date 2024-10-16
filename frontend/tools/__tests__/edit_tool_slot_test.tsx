@@ -36,6 +36,7 @@ import {
   setToolHover,
 } from "../../farm_designer/map/layers/tool_slots/tool_graphics";
 import { SpecialStatus } from "farmbot";
+import { fakeMovementState } from "../../__test_support__/fake_bot_data";
 
 describe("<EditToolSlot />", () => {
   const fakeProps = (): EditToolSlotProps => ({
@@ -48,6 +49,9 @@ describe("<EditToolSlot />", () => {
     toolTransformProps: fakeToolTransformProps(),
     isActive: jest.fn(),
     botOnline: true,
+    arduinoBusy: false,
+    defaultAxes: "XY",
+    movementState: fakeMovementState(),
   });
 
   it("redirects", () => {
@@ -119,7 +123,7 @@ describe("<EditToolSlot />", () => {
     const toolSlot = fakeToolSlot();
     p.findToolSlot = () => toolSlot;
     const wrapper = shallow(<EditToolSlot {...p} />);
-    wrapper.find("button").last().simulate("click");
+    wrapper.find(".fa-trash").first().simulate("click");
     expect(destroy).toHaveBeenCalledWith(toolSlot.uuid);
   });
 

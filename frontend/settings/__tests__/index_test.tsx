@@ -3,19 +3,15 @@ jest.mock("../../config_storage/actions", () => ({
   setWebAppConfigValue: jest.fn(),
 }));
 
+let mockHighlightName = "";
 jest.mock("../../settings/maybe_highlight", () => ({
   maybeOpenPanel: jest.fn(),
   Highlight: (p: { children: React.ReactChild }) => <div>{p.children}</div>,
-  getHighlightName: jest.fn(),
+  getHighlightName: jest.fn(() => mockHighlightName),
 }));
 
 jest.mock("../fbos_settings/boot_sequence_selector", () => ({
   BootSequenceSelector: () => <div />,
-}));
-
-let mockShouldDisplay = false;
-jest.mock("../../devices/should_display", () => ({
-  shouldDisplayFeature: () => mockShouldDisplay,
 }));
 
 import React from "react";
@@ -36,7 +32,9 @@ import { SearchField } from "../../ui/search_field";
 import { maybeOpenPanel } from "../maybe_highlight";
 import { SettingsPanelState } from "../../interfaces";
 import { settingsPanelState } from "../../__test_support__/panel_state";
-import { fakeUser } from "../../__test_support__/fake_state/resources";
+import {
+  fakeUser, fakeWebAppConfig,
+} from "../../__test_support__/fake_state/resources";
 import { API } from "../../api";
 import { push } from "../../history";
 
@@ -56,11 +54,11 @@ describe("<DesignerSettings />", () => {
 
   const fakeProps = (): DesignerSettingsProps => ({
     dispatch: jest.fn(),
-    getConfigValue: jest.fn(),
+    getConfigValue: () => 0,
     firmwareConfig: undefined,
     sourceFwConfig: () => ({ value: 10, consistent: true }),
     sourceFbosConfig: () => ({ value: 10, consistent: true }),
-    resources: buildResourceIndex().index,
+    resources: buildResourceIndex([]).index,
     deviceAccount: fakeDevice(),
     alerts: [],
     saveFarmwareEnv: jest.fn(),
@@ -80,13 +78,15 @@ describe("<DesignerSettings />", () => {
     const settings = wrapper.find(".designer-setting");
     expect(settings.length).toBeGreaterThanOrEqual(8);
     expect(wrapper.text().toLowerCase()).not.toContain("unstable fe");
+    expect(wrapper.text().toLowerCase()).not.toContain("reporting");
   });
 
   it("renders all settings", () => {
-    mockShouldDisplay = true;
-    const wrapper = mount(<DesignerSettings {...fakeProps()} />);
+    mockHighlightName = "pin_reporting";
+    const p = fakeProps();
+    p.searchTerm = "pin reporting";
+    const wrapper = mount(<DesignerSettings {...p} />);
     expect(wrapper.text().toLowerCase()).toContain("reporting");
-    mockShouldDisplay = false;
   });
 
   it("mounts", () => {
@@ -164,9 +164,11 @@ describe("<DesignerSettings />", () => {
   it("renders defaultOn setting", () => {
     const p = fakeProps();
     p.settingsPanelState.farm_designer = true;
-    p.getConfigValue = () => undefined;
+    const config = fakeWebAppConfig();
+    config.body.confirm_plant_deletion = undefined as never;
+    p.getConfigValue = key => config.body[key];
     const wrapper = mount(<DesignerSettings {...p} />);
-    const confirmDeletion = getSetting(wrapper, 10, "confirm plant");
+    const confirmDeletion = getSetting(wrapper, 12, "confirm plant");
     expect(confirmDeletion.find("button").text()).toEqual("on");
   });
 
@@ -195,7 +197,7 @@ describe("<DesignerSettings />", () => {
     const p = fakeProps();
     p.searchTerm = "env";
     const wrapper = mount(<DesignerSettings {...p} />);
-    expect(wrapper.text().toLowerCase()).toContain("editor");
+    expect(wrapper.text().toLowerCase()).toContain("custom settings");
   });
 
   it("renders setup settings", () => {
@@ -240,7 +242,9 @@ describe("<DesignerSettings />", () => {
   it("renders change ownership form", () => {
     API.setBaseUrl("");
     const p = fakeProps();
-    p.getConfigValue = () => true;
+    const config = fakeWebAppConfig();
+    config.body.show_advanced_settings = true;
+    p.getConfigValue = key => config.body[key];
     p.bot.hardware.informational_settings.sync_status = "synced";
     p.bot.connectivity.uptime["bot.mqtt"] = { state: "up", at: 1 };
     const wrapper = mount(<DesignerSettings {...p} />);

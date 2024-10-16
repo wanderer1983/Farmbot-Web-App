@@ -7,7 +7,9 @@ import { Panel } from "../../farm_designer/panel_header";
 import { mapStateToProps } from "../state_to_props";
 import { SequencesProps } from "../interfaces";
 import { t } from "../../i18next_wrapper";
-import { EmptyStateWrapper, EmptyStateGraphic } from "../../ui";
+import {
+  EmptyStateWrapper, EmptyStateGraphic, Popover, ColorPickerCluster,
+} from "../../ui";
 import {
   SequenceEditorMiddleActive,
 } from "../sequence_editor_middle_active";
@@ -17,15 +19,39 @@ import {
   setActiveSequenceByName,
 } from "../set_active_sequence_by_name";
 import { push } from "../../history";
-import { urlFriendly } from "../../util";
-import { edit } from "../../api/crud";
-import { TaggedRegimen, TaggedSequence } from "farmbot";
+import { colors, urlFriendly } from "../../util";
+import { edit, save } from "../../api/crud";
+import {
+  Color,
+  TaggedCurve,
+  TaggedPoint, TaggedPointGroup, TaggedRegimen, TaggedSequence,
+} from "farmbot";
 import { Path } from "../../internal_urls";
+import { requestAutoGeneration } from "../request_auto_generation";
+import { error } from "../../toast/toast";
+import { noop } from "lodash";
+import { addNewSequenceToFolder } from "../../folders/actions";
+import { Position } from "@blueprintjs/core";
+import { isMobile } from "../../screen_size";
 
-export class RawDesignerSequenceEditor extends React.Component<SequencesProps> {
+interface SequencesState {
+  processingTitle: boolean;
+  processingColor: boolean;
+}
+
+export class RawDesignerSequenceEditor
+  extends React.Component<SequencesProps, SequencesState> {
+  state: SequencesState = {
+    processingTitle: false,
+    processingColor: false,
+  };
 
   componentDidMount() {
     if (!this.props.sequence) { setActiveSequenceByName(); }
+  }
+
+  get isProcessing() {
+    return this.state.processingColor || this.state.processingTitle;
   }
 
   render() {
@@ -35,30 +61,55 @@ export class RawDesignerSequenceEditor extends React.Component<SequencesProps> {
       <DesignerPanelHeader
         panelName={panelName}
         panel={Panel.Sequences}
+        colorClass={sequence?.body.color}
         titleElement={<ResourceTitle
-          key={this.props.sequence?.body.name}
-          resource={this.props.sequence}
+          key={sequence?.body.name}
+          resource={sequence}
           fallback={t("No Sequence selected")}
           dispatch={this.props.dispatch} />}
         backTo={Path.sequences()}>
-        {sequence && window.innerWidth > 450 &&
-          <a className={"right-button"}
-            title={t("open full-page editor")}
-            onClick={() =>
-              push(Path.sequencePage(urlFriendly(sequence.body.name)))}>
-            {t("full editor")}
-          </a>}
+        <div className={"panel-header-icon-group"}>
+          {sequence &&
+            <AutoGenerateButton
+              dispatch={this.props.dispatch}
+              sequence={sequence}
+              isProcessing={this.isProcessing}
+              setTitleProcessing={processingTitle =>
+                this.setState({ processingTitle })}
+              setColorProcessing={processingColor =>
+                this.setState({ processingColor })} />}
+          {sequence && <Popover className={"color-picker"}
+            position={Position.BOTTOM}
+            popoverClassName={"colorpicker-menu gray"}
+            target={<i title={t("select color")}
+              className={"fa fa-paint-brush fb-icon-button"} />}
+            content={<ColorPickerCluster
+              onChange={color => this.props.dispatch(edit(sequence, { color }))}
+              current={sequence.body.color} />} />}
+          {sequence && !isMobile() &&
+            <i className={"fa fa-expand fb-icon-button"}
+              title={t("open full-page editor")}
+              onClick={() =>
+                push(Path.sequencePage(urlFriendly(sequence.body.name)))} />}
+          {!sequence && <button
+            className={"fb-button green"}
+            title={t("add new sequence")}
+            onClick={() => addNewSequenceToFolder()}>
+            <i className="fa fa-plus" />
+          </button>}
+        </div>
       </DesignerPanelHeader>
       <DesignerPanelContent panelName={panelName}>
         <EmptyStateWrapper
-          notEmpty={this.props.sequence && isTaggedSequence(this.props.sequence)}
+          notEmpty={sequence && isTaggedSequence(sequence)}
           graphic={EmptyStateGraphic.sequences}
           title={t("No Sequence selected.")}
           text={Content.NO_SEQUENCE_SELECTED}>
-          {this.props.sequence && <SequenceEditorMiddleActive
+          {sequence && <SequenceEditorMiddleActive
             showName={false}
             dispatch={this.props.dispatch}
-            sequence={this.props.sequence}
+            sequence={sequence}
+            sequences={this.props.sequences}
             resources={this.props.resources}
             syncStatus={this.props.syncStatus}
             hardwareFlags={this.props.hardwareFlags}
@@ -66,7 +117,7 @@ export class RawDesignerSequenceEditor extends React.Component<SequencesProps> {
             getWebAppConfigValue={this.props.getWebAppConfigValue}
             visualized={this.props.visualized}
             hoveredStep={this.props.hoveredStep}
-            menuOpen={this.props.menuOpen} />}
+            sequencesState={this.props.sequencesState} />}
         </EmptyStateWrapper>
       </DesignerPanelContent>
     </DesignerPanel>;
@@ -75,9 +126,15 @@ export class RawDesignerSequenceEditor extends React.Component<SequencesProps> {
 
 export interface ResourceTitleProps {
   dispatch: Function;
-  resource: TaggedSequence | TaggedRegimen | undefined;
+  resource: TaggedSequence
+  | TaggedRegimen
+  | TaggedPoint
+  | TaggedPointGroup
+  | TaggedCurve
+  | undefined;
   readOnly?: boolean;
   fallback: string;
+  save?: boolean;
 }
 
 export const ResourceTitle = (props: ResourceTitleProps) => {
@@ -90,6 +147,7 @@ export const ResourceTitle = (props: ResourceTitleProps) => {
       onBlur={() => {
         setIsEditing(false);
         props.resource && props.dispatch(edit(props.resource, { name: nameValue }));
+        props.save && props.resource && props.dispatch(save(props.resource.uuid));
       }}
       onChange={e => {
         setNameValue(e.currentTarget.value);
@@ -100,6 +158,64 @@ export const ResourceTitle = (props: ResourceTitleProps) => {
       onClick={() => setIsEditing(true)}>
       {props.resource?.body.name || props.fallback}
     </span>;
+};
+
+interface AutoGenerateButtonProps {
+  dispatch: Function;
+  sequence: TaggedSequence;
+  isProcessing: boolean;
+  setTitleProcessing(state: boolean): void;
+  setColorProcessing(state: boolean): void;
+}
+
+export const AutoGenerateButton = (props: AutoGenerateButtonProps) => {
+  const {
+    dispatch, sequence, isProcessing, setTitleProcessing, setColorProcessing,
+  } = props;
+  return <i title={t("auto-generate sequence title and color")}
+    className={[
+      "fa",
+      isProcessing ? "fa-spinner fa-pulse" : "fa-magic",
+      "fb-icon-button",
+    ].join(" ")}
+    onClick={() => {
+      if (!sequence.body.id) {
+        error(t("Save sequence first."));
+        return;
+      }
+      setTitleProcessing(true);
+      const updateTitle = (title: string) =>
+        dispatch(edit(sequence, { name: title.replace(/"*/g, "") }));
+      requestAutoGeneration({
+        contextKey: "title",
+        sequenceId: sequence.body.id,
+        onUpdate: title => {
+          updateTitle(title);
+        },
+        onSuccess: title => {
+          setTitleProcessing(false);
+          updateTitle(title);
+        },
+        onError: () => setTitleProcessing(false),
+      });
+      setColorProcessing(true);
+      requestAutoGeneration({
+        contextKey: "color",
+        sequenceId: sequence.body.id,
+        onUpdate: noop,
+        onSuccess: potentialColor => {
+          setColorProcessing(false);
+          const pColor = potentialColor.toLowerCase().split(".")[0];
+          const color = colors.includes(pColor as Color)
+            ? pColor
+            : "gray";
+          dispatch(edit(sequence, {
+            color: color as Color
+          }));
+        },
+        onError: () => setColorProcessing(false),
+      });
+    }} />;
 };
 
 export const DesignerSequenceEditor =

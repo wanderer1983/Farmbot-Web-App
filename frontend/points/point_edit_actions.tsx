@@ -1,7 +1,7 @@
 import React from "react";
 import { t } from "../i18next_wrapper";
-import { destroy, edit, save } from "../api/crud";
-import { ResourceColor } from "../interfaces";
+import { edit, save } from "../api/crud";
+import { MovementState, ResourceColor } from "../interfaces";
 import {
   TaggedGenericPointer, TaggedPoint, TaggedWeedPointer, Xyz,
 } from "farmbot";
@@ -9,14 +9,14 @@ import { ListItem } from "../plants/plant_panel";
 import { round, cloneDeep } from "lodash";
 import { Row, Col, BlurableInput, ColorPicker } from "../ui";
 import { parseIntInput } from "../util";
-import { UUID } from "../resources/interfaces";
-import { plantAge } from "../plants/map_state_to_props";
+import { plantAgeAndStage } from "../plants/map_state_to_props";
 import { EditWeedStatus } from "../plants/edit_plant_status";
 import {
   MEASURE_SOIL_HEIGHT_NAME, soilHeightPoint, toggleSoilHeight,
 } from "./soil_height";
-import { push } from "../history";
-import { Path } from "../internal_urls";
+import { daysOldText } from "../plants/plant_inventory_item";
+import { GoToThisLocationButton } from "../farm_designer/move_to";
+import { BotPosition } from "../devices/interfaces";
 
 type PointUpdate =
   Partial<TaggedGenericPointer["body"] | TaggedWeedPointer["body"]>;
@@ -31,10 +31,15 @@ export const updatePoint =
       }
     };
 
-export interface EditPointPropertiesProps {
+interface EditPointPropertiesProps {
   point: TaggedGenericPointer | TaggedWeedPointer;
   updatePoint(update: PointUpdate): void;
   botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  dispatch: Function;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
 }
 
 export interface AdditionalWeedPropertiesProps {
@@ -44,17 +49,7 @@ export interface AdditionalWeedPropertiesProps {
 
 export const EditPointProperties = (props: EditPointPropertiesProps) =>
   <ul>
-    <li>
-      <Row>
-        <EditPointName
-          name={props.point.body.name}
-          updatePoint={props.updatePoint} />
-        <EditPointColor
-          color={props.point.body.meta.color}
-          updatePoint={props.updatePoint} />
-      </Row>
-    </li>
-    <ListItem name={t("Location")}>
+    <ListItem>
       <EditPointLocation
         pointLocation={{
           x: props.point.body.x,
@@ -62,9 +57,14 @@ export const EditPointProperties = (props: EditPointPropertiesProps) =>
           z: props.point.body.z,
         }}
         botOnline={props.botOnline}
+        dispatch={props.dispatch}
+        arduinoBusy={props.arduinoBusy}
+        currentBotLocation={props.currentBotLocation}
+        movementState={props.movementState}
+        defaultAxes={props.defaultAxes}
         updatePoint={props.updatePoint} />
     </ListItem>
-    <ListItem name={t("Size")}>
+    <ListItem>
       <EditPointRadius
         radius={props.point.body.radius}
         updatePoint={props.updatePoint} />
@@ -80,7 +80,7 @@ export const EditPointProperties = (props: EditPointPropertiesProps) =>
 export const AdditionalWeedProperties = (props: AdditionalWeedPropertiesProps) =>
   <ul className="additional-weed-properties">
     <ListItem name={t("Age")}>
-      {`${plantAge(props.point)} ${t("days old")}`}
+      {daysOldText(plantAgeAndStage(props.point))}
     </ListItem>
     <ListItem name={t("Status")}>
       <EditWeedStatus weed={props.point} updateWeed={props.updatePoint} />
@@ -129,21 +129,6 @@ const SOURCE_LOOKUP = (): Record<string, string> => ({
 export const lookupPointSource = (createdBy: string | undefined) =>
   SOURCE_LOOKUP()[createdBy || ""] || t("unknown");
 
-export interface PointActionsProps {
-  uuid: UUID;
-  dispatch: Function;
-}
-
-export const PointActions = ({ uuid, dispatch }: PointActionsProps) =>
-  <div className={"point-actions"}>
-    <button
-      className="fb-button red no-float"
-      title={t("delete")}
-      onClick={() => dispatch(destroy(uuid))}>
-      {t("Delete")}
-    </button>
-  </div>;
-
 export interface EditPointNameProps {
   updatePoint(update: PointUpdate): void;
   name: string;
@@ -155,7 +140,7 @@ export const EditPointName = (props: EditPointNameProps) =>
       <label>{t("Name")}</label>
       <BlurableInput
         type="text"
-        name="name"
+        name="pointName"
         value={props.name}
         onCommit={e => props.updatePoint({ name: e.currentTarget.value })} />
     </Col>
@@ -165,10 +150,15 @@ export interface EditPointLocationProps {
   updatePoint(update: PointUpdate): void;
   pointLocation: Record<Xyz, number>;
   botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  dispatch: Function;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
 }
 
 export const EditPointLocation = (props: EditPointLocationProps) =>
-  <Row>
+  <Row className={"edit-point-location"}>
     {["x", "y", "z"].map((axis: Xyz) =>
       <Col xs={4} key={axis}>
         <label style={{ marginTop: 0 }}>{t("{{axis}} (mm)", { axis })}</label>
@@ -181,13 +171,14 @@ export const EditPointLocation = (props: EditPointLocationProps) =>
             [axis]: round(parseIntInput(e.currentTarget.value))
           })} />
       </Col>)}
-    <button
-      className={"fb-button gray no-float move-to-button"}
-      type={"button"}
-      title={t("move to location")}
-      onClick={() => push(Path.location(props.pointLocation))}>
-      {t("Move FarmBot to location")}
-    </button>
+    <GoToThisLocationButton
+      dispatch={props.dispatch}
+      locationCoordinate={props.pointLocation}
+      botOnline={props.botOnline}
+      arduinoBusy={props.arduinoBusy}
+      currentBotLocation={props.currentBotLocation}
+      movementState={props.movementState}
+      defaultAxes={props.defaultAxes} />
   </Row>;
 
 export interface EditPointRadiusProps {

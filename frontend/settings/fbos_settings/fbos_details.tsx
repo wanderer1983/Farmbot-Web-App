@@ -10,11 +10,12 @@ import { LastSeen } from "./last_seen_row";
 import moment from "moment";
 import { formatTime } from "../../util";
 import {
-  boardType, FIRMWARE_CHOICES_DDI,
+  boardType, FIRMWARE_CHOICES_DDI, hasZero2, validFirmwareHardware,
 } from "../firmware/firmware_hardware_support";
 import { ExternalUrl, FarmBotRepo } from "../../external_urls";
 import { DeviceAccountSettings } from "farmbot/dist/resources/api_resources";
 import { getModifiedClassName } from "./default_values";
+import { FirmwareHardware } from "farmbot";
 
 /** Return an indicator color for the given temperature (C). */
 export const colorFromTemp = (temp: number | undefined): string => {
@@ -46,11 +47,31 @@ export function ChipTemperatureDisplay(
   return <div className="chip-temp-display">
     <p>
       <b>{chip && chip.toUpperCase()} {t("CPU temperature")}: </b>
-      {isNumber(temperature) ? <span>{temperature}&deg;C</span> : t("unknown")}
+      {isNumber(temperature) ? <span>{temperature}&deg;C</span> : t("Unknown")}
     </p>
     <Saucer color={colorFromTemp(temperature)} className={"small-inline"} />
   </div>;
 }
+
+export interface PiDisplayProps {
+  chip: string;
+  firmware: FirmwareHardware | undefined;
+}
+
+/** RPI model display row. */
+export const PiDisplay = ({ chip, firmware }: PiDisplayProps): JSX.Element => {
+  const pi = () => {
+    switch (chip) {
+      case "rpi": return "Zero W";
+      case "rpi3": return hasZero2(firmware) ? "Zero 2 W" : "3";
+      case "rpi4": return "4";
+      default: return t("Unknown");
+    }
+  };
+  return <div className={"pi-display"}>
+    <p><b>{t("Raspberry Pi")}: </b>{pi()}</p>
+  </div>;
+};
 
 /** Return an indicator color for the given memory usage (MB). */
 export const colorFromMemoryUsage = (usage: number | undefined) => {
@@ -73,13 +94,30 @@ export const MemoryUsageDisplay = ({ usage }: MemoryUsageDisplayProps) =>
   <div className={"memory-usage-display"}>
     <p>
       <b>{t("Memory usage")}: </b>
-      {isNumber(usage) ? <span>{usage}MB</span> : t("unknown")}
+      {isNumber(usage) ? <span>{usage}MB</span> : t("Unknown")}
     </p>
     <Saucer color={colorFromMemoryUsage(usage)} className={"small-inline"} />
   </div>;
 
+interface CameraIndicatorProps {
+  videoDevices: string | undefined;
+}
+
+/** Camera connection status indicator. */
+export const CameraIndicator = ({ videoDevices }: CameraIndicatorProps) => {
+  const camera = videoDevices &&
+    videoDevices.toString().trim().split(",").length > 0;
+  return <div className={"camera-connection-indicator"}>
+    <p>
+      <b>{t("Camera")}: </b>
+      <span>{camera ? t("Connected") : t("Unknown")}</span>
+    </p>
+    <Saucer color={camera ? "green" : "gray"} className={"small-inline"} />
+  </div>;
+};
+
 /** Return an indicator color for the given WiFi signal strength (%). */
-export const colorFromSignalStrength = (percent: number) => {
+const colorFromSignalStrength = (percent: number) => {
   if (percent < 20) {
     return "gray";
   } else if (percent < 68) {
@@ -139,12 +177,13 @@ export const isWifi = (
   isNumber(wifiStrength) || isNumber(wifiStrengthPercent);
 
 export const LocalIpAddress = ({ address }: { address: string | undefined }) =>
-  isString(address)
-    ? <p className={"ip-address"}><b>{t("Local IP")}: </b>{address}</p>
-    : <div className={"no-local-ip"} />;
+  <p className={"ip-address"}><b>{t("Local IP")}: </b>{address || "---"}</p>;
 
 const calcMac =
-  (nodeName: string, target: string | undefined, wifi: boolean) => {
+  (nodeName: string | undefined, target: string | undefined, wifi: boolean) => {
+    if (!isString(nodeName) || nodeName.includes("---") || !nodeName) {
+      return "---";
+    }
     const firstHalf = target == "rpi4" ? "dca632" : "b827eb";
     const snLast6 = nodeName.split(".")[0].slice(-6);
     const lastHalf = wifi
@@ -163,11 +202,9 @@ export interface MacAddressProps {
 }
 
 export const MacAddress = ({ wifi, nodeName, target }: MacAddressProps) =>
-  isString(nodeName) && !nodeName.includes("---") && nodeName
-    ? <p className={"mac-address"}>
-      <b>{t("MAC address")}: </b>{calcMac(nodeName, target, wifi)}
-    </p>
-    : <div className={"no-mac-address"} />;
+  <p className={"mac-address"}>
+    <b>{t("MAC address")}: </b>{calcMac(nodeName, target, wifi)}
+  </p>;
 
 /** Available throttle info. */
 export enum ThrottleType {
@@ -189,7 +226,8 @@ const THROTTLE_BIT_LOOKUP:
 
 /** Return a color based on throttle flag states. */
 export const colorFromThrottle =
-  (throttled: string, throttleType: ThrottleType) => {
+  (throttled: string | undefined, throttleType: ThrottleType) => {
+    if (!throttled) { return "gray"; }
     const throttleCode = parseInt(throttled, 16);
     const bit = THROTTLE_BIT_LOOKUP[throttleType];
     // eslint-disable-next-line no-bitwise
@@ -206,24 +244,26 @@ export const colorFromThrottle =
   };
 
 const THROTTLE_COLOR_KEY = () => ({
-  red: t("active"),
-  yellow: t("occurred"),
-  green: t("ok"),
+  red: t("Active"),
+  yellow: t("Occurred"),
+  green: t("Ok"),
+  gray: t("Unknown"),
 });
 
 const VOLTAGE_COLOR_KEY = () => ({
-  red: t("low"),
-  yellow: t("ok"),
-  green: t("good"),
+  red: t("Low"),
+  yellow: t("Ok"),
+  green: t("Good"),
+  gray: t("Unknown"),
 });
 
 interface ThrottleIndicatorProps {
-  throttleDataString: string;
+  throttleDataString: string | undefined;
   throttleType: ThrottleType;
 }
 
 /** Saucer with color and title indicating throttle state. */
-const ThrottleIndicator = (props: ThrottleIndicatorProps) => {
+export const ThrottleIndicator = (props: ThrottleIndicatorProps) => {
   const { throttleDataString, throttleType } = props;
   const throttleColor = colorFromThrottle(throttleDataString, throttleType);
   return <Saucer className={"small-inline"}
@@ -232,7 +272,7 @@ const ThrottleIndicator = (props: ThrottleIndicatorProps) => {
 };
 
 /** Visual representation of throttle state. */
-const ThrottleDisplay = (dataString: string) =>
+const ThrottleDisplay = (dataString: string | undefined) =>
   <div className="throttle-display">
     {Object.keys(THROTTLE_BIT_LOOKUP).map((key: ThrottleType) =>
       <div className="throttle-row" key={key}>
@@ -249,13 +289,12 @@ interface VoltageDisplayProps {
 
 /** RPI throttle state display row: label, indicator. */
 export const VoltageDisplay = ({ chip, throttleData }: VoltageDisplayProps) => {
-  if (!throttleData) { return <div className="voltage-display" />; }
   const voltageColor = colorFromThrottle(throttleData, ThrottleType.UnderVoltage);
   return <div className="voltage-display">
     <p><b>{chip && chip.toUpperCase()} {t("Voltage")}</b></p>
     <Help text={ToolTips.VOLTAGE_STATUS} />
     <p>:&nbsp;{VOLTAGE_COLOR_KEY()[voltageColor]}</p>
-    <Popover usePortal={false}
+    <Popover usePortal={false} className={"voltage-saucer"}
       target={<ThrottleIndicator
         throttleDataString={throttleData}
         throttleType={ThrottleType.UnderVoltage} />}
@@ -289,23 +328,24 @@ const CommitDisplay = (
   </p>;
 };
 
+export const convertUptime = (seconds: number, abrv = false) => {
+  if (seconds >= 172800) {
+    return `${Math.round(seconds / 86400)} ${t("days")}`;
+  } else if (seconds >= 7200) {
+    return `${Math.round(seconds / 3600)} ${t("hours")}`;
+  } else if (seconds >= 120) {
+    return `${Math.round(seconds / 60)} ${abrv ? t("min") : t("minutes")}`;
+  } else {
+    return `${seconds} ${abrv ? t("sec") : t("seconds")}`;
+  }
+};
+
 interface UptimeDisplayProps {
   uptime_sec: number;
 }
 
 /** FBOS uptime display row: label and uptime in relevant unit. */
 const UptimeDisplay = ({ uptime_sec }: UptimeDisplayProps): JSX.Element => {
-  const convertUptime = (seconds: number) => {
-    if (seconds >= 172800) {
-      return `${Math.round(seconds / 86400)} ${t("days")}`;
-    } else if (seconds >= 7200) {
-      return `${Math.round(seconds / 3600)} ${t("hours")}`;
-    } else if (seconds >= 120) {
-      return `${Math.round(seconds / 60)} ${t("minutes")}`;
-    } else {
-      return `${seconds} ${t("seconds")}`;
-    }
-  };
   return <p><b>{t("Uptime")}: </b>{convertUptime(uptime_sec)}</p>;
 };
 
@@ -319,12 +359,14 @@ export const OSReleaseChannelSelection = (
   { dispatch, sourceFbosConfig }: OSReleaseChannelSelectionProps,
 ): JSX.Element => {
   const channel = sourceFbosConfig("update_channel").value;
+  const firmwareHardware = validFirmwareHardware(
+    sourceFbosConfig("firmware_hardware").value);
   return <fieldset className={"os-release-channel"}>
     <label>
       {t("OS release channel")}
     </label>
     <FBSelect
-      extraClass={getModifiedClassName("update_channel", channel)}
+      extraClass={getModifiedClassName("update_channel", channel, firmwareHardware)}
       selectedItem={{ label: t("" + channel), value: "" + channel }}
       onChange={ddi =>
         (ddi.value == "stable" ||
@@ -349,20 +391,23 @@ export const reformatFwVersion =
   };
 
 export const reformatFbosVersion = (fbosVersion: string | undefined): string =>
-  fbosVersion ? "v" + fbosVersion : t("unknown");
+  fbosVersion ? "v" + fbosVersion : t("Unknown");
 
 /** Current technical information about FarmBot OS running on the device. */
 export function FbosDetails(props: FbosDetailsProps) {
+  const { informational_settings } = props.bot.hardware;
   const {
     env, commit, target, node_name, firmware_version, firmware_commit,
     soc_temp, wifi_level, uptime, memory_usage, disk_usage, throttled,
-    wifi_level_percent, cpu_usage, private_ip,
-  } = props.bot.hardware.informational_settings;
+    wifi_level_percent, cpu_usage, private_ip, video_devices,
+  } = informational_settings;
   const { fbos_version } = props.deviceAccount.body;
   const last_ota = props.deviceAccount.body[
     "last_ota" as keyof DeviceAccountSettings] as string | undefined;
   const firmware_path =
     props.sourceFbosConfig("firmware_path").value || "---";
+  const firmware_hardware = validFirmwareHardware(
+    props.sourceFbosConfig("firmware_hardware").value);
   const infoFwCommit = firmware_version?.includes(".") ? firmware_commit : "---";
   const firmwareCommit = firmware_version?.split("-")[1] || infoFwCommit;
 
@@ -377,6 +422,7 @@ export function FbosDetails(props: FbosDetailsProps) {
     <CommitDisplay title={t("Commit")}
       repo={FarmBotRepo.FarmBotOS} commit={commit} />
     <p><b>{t("Target")}: </b>{target}</p>
+    <PiDisplay chip={target} firmware={firmware_hardware} />
     <p><b>{t("Node name")}: </b>{last((node_name || "").split("@"))}</p>
     <p><b>{t("Device ID")}: </b>{props.deviceAccount.body.id}</p>
     <LocalIpAddress address={private_ip} />
@@ -395,6 +441,7 @@ export function FbosDetails(props: FbosDetailsProps) {
     <WiFiStrengthDisplay extraInfo={true}
       wifiStrength={wifi_level} wifiStrengthPercent={wifi_level_percent} />
     <VoltageDisplay chip={target} throttleData={throttled} />
+    <p><b>{t("Cameras")}: </b>{video_devices}</p>
     <OSReleaseChannelSelection
       dispatch={props.dispatch} sourceFbosConfig={props.sourceFbosConfig} />
     {last_ota && <p><b>{t("Last updated")}: </b>

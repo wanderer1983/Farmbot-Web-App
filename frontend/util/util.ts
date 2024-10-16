@@ -1,22 +1,17 @@
 import { ResourceColor, TimeSettings } from "../interfaces";
-import { box } from "boxed_value";
 import {
   TaggedResource,
   TaggedFirmwareConfig,
   TaggedFbosConfig,
-  Dictionary,
   ResourceName,
 } from "farmbot";
-import { BotLocationData } from "../devices/interfaces";
 import {
-  sample,
-  padStart,
   sortBy,
   merge,
   isNumber,
 } from "lodash";
-import { t } from "../i18next_wrapper";
 import moment from "moment";
+import { BotLocationData } from "../devices/interfaces";
 
 export const colors: Array<ResourceColor> = [
   "blue",
@@ -29,64 +24,10 @@ export const colors: Array<ResourceColor> = [
   "red",
 ];
 
-/** Picks a color that is compliant with sequence / regimen color codes */
-export function randomColor(): ResourceColor {
-  return sample(colors) as typeof colors[0];
-}
-
 export function defensiveClone<T>(target: T): T {
   const jsonString = JSON.stringify(target);
   return JSON.parse(jsonString || "null");
 }
-
-/** USAGE: DYNAMICALLY plucks `obj[key]`.
- *         * `undefined` becomes `""`
- *         * `number` types are coerced to strings (Eg: "5").
- *         * `boolean` is converted to "true" and "false" (a string).
- *         * All other types raise a runtime exception (Objects, functions,
- *           Array, Symbol, etc)
- */
-export function safeStringFetch(obj: {}, key: string): string {
-  const boxed = box((obj as Dictionary<{}>)[key]);
-  switch (boxed.kind) {
-    case "undefined":
-    case "null":
-      return "";
-    case "number":
-    case "string":
-      return boxed.value.toString();
-    case "boolean":
-      return (boxed.value) ? "true" : "false";
-    default:
-      const msg = t(`Numbers strings and null only (got ${boxed.kind}).`);
-      throw new Error(msg);
-  }
-}
-
-/** Fancy debug */
-export function fancyDebug<T extends {}>(d: T): T {
-  console.log(Object
-    .keys(d)
-    .map(key => [key, (d as Dictionary<string>)[key]])
-    .map((x) => {
-      const key = padStart(x[0], 20, " ");
-      const val = (JSON.stringify(x[1]) || "Nothing").slice(0, 52);
-
-      return `${key} => ${val}`;
-    })
-    .join("\n"));
-  return d;
-}
-
-export type CowardlyDictionary<T> = Dictionary<T | undefined>;
-/** Sometimes, you are forced to pass a number type even though
- * the resource has no ID (usually for rendering purposes).
- * Example:
- *  farmEvent.id || 0
- *
- *  In those cases, you can use this constant to indicate intent.
- */
-export const NOT_SAVED = -1;
 
 /** Better than Array.proto.filter and compact() because the type checker
  * knows what's going on.
@@ -141,8 +82,6 @@ export function shortRevision() {
   return (globalConfig.SHORT_REVISION || "NONE").slice(0, 8);
 }
 
-export * from "./urls";
-
 export const trim = (i: string): string => i.replace(/\s+/g, " ");
 
 /** When you have a ridiculously long chain of flags and need to convert it
@@ -169,15 +108,6 @@ export function scrollToBottom(elementId: string) {
   if (!elToScroll) { return; }
   // Wait for the new element height and scroll to the bottom.
   setTimeout(() => elToScroll.scrollTop = elToScroll.scrollHeight, 1);
-}
-
-export function validBotLocationData(
-  botLocationData: BotLocationData | undefined): BotLocationData {
-  return betterMerge({
-    position: { x: undefined, y: undefined, z: undefined },
-    scaled_encoders: { x: undefined, y: undefined, z: undefined },
-    raw_encoders: { x: undefined, y: undefined, z: undefined },
-  }, botLocationData);
 }
 
 /**
@@ -239,3 +169,12 @@ export const formatTime =
       .utcOffset(timeSettings.utcOffset)
       .format(`${dateFormat}${separator}${timeFormat}`);
   };
+
+export const fullLocationData = (botLocationData: BotLocationData | undefined) =>
+  betterMerge({
+    position: { x: undefined, y: undefined, z: undefined },
+    scaled_encoders: { x: undefined, y: undefined, z: undefined },
+    raw_encoders: { x: undefined, y: undefined, z: undefined },
+    load: { x: undefined, y: undefined, z: undefined },
+    axis_states: { x: undefined, y: undefined, z: undefined },
+  }, botLocationData);

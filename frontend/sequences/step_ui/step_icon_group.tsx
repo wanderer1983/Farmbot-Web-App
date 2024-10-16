@@ -9,6 +9,8 @@ import { setActiveSequenceByName } from "../set_active_sequence_by_name";
 import { t } from "../../i18next_wrapper";
 import { Popover } from "../../ui";
 import { Path } from "../../internal_urls";
+import { SequenceReducerState } from "../interfaces";
+import { StateToggleKey, StateToggles } from "./step_wrapper";
 
 export interface StepIconBarProps {
   index: number;
@@ -20,18 +22,19 @@ export interface StepIconBarProps {
   confirmStepDeletion: boolean;
   viewRaw: boolean | undefined;
   toggleViewRaw: (() => void) | undefined;
-  monacoEditor: boolean | undefined;
-  toggleMonacoEditor: (() => void) | undefined;
+  stateToggles?: StateToggles;
   links: React.ReactElement[] | undefined;
-  pinnedView: boolean | undefined;
-  togglePinnedView: (() => void) | undefined;
   readOnly: boolean;
+  enableMarkdown?: boolean;
+  isProcessing: boolean;
+  togglePrompt(): void;
+  sequencesState: SequenceReducerState;
 }
 
 export function StepUpDownButtonPopover(
   { onMove }: { onMove: (d: number) => () => void }) {
   return <Popover position={Position.TOP} usePortal={false}
-    target={<i title={t("move step")} className="fa fa-arrows-v" />}
+    target={<i title={t("move step")} className="fa fa-arrows-v fb-icon-button" />}
     content={<div className={"step-up-down-arrows"}>
       <i className="fa fa-arrow-circle-up" onClick={onMove(-1)} />
       <i className="fa fa-arrow-circle-down" onClick={onMove(2)} />
@@ -43,9 +46,12 @@ export function StepIconGroup(props: StepIconBarProps) {
     index, dispatch, step, sequence, helpText, confirmStepDeletion, readOnly,
   } = props;
 
-  const onClone = () => dispatch(splice({ step, index, sequence }));
-  const onTrash = () =>
+  const onClone = () => {
+    dispatch(splice({ step, index, sequence }));
+  };
+  const onTrash = () => {
     remove({ dispatch, index, sequence, confirmStepDeletion });
+  };
   const onMove = (delta: number) => () => {
     const to = Math.max(index + delta, 0);
     dispatch(move({ step, sequence, from: index, to }));
@@ -54,30 +60,41 @@ export function StepIconGroup(props: StepIconBarProps) {
     push(Path.sequences(urlFriendly(sequenceName)));
     setActiveSequenceByName();
   };
+  const monaco = props.stateToggles?.[StateToggleKey.monacoEditor];
+  const expanded = props.stateToggles?.[StateToggleKey.luaExpanded];
 
   return <span className={"step-control-icons"}>
+    {!readOnly && props.step.kind == "lua" &&
+      <i className={"fa fa-magic fb-icon-button"}
+        title={t("auto-generate Lua code")}
+        onClick={props.togglePrompt} />}
     {props.executeSequenceName &&
-      <i className={"fa fa-external-link"}
+      <i className={"fa fa-external-link fb-icon-button"}
         title={t("open linked sequence")}
         onClick={onSequenceLinkNav(props.executeSequenceName)} />}
-    {props.togglePinnedView &&
-      <i className={`fa fa-thumb-tack ${props.pinnedView ? "enabled" : ""}`}
-        title={t("toggle pinned view")}
-        onClick={props.togglePinnedView} />}
-    {props.toggleMonacoEditor &&
-      <i className={`fa fa-font ${props.monacoEditor ? "enabled" : ""}`}
+    {monaco &&
+      <i className={`fa fa-font ${monaco.enabled ? "enabled" : ""} fb-icon-button`}
         title={t("toggle fancy editor")}
-        onClick={props.toggleMonacoEditor} />}
+        onClick={monaco.toggle} />}
+    {expanded &&
+      <i title={t("toggle increased editor height")}
+        className={[
+          "fa",
+          expanded.enabled ? "fa-compress" : "fa-expand",
+          "fb-icon-button",
+        ].join(" ")}
+        onClick={expanded.toggle} />}
     {props.toggleViewRaw &&
-      <i className={`fa fa-code ${props.viewRaw ? "enabled" : ""}`}
+      <i className={`fa fa-code ${props.viewRaw ? "enabled" : ""} fb-icon-button`}
         title={t("toggle code view")}
         onClick={props.toggleViewRaw} />}
-    <Help text={helpText} position={Position.TOP} title={t("help")}
-      links={props.links} />
-    {!readOnly && <i className={"fa fa-trash"}
+    <Help iconButton={true}
+      text={helpText} position={Position.TOP} title={t("help")}
+      links={props.links} enableMarkdown={props.enableMarkdown} />
+    {!readOnly && <i className={"fa fa-trash fb-icon-button"}
       title={t("delete step")}
       onClick={onTrash} />}
-    {!readOnly && <i className={"fa fa-clone"}
+    {!readOnly && <i className={"fa fa-clone fb-icon-button"}
       title={t("duplicate step")}
       onClick={onClone} />}
     {!readOnly && <StepUpDownButtonPopover onMove={onMove} />}

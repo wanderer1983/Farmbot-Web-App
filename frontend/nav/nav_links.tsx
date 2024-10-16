@@ -9,13 +9,14 @@ import { ExternalUrl } from "../external_urls";
 import { maybeBeacon } from "../help/tours";
 
 export const getLinks = (): Panel[] => [
+  Panel.Map,
   Panel.Plants,
   Panel.Weeds,
   Panel.Points,
+  Panel.Curves,
   Panel.Sequences,
   Panel.Regimens,
   Panel.FarmEvents,
-  Panel.Controls,
   ...(showSensors() ? [Panel.Sensors] : []),
   Panel.Photos,
   ...(showFarmware() ? [Panel.Farmware] : []),
@@ -28,7 +29,7 @@ export const getLinks = (): Panel[] => [
 export const NavLinks = (props: NavLinksProps) =>
   <div className={"links"}>
     <div className={"nav-links"}>
-      {(props.addMap ? [Panel.Map] : []).concat(getLinks()).map(panel =>
+      {getLinks().map(panel =>
         <Link
           to={getPanelPath(panel)}
           className={[

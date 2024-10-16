@@ -21,7 +21,7 @@ jest.mock("../session", () => ({
 import {
   responseFulfilled, isLocalRequest, requestFulfilled, responseRejected,
 } from "../interceptors";
-import { AxiosResponse, Method } from "axios";
+import { AxiosResponse, InternalAxiosRequestConfig, Method } from "axios";
 import { uuid } from "farmbot";
 import { startTracking } from "../connectivity/data_consistency";
 import { SafeError } from "../interceptor_support";
@@ -46,7 +46,7 @@ function fakeResponse(config: Partial<FakeProps>): AxiosResponse {
     config: {
       method: config.method || "put",
       url: config.url || "http://my.farm.bot/api/tools/6"
-    }
+    } as InternalAxiosRequestConfig,
   };
 
   return output as AxiosResponse;
@@ -80,6 +80,18 @@ describe("responseRejected", () => {
     expect(dispatchNetworkUp).toHaveBeenCalledWith("user.api", ANY_NUMBER);
   });
 
+  it("throws error", () => {
+    const safeError: SafeError = {
+      request: { responseURL: "" },
+      response: { status: 400 }
+    };
+    jest.useFakeTimers();
+    expect(() => {
+      responseRejected(safeError).then(() => { }, () => { });
+      jest.runAllTimers();
+    }).toThrow("Bad response: 400 {\"status\":400}");
+  });
+
   it("handles 500", async () => {
     const safeError: SafeError = {
       request: { responseURL: "" },
@@ -98,6 +110,17 @@ describe("responseRejected", () => {
     API.setBaseUrl("http://localhost:3000");
     await expect(responseRejected(safeError)).rejects.toEqual(safeError);
     expect(Session.clear).toHaveBeenCalled();
+  });
+
+  it("handles 404", async () => {
+    const safeError: SafeError = {
+      request: { responseURL: "http://localhost:3000" },
+      response: { status: 404 }
+    };
+    API.setBaseUrl("http://localhost:3000");
+    await expect(responseRejected(safeError)).rejects.toEqual(safeError);
+    expect(Session.clear).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
   });
 
   it("handles 451", async () => {
@@ -132,13 +155,17 @@ describe("isLocalRequest", () => {
 describe("requestFulfilled", () => {
   it("returns unchanged config when not an API request", () => {
     API.setBaseUrl("http://localhost:3000");
-    const config = requestFulfilled(auth)({ url: "other" });
+    const config = requestFulfilled(auth)({
+      url: "other",
+    } as InternalAxiosRequestConfig);
     expect(config).toEqual({ url: "other" });
   });
 
   it("returns config with headers", () => {
     API.setBaseUrl("http://localhost:3000");
-    const config = requestFulfilled(auth)({ url: "http://localhost:3000/api" });
+    const config = requestFulfilled(auth)({
+      url: "http://localhost:3000/api",
+    } as InternalAxiosRequestConfig);
     expect(config.url).toEqual("http://localhost:3000/api");
     expect(config.headers?.Authorization).toEqual(auth.token.encoded);
     expect(config.headers?.["X-Farmbot-Rpc-Id"]).toEqual("abc");

@@ -22,6 +22,7 @@ export function LayerToggle(props: LayerToggleProps) {
   const classNames = [
     "fb-button",
     "fb-toggle-button",
+    "fb-layer-toggle",
     value ? "green" : "red",
     getModifiedClassName(props.settingName),
   ].join(" ");
@@ -33,7 +34,8 @@ export function LayerToggle(props: LayerToggleProps) {
           <Popover
             position={Position.BOTTOM_RIGHT}
             className={"caret-menu-button"}
-            target={<i className="fa fa-caret-down" title={t(title)} />}
+            target={<i className={"fa fa-caret-down fb-icon-button"}
+              title={t(title)} />}
             content={popover} />}
       </span>
     </label>

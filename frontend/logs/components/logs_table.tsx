@@ -2,13 +2,17 @@ import React from "react";
 import moment from "moment";
 import { t } from "../../i18next_wrapper";
 import { TaggedLog, ALLOWED_MESSAGE_TYPES } from "farmbot";
-import { LogsState, LogsTableProps, Filters } from "../interfaces";
-import { Classes } from "@blueprintjs/core";
-import { isNumber, startCase, some } from "lodash";
+import {
+  LogsState, LogsTableProps, Filters, FilterPopoverProps,
+} from "../interfaces";
+import { isNumber, some, round } from "lodash";
 import { TimeSettings } from "../../interfaces";
 import { UUID } from "../../resources/interfaces";
-import { Markdown } from "../../ui";
+import { Markdown, Popover } from "../../ui";
 import { semverCompare, SemverResult, formatTime } from "../../util";
+import { destroy } from "../../api/crud";
+import { Position } from "@blueprintjs/core";
+import { LogsFilterMenu } from "./filter_menu";
 
 interface LogsRowProps {
   tlog: TaggedLog;
@@ -33,7 +37,7 @@ export const logVersionMatch =
 export const xyzTableEntry =
   (x: number | undefined, y: number | undefined, z: number | undefined) =>
     (isNumber(x) && isNumber(y) && isNumber(z))
-      ? `(${x}, ${y}, ${z})`
+      ? `(${round(x)}, ${round(y)}, ${round(z)})`
       : t("Unknown");
 
 interface LogVerbositySaucerProps {
@@ -46,7 +50,9 @@ interface LogVerbositySaucerProps {
 const LogVerbositySaucer = (props: LogVerbositySaucerProps) =>
   <div className="log-verbosity-saucer">
     <div className={`saucer ${props.type}`}>
-      <p>
+      <p style={{
+        color: ["busy", "info"].includes(props.type) ? "black" : "white"
+      }}>
         {(props.verbosity || 0) < 1 ? "" : props.verbosity}
       </p>
     </div>
@@ -57,12 +63,16 @@ const LogsRow = (props: LogsRowProps) => {
   const { tlog, timeSettings, dispatch, markdown } = props;
   const { uuid } = tlog;
   const { x, y, z, verbosity, type, created_at, message, id } = tlog.body;
-  const time = formatTime(moment.unix(created_at || NaN), timeSettings, "MMM D");
+  const at = moment.unix(created_at || NaN);
+  const oneDay = 24 * 60 * 60 * 1000;
+  const dateFormat = moment().diff(at) > oneDay ? "MMM D" : "";
+  const time = formatTime(at, timeSettings, dateFormat);
   return <tr key={uuid} id={"" + id}>
     <td>
+      <i className={"fa fa-trash fb-icon-button"} title={t("delete log")}
+        onClick={() => dispatch(destroy(uuid))} />
       <LogVerbositySaucer
         uuid={uuid} dispatch={dispatch} verbosity={verbosity} type={type} />
-      {t(startCase(type))}
     </td>
     <td>
       {markdown ? <Markdown>{message}</Markdown> : message || t("Loading")}
@@ -81,18 +91,16 @@ const LogsRow = (props: LogsRowProps) => {
 };
 
 const LOG_TABLE_CLASS = [
-  Classes.HTML_TABLE,
-  Classes.HTML_TABLE_STRIPED,
   "logs-table",
 ].join(" ");
 
 /** All log messages with select data in table form for display in the app. */
 export const LogsTable = (props: LogsTableProps) => {
-  return <div className={"table-responsive"}>
+  return <div className={"logs-table-wrapper"}>
     <table className={LOG_TABLE_CLASS}>
       <thead>
         <tr>
-          <th><label>{t("Type")}</label></th>
+          <th><label><FilterPopover {...props} /></label></th>
           <th><label>{t("Message")}</label></th>
           <th><label>{t("(x, y, z)")}</label></th>
           <th><label>{t("Time")}</label></th>
@@ -113,6 +121,29 @@ export const LogsTable = (props: LogsTableProps) => {
               timeSettings={props.timeSettings} />)}
       </tbody>
     </table>
+    <p className={"notice"}>
+      {t("Logs older than {{ days }} days are automatically deleted", {
+        days: props.device.body.max_log_age_in_days || 60,
+      })}
+    </p>
+  </div>;
+};
+
+/** Pop-up with log verbosity filter settings. */
+const FilterPopover = (props: FilterPopoverProps) => {
+  const { filterActive } = props;
+  return <div className={"logs-filter-settings-menu-button"}>
+    <Popover position={Position.BOTTOM_RIGHT}
+      target={<i className={"fa fa-filter"}
+        style={{
+          backgroundColor: filterActive ? "#6a4" : "",
+          color: filterActive ? "white" : "#434343",
+        }}
+        title={t("edit filter settings")} />}
+      content={<LogsFilterMenu
+        toggle={props.toggle} state={props.state}
+        toggleCurrentFbosOnly={props.toggleCurrentFbosOnly}
+        setFilterLevel={props.setFilterLevel} />} />
   </div>;
 };
 

@@ -10,10 +10,16 @@ jest.mock("../../../../config_storage/actions", () => ({
   setWebAppConfigValue: jest.fn(),
 }));
 
+let mockDev = false;
+jest.mock("../../../../settings/dev/dev_support", () => ({
+  DevSettings: { futureFeaturesEnabled: () => mockDev }
+}));
+
 import React from "react";
 import { shallow, mount } from "enzyme";
 import {
   GardenMapLegend, ZoomControls, PointsSubMenu, FarmbotSubMenu,
+  PlantsSubMenu, MapSettingsContent, SettingsSubMenuProps,
 } from "../garden_map_legend";
 import { GardenMapLegendProps } from "../../interfaces";
 import { BooleanSetting } from "../../../../session_keys";
@@ -62,6 +68,7 @@ describe("<GardenMapLegend />", () => {
     expect(wrapper.html()).toContain("filter");
     expect(wrapper.html()).toContain("extras");
     expect(wrapper.html()).not.toContain("-100");
+    expect(wrapper.text().toLowerCase()).not.toContain("3d map");
   });
 
   it("renders with readings", () => {
@@ -75,6 +82,16 @@ describe("<GardenMapLegend />", () => {
     const wrapper = mount(<GardenMapLegend {...fakeProps()} />);
     wrapper.find(".fb-toggle-button").last().simulate("click");
     expect(wrapper.html()).toContain("-100");
+  });
+
+  it("renders 3D map toggle", () => {
+    mockDev = true;
+    const p = fakeProps();
+    const wrapper = mount(<GardenMapLegend {...p} />);
+    expect(wrapper.text().toLowerCase()).toContain("3d map");
+    wrapper.find(".fb-layer-toggle").last().simulate("click");
+    expect(setWebAppConfigValue).toHaveBeenCalledWith(
+      BooleanSetting.three_d_garden, true);
   });
 });
 
@@ -105,11 +122,14 @@ describe("<ZoomControls />", () => {
   });
 });
 
+const fakeProps = (): SettingsSubMenuProps => ({
+  dispatch: jest.fn(),
+  getConfigValue: () => true,
+});
+
 describe("<PointsSubMenu />", () => {
   it("shows historic points", () => {
-    const wrapper = mount(<PointsSubMenu
-      dispatch={jest.fn()}
-      getConfigValue={() => true} />);
+    const wrapper = mount(<PointsSubMenu {...fakeProps()} />);
     const toggleBtn = wrapper.find("button").first();
     expect(toggleBtn.text()).toEqual("yes");
     toggleBtn.simulate("click");
@@ -118,15 +138,35 @@ describe("<PointsSubMenu />", () => {
   });
 });
 
+describe("<PlantsSubMenu />", () => {
+  it("shows plants settings", () => {
+    const wrapper = mount(<PlantsSubMenu {...fakeProps()} />);
+    const toggleBtn = wrapper.find("button").first();
+    expect(toggleBtn.text()).toEqual("no");
+    toggleBtn.simulate("click");
+    expect(setWebAppConfigValue).toHaveBeenCalledWith(
+      BooleanSetting.disable_animations, false);
+  });
+});
+
 describe("<FarmbotSubMenu />", () => {
   it("shows farmbot settings", () => {
-    const wrapper = mount(<FarmbotSubMenu
-      dispatch={jest.fn()}
-      getConfigValue={() => true} />);
-    const toggleBtn = wrapper.find("button");
+    const wrapper = mount(<FarmbotSubMenu {...fakeProps()} />);
+    const toggleBtn = wrapper.find("button").first();
     expect(toggleBtn.text()).toEqual("yes");
     toggleBtn.simulate("click");
     expect(setWebAppConfigValue).toHaveBeenCalledWith(
-      BooleanSetting.show_camera_view_area, false);
+      BooleanSetting.display_trail, false);
+  });
+});
+
+describe("<MapSettingsContent />", () => {
+  it("shows map settings", () => {
+    const wrapper = mount(<MapSettingsContent {...fakeProps()} />);
+    const toggleBtn = wrapper.find("button").first();
+    expect(toggleBtn.text()).toEqual("yes");
+    toggleBtn.simulate("click");
+    expect(setWebAppConfigValue).toHaveBeenCalledWith(
+      BooleanSetting.dynamic_map, false);
   });
 });

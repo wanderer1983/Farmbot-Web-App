@@ -158,12 +158,46 @@ describe("<WizardStepContainer />", () => {
     expect(wrapper.html()).toContain("no-background");
   });
 
+  it("renders warning banner", () => {
+    const p = fakeProps();
+    p.step.warning = "warning";
+    const wrapper = mount(<WizardStepContainer {...p} />);
+    expect(wrapper.html()).toContain("warning-banner");
+    expect(wrapper.text()).toContain("warning");
+  });
+
   it("renders video", () => {
     const p = fakeProps();
     p.step.video = "url";
     const wrapper = mount(<WizardStepContainer {...p} />);
     expect(wrapper.html()).toContain("iframe");
     wrapper.setProps(p);
+  });
+
+  it("renders images", () => {
+    const p = fakeProps();
+    p.step.images = ["url"];
+    p.step.outcomes[0].images = ["url"];
+    const wrapper = mount(<WizardStepContainer {...p} />);
+    expect(wrapper.find("img").length).toEqual(2);
+  });
+
+  it("renders controls check", () => {
+    const p = fakeProps();
+    p.step.controlsCheckOptions = {};
+    p.step.outcomes[0].detectedProblems = [
+      { status: () => false, description: "problem" },
+    ];
+    p.step.outcomes[0].controlsCheckOptions = {};
+    const wrapper = mount(<WizardStepContainer {...p} />);
+    expect(wrapper.find(".controls-check").length).toEqual(2);
+  });
+
+  it("renders pin bindings", () => {
+    const p = fakeProps();
+    p.step.pinBindingOptions = { editing: false };
+    const wrapper = mount(<WizardStepContainer {...p} />);
+    expect(wrapper.find(".electronics-box-top").length).toEqual(1);
   });
 });
 

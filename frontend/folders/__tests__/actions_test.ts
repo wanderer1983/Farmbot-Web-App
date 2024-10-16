@@ -6,8 +6,12 @@ jest.mock("../../draggable/actions", () => ({
   stepGet: jest.fn(() => () => mockStepGetResult),
 }));
 
+let mockExceeded = false;
+jest.mock("../../sequences/actions", () => ({
+  sequenceLimitExceeded: () => mockExceeded,
+}));
+
 import {
-  collapseAll,
   setFolderColor,
   setFolderName,
   addNewSequenceToFolder,
@@ -21,10 +25,8 @@ import {
   dropSequence,
   sequenceEditMaybeSave,
 } from "../actions";
-import { sample } from "lodash";
-import { cloneAndClimb, climb } from "../climb";
 import { store } from "../../redux/store";
-import { DeepPartial } from "redux";
+import { DeepPartial } from "../../redux/interfaces";
 import { Everything } from "../../interfaces";
 import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import { newTaggedResource } from "../../sync/actions";
@@ -37,7 +39,7 @@ import { fakeSequence } from "../../__test_support__/fake_state/resources";
 import { stepGet } from "../../draggable/actions";
 import { SpecialStatus } from "farmbot";
 import { dragEvent } from "../../__test_support__/fake_html_events";
-import { mockFolders, TEST_GRAPH } from "../test_fixtures";
+import { mockFolders } from "../test_fixtures";
 import { Path } from "../../internal_urls";
 
 const mockSequence = fakeSequence();
@@ -69,19 +71,6 @@ jest.mock("../../sequences/set_active_sequence_by_name", () => {
   return { setActiveSequenceByName: jest.fn() };
 });
 
-describe("expand/collapse all", () => {
-  const halfOpen = cloneAndClimb(TEST_GRAPH, (node) => {
-    node.open = !sample([true, false]);
-  });
-
-  it("collapses all folders", async () => {
-    const closed = await collapseAll(halfOpen);
-    climb(closed, (node) => {
-      expect(node.open).toBe(false);
-    });
-  });
-});
-
 describe("setFolderColor", () => {
   it("updates a folder's color", () => {
     setFolderColor(11, "blue");
@@ -108,13 +97,43 @@ describe("setFolderName", () => {
 });
 
 describe("addNewSequenceToFolder", () => {
-  it("Adds a new sequence to a folder", () => {
-    addNewSequenceToFolder(11);
+  it("adds a new sequence", () => {
+    addNewSequenceToFolder();
     expect(setActiveSequenceByName).toHaveBeenCalled();
     expect(init).toHaveBeenCalledWith("Sequence", expect.objectContaining({
-      name: "new sequence 1"
+      name: "New Sequence 1",
+      color: "gray",
+      folder_id: undefined,
     }));
-    expect(push).toHaveBeenCalledWith(Path.sequences("new_sequence_1"));
+    expect(push).toHaveBeenCalledWith(Path.sequences("New_Sequence_1"));
+  });
+
+  it("adds a new sequence to a folder", () => {
+    addNewSequenceToFolder({ id: 11 });
+    expect(setActiveSequenceByName).toHaveBeenCalled();
+    expect(init).toHaveBeenCalledWith("Sequence", expect.objectContaining({
+      name: "New Sequence 1",
+      color: "gray",
+      folder_id: 11,
+    }));
+    expect(push).toHaveBeenCalledWith(Path.sequences("New_Sequence_1"));
+  });
+
+  it("adds a new sequence to a folder with a color", () => {
+    addNewSequenceToFolder({ id: 11, color: "blue" });
+    expect(setActiveSequenceByName).toHaveBeenCalled();
+    expect(init).toHaveBeenCalledWith("Sequence", expect.objectContaining({
+      name: "New Sequence 1",
+      color: "blue",
+      folder_id: 11,
+    }));
+    expect(push).toHaveBeenCalledWith(Path.sequences("New_Sequence_1"));
+  });
+
+  it("exceeds limit", () => {
+    mockExceeded = true;
+    addNewSequenceToFolder();
+    expect(init).not.toHaveBeenCalled();
   });
 });
 

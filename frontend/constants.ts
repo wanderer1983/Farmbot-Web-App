@@ -11,11 +11,10 @@ export namespace ToolTips {
     every time, so the ordering shown below will only be representative.`);
 
   export const CRITERIA_SELECTION_COUNT =
-    trim(`Filter additions can only be removed by changing filters.
-    Click and drag in the map to modify selection filters.
-    Filters will be applied at the time of sequence execution. The final
-    selection at that time may differ from the selection currently
-    displayed.`);
+    trim(`Manually add group members by clicking in the map. Group members
+    selected by filters can only be removed by changing the filters.
+    Filters will be applied at the time of sequence execution.
+    Group members at that time may differ from those currently displayed.`);
 
   export const DOT_NOTATION_TIP =
     trim(`Tip: Use dot notation (i.e., 'meta.color') to access meta fields.`);
@@ -62,7 +61,7 @@ export namespace ToolTips {
 
   // FarmBot OS Settings: Firmware
   export const FIRMWARE_VALUE_API =
-    trim(`Firmware value from your choice in the dropdown to the left, as
+    trim(`Firmware value from your choice in the dropdown to the right, as
     understood by the Web App.`);
 
   export const FIRMWARE_VALUE_FBOS =
@@ -71,6 +70,14 @@ export namespace ToolTips {
 
   export const FIRMWARE_VALUE_MCU =
     trim(`Firmware value reported from the firmware.`);
+
+  export const RPI_VALUE_API =
+    trim(`Raspberry Pi model from your choice in the dropdown to the right,
+    as understood by the Web App.`);
+
+  export const RPI_VALUE_FBOS =
+    trim(`Raspberry Pi model reported from your device, as understood by
+    FarmBot OS.`);
 
   // Hardware Settings
   export const HW_SETTINGS =
@@ -95,6 +102,9 @@ export namespace ToolTips {
   export const FIND_LENGTH_STALL_DETECTION =
     trim(`If stall detection or limit switches are enabled, home axis and
     determine maximum. Will set axis length value.`);
+
+  export const SET_AXIS_LENGTH =
+    trim(`Set axis length to the current FarmBot axis position.`);
 
   export const SET_HOME_POSITION =
     trim(`Set the current location as home (zero).`);
@@ -137,7 +147,7 @@ export namespace ToolTips {
 
   export const CALIBRATION_RETRY_RESET_DISTANCE =
     trim(`Distance in millimeters to group calibration retries. If the
-    distance travelled while detecting the axis end location exceeds this
+    distance traveled while detecting the axis end location exceeds this
     value, the calibration retry counter is reset.
     (default: x: {{ x }}, y: {{ y }}, z: {{ z }})`);
 
@@ -145,6 +155,12 @@ export namespace ToolTips {
     trim(`Set the length of each axis to provide software limits.
     Used only if STOP AT MAX is enabled.
     (default: x: {{ x }}, y: {{ y }}, z: {{ z }} (disabled))`);
+
+  export const GANTRY_HEIGHT =
+    trim(`The **GANTRY HEIGHT** is the distance in millimeters between the
+    bottom of FarmBot's tool head and the bottom of the gantry main beam
+    when the Z-axis is fully raised. It is used to determine if a plant is
+    too tall for the gantry to pass over it. (default: {{ distance }})`);
 
   export const SAFE_HEIGHT =
     trim(`Z axis coordinate (millimeters) to which the z axis should be
@@ -213,8 +229,8 @@ export namespace ToolTips {
     (default: x: {{ x }}, y: {{ y }}, z: {{ z }})`);
 
   export const MOTOR_CURRENT =
-    trim(`Motor current in milliamps.
-    (default: x: {{ x }}, y: {{ y }}, z: {{ z }})`);
+    trim(`Motor current as a percent of maximum.
+    (default: x: {{ x }}%, y: {{ y }}%, z: {{ z }}%)`);
 
   export const QUIET_MODE =
     trim(`Enable quiet motors.
@@ -243,7 +259,8 @@ export namespace ToolTips {
     Least sensitive: +63. (default: x: {{ x }}, y: {{ y }}, z: {{ z }})`);
 
   export const USE_ENCODERS_FOR_POSITIONING =
-    trim(`Use encoders for positioning.
+    trim(`Use the encoders for calculating movements in addition to using
+    encoders for stall detection.
     (default: x: {{ x }}, y: {{ y }}, z: {{ z }})`);
 
   export const INVERT_ENCODERS =
@@ -410,6 +427,21 @@ export namespace ToolTips {
     trim(`Color value, 0 (black) to 255 (color)
     (default: {{ defaultLow }} - {{ defaultHigh }})`);
 
+  export const SAVE_DETECTED_PLANTS =
+    trim(`Save detected plants as map points. (default: {{ defaultSavePlants }})`);
+
+  export const USE_BOUNDS =
+    trim(`Don't save weeds detected outside of garden bed.
+    (default: {{ defaultUseBounds }})`);
+
+  export const MIN_RADIUS =
+    trim(`Minimum weed size (diameter) in millimeters. Set to 0 to disable limit.
+    (default: {{ defaultMinDiameter }})`);
+
+  export const MAX_RADIUS =
+    trim(`Maximum weed size (diameter) in millimeters. Set to 0 to disable limit.
+    (default: {{ defaultMaxDiameter }})`);
+
   // Sequences
   export const SEQUENCE_COMMANDS =
     trim(`These are the most basic commands FarmBot can execute. Drag and drop
@@ -424,7 +456,7 @@ export namespace ToolTips {
     assign a color; and give your commands custom names.`);
 
   export const DEFAULT_VALUE =
-    trim(`Select a location to be used as the default value for this variable.
+    trim(`Select a default value for this variable.
     If the sequence is ever run without the variable explicitly set to
     another value, the default value will be used.`);
 
@@ -498,7 +530,7 @@ export namespace ToolTips {
     is not satisfied, chose to do nothing or execute a different sequence.`);
 
   export const EXECUTE_SEQUENCE =
-    trim(`Executes another sequence.`);
+    trim(`No description provided for this subsequence.`);
 
   export const EXECUTE_SCRIPT =
     trim(`The Run Farmware step runs a Farmware package.
@@ -574,21 +606,12 @@ export namespace ToolTips {
   export const UNKNOWN_STEP =
     trim(`Unable to properly display this step.`);
 
-  // Regimens
-  export const BULK_SCHEDULER =
-    trim(`Add sequences to your regimen by selecting a sequence from the
-    drop down, specifying a time, choosing which days it should run on,
-    and then clicking the + button. For example: a Seeding sequence might
-    be scheduled for Day 1, while a Watering sequence would be scheduled
-    to run every other day.`);
-
-  export const REGIMEN_EDITOR =
-    trim(`Regimens allow FarmBot to take care of a plant throughout its
-    entire life. A regimen consists of many sequences that are scheduled
-    to run based on the age of the plant. Regimens are applied to plants
-    from the farm designer (coming soon) and can be re-used on many plants
-    growing at the same or different times. Multiple regimens can be
-    applied to any one plant.`);
+  // Tools
+  export const WATER_FLOW_RATE =
+    trim(`To calculate **WATER FLOW RATE**, hold a measuring cup below the
+    watering nozzle and click the **RUN WATER FOR 5 SECONDS** button.
+    Measure how much water FarmBot dispensed in milliliters (mL)
+    and then divide this number by 5. Enter the result in the field.`);
 
   // Logs
   export const LOGS =
@@ -737,7 +760,7 @@ export namespace Content {
   export const FEEDBACK_NOTICE =
     trim(`Feedback submitted through this form will be linked to your user
     account and email so that we may follow up when necessary. If your
-    account email is not the best way for a support technician to reach
+    account email is not the best way for us to reach
     you, please include your phone number or preferred means of contact.`);
 
   export const MUST_REGISTER =
@@ -755,17 +778,20 @@ export namespace Content {
   export const TIME_FORMAT_SECONDS =
     trim(`Display seconds in time, i.e., 10:00:00am instead of 10:00am`);
 
-  export const HIDE_WEBCAM_WIDGET =
-    trim(`If not using a webcam, use this setting to remove the
-    widget from the Controls panel.`);
-
   export const HIDE_SENSORS_WIDGET =
     trim(`If not using sensors, use this setting to remove the
     panel from the Farm Designer.`);
 
+  export const ENABLE_3D_ELECTRONICS_BOX_TOP =
+    trim(`Show a 3D model of FarmBot's electronics box instead of a 2D view
+    in the Peripherals tab of the Controls pop-up.`);
+
   export const BROWSER_SPEAK_LOGS =
     trim(`Have the browser also read aloud log messages on the
     "Speak" channel that are spoken by FarmBot.`);
+
+  export const LANDING_PAGE =
+    trim(`Choose the starting page that loads after logging in.`);
 
   export const BROWSER_ACTIVITY_BEEP =
     trim(`Have the browser beep when FarmBot sends a log message.
@@ -842,6 +868,11 @@ export namespace Content {
   export const RESTART_FIRMWARE =
     trim(`Restart the Farmduino or Arduino firmware.`);
 
+  export const FIRMWARE_UPGRADED =
+    trim(`If you are upgrading your FarmBot, you may need to manually add
+    any new peripherals, sensors, and tools that your new electronics board
+    supports.`);
+
   // FarmBot OS Settings: Power and Reset
   export const RESTART_FARMBOT =
     trim(`This will restart FarmBot's Raspberry Pi and controller
@@ -876,35 +907,12 @@ export namespace Content {
     complete restore to your device once it is back online and paired with
     your web app account.`);
 
-  export const AUTO_SOFT_RESET =
-    trim(`Automatically soft reset when the WiFi network cannot be
-    detected. Useful for network changes.`);
-
-  export const AUTO_SOFT_RESET_PERIOD =
-    trim(`Time in minutes to attempt connecting to WiFi before a soft
-    reset.`);
-
   export const NOT_HTTPS =
     trim(`WARNING: Sending passwords via HTTP:// is not secure.`);
 
   export const CONTACT_SYSADMIN =
     trim(`Please contact the system(s) administrator(s) and ask them to enable
     HTTPS://`);
-
-  // Hardware Settings: Stall Detection
-  export const STALL_DETECTION_NOT_AVAILABLE =
-    trim(`Stall detection for FarmBot Express bots is not yet available.
-    Once it is ready, you will receive a message in the Message Center.
-    We thank you for your patience.`);
-
-  export const STALL_DETECTION_IN_BETA =
-    trim(`Warning: Stall detection for FarmBot Express bots is now
-    available as a public beta. While you may enable stall detection for
-    all three axes, you may not achieve desirable or consistent results
-    for some or any of the axes. If you experience any issues, we advise
-    you to wait until there are further updates. We are working hard to
-    improve this system and thank you for your patience. Feedback is
-    appreciated and may be provided on the community forum.`);
 
   // Hardware Settings: Limit Switches
   export const LIMIT_SWITCH_WARNING =
@@ -936,7 +944,7 @@ export namespace Content {
 
   export const MAP_MISSED_STEPS =
     trim(`Display high motor load warning indicators in map.
-    Requires VIRTUAL FARMBOT TRAIL and stall detection to be enabled.`);
+    Requires TRAIL and stall detection to be enabled.`);
 
   export const DYNAMIC_MAP_SIZE =
     trim(`Change the garden map size based on axis length.
@@ -968,8 +976,16 @@ export namespace Content {
   export const SHOW_CAMERA_VIEW_AREA =
     trim(`Show the camera's field of view in the garden map.`);
 
+  export const SHOW_UNCROPPED_CAMERA_VIEW_AREA =
+    trim(`Show the camera's uncropped and unrotated field of view in the
+    garden map when CROP MAP IMAGES is enabled.`);
+
   export const CONFIRM_PLANT_DELETION =
     trim(`Show a confirmation dialog when deleting a plant.`);
+
+  export const DEFAULT_PLANT_DEPTH =
+    trim(`When adding plants to the map from the web app, set each new
+    plant's depth to this value (in millimeters).`);
 
   // App
   export const APP_LOAD_TIMEOUT_MESSAGE =
@@ -997,17 +1013,16 @@ export namespace Content {
     trim(`You are running an old version of FarmBot OS that is no longer
     supported.`);
 
-  export const EXPERIMENTAL_WARNING =
-    trim(`Warning! This is an EXPERIMENTAL feature. This feature may be
-    broken and may break or otherwise hinder your usage of the rest of the
-    app. This feature may disappear or break at any time.`);
-
   export const FORCE_REFRESH_CONFIRM =
     trim(`A new version of the FarmBot web app has been released.
     Refresh page?`);
 
   export const FORCE_REFRESH_CANCEL_WARNING =
     trim(`You may experience data loss if you do not refresh the page.`);
+
+  export const DELETE_ALL_LOGS_CONFIRMATION =
+    trim(`Are you sure you want to delete all logs? A page refresh will be
+    required.`);
 
   // Front Page
   export const TOS_UPDATE =
@@ -1090,6 +1105,9 @@ export namespace Content {
     FarmBot and make changes. If the original author of the sequence
     publishes a new version, you will have the option to upgrade your copy.`);
 
+  export const INCLUDES_LUA_WARNING =
+    trim(`This sequence includes Lua code. Review carefully before executing.`);
+
   export const IMPORTED_SEQUENCE =
     trim(`This sequence was imported from a publicly shared sequence. If
     the original author publishes a new version, you may upgrade your copy.
@@ -1110,14 +1128,13 @@ export namespace Content {
   export const NO_REGIMENS =
     trim(`Click "+" to create a new regimen.`);
 
+  export const WITHIN_HOUR_OF_OS_UPDATE =
+    trim(`Warning: One or more items are scheduled to run within one hour
+    of the FarmBot OS update time setting.`);
+
   // Farm Designer
   export const OUTSIDE_PLANTING_AREA =
     trim(`Outside of planting area. Plants must be placed within the grid.`);
-
-  export const MOVE_MODE_DESCRIPTION =
-    trim(`Click a spot in the grid to choose a location.
-    Once selected, press button to move FarmBot to this position.
-    Press the back arrow to exit.`);
 
   export const CREATE_POINTS_DESCRIPTION =
     trim(`Click and drag or use the inputs to draw a point.`);
@@ -1126,8 +1143,7 @@ export namespace Content {
     trim(`Click and drag or use the inputs to draw a weed.`);
 
   export const BOX_SELECT_DESCRIPTION =
-    trim(`Drag a box around the items you would like to select.
-    Press the back arrow to exit.`);
+    trim(`Drag a box around the items you would like to select.`);
 
   export const SAVED_GARDENS =
     trim(`Create a new garden from scratch or by copying plants from the
@@ -1163,6 +1179,9 @@ export namespace Content {
 
   export const NO_ZONES =
     trim(`Press "+" to add a zone.`);
+
+  export const NO_CURVES =
+    trim(`Press "+" to add a curve.`);
 
   export const ENTER_CROP_SEARCH_TERM =
     trim(`Search for a crop to add to your garden.`);
@@ -1240,6 +1259,10 @@ export namespace Content {
   export const FARMWARE_ENV_EDITOR_WARNING =
     trim(`Warning: Changing the values below may cause app and device errors.`);
 
+  export const FARMWARE_ENV_EDITOR_LUA =
+    trim(`Custom settings can be added here and accessed via the Lua env()
+    function.`);
+
   export const FARMWARE_ENV_EDITOR_INFO =
     trim(`Environment variables added here can be accessed via the LUA
     sequence step 'env()' function.`);
@@ -1248,6 +1271,17 @@ export namespace Content {
   export const DOWNLOAD_FBOS =
     trim(`Download the version of FarmBot OS that corresponds to your
     FarmBot kit and its internal computer.`);
+
+  export const SHIPPING_BOX_LABEL_PROMPT =
+    trim(`Check the side of the box your FarmBot came in. What is the
+    labeled version?`);
+
+  export const PI_POWER_CABLE_COLOR_PROMPT =
+    trim(`Look inside the electronics box. What color cable is plugged into
+    the top of the Raspberry Pi (the green circuit board)?`);
+
+  export const FEATURED_SEQUENCES =
+    trim(`Featured shared sequences published by FarmBot Inc.`);
 
   export const UNSUPPORTED_BROWSER =
     trim(`Your web browser may not work properly with the FarmBot Web App.
@@ -1298,13 +1332,6 @@ export namespace TourContent {
     details panel where you can make edits.
     Pressing the group + button will create a new group.`);
 
-  export const SAVED_GARDENS_PANEL =
-    trim(`This is the gardens section. Here you can view and manage all of
-    your saved gardens for quickly replanting season after season. Clicking
-    a garden will open up the garden details panel where you can view and
-    edit it. Pressing the garden + button will allow to snapshot the current
-    garden or add a new one from scratch.`);
-
   export const SEQUENCES_PANEL =
     trim(`This is the sequences panel. Here you can view and manage all of
     your sequences. Clicking a sequence will open up the sequence editor
@@ -1342,12 +1369,26 @@ export namespace TourContent {
     Clicking a weed will open up the weed details panel where you can
     manually edit it.`);
 
+  export const CURVES_PANEL =
+    trim(`This is the curves panel. Here you can view and manage all of the
+    water, spread, and height curves for your plants. Pressing the + button
+    will create a new curve.`);
+
   export const CONTROLS_PANEL =
-    trim(`This is the controls panel. Here you can control your FarmBot in
+    trim(`Here you can control your FarmBot in
     realtime by pressing the movement arrow buttons, toggling peripherals,
     and executing pinned sequences. You can also view current status
     information about your FarmBot including its position and an optional
     webcam stream.`);
+
+  export const SENSORS_PANEL =
+    trim(`This is the sensors panel. Here you can view and manage your
+    sensors and sensor readings. Click the Read Sensor buttons to read the
+    current value of your sensors. Create and view historical sensor
+    readings in the Sensor History section.`);
+
+  export const JOBS_AND_LOGS_PANEL =
+    trim(`Here you can view running and completed jobs as well as log messages.`);
 
   export const PHOTOS_PANEL =
     trim(`This is the photos panel. Here you can view and manage all of the
@@ -1378,17 +1419,10 @@ export namespace TourContent {
     documentation for information about each setting.`);
 
   export const CONNECTIVITY_POPUP =
-    trim(`This is the connectivity popup. Click it to view information
+    trim(`This is the connectivity popup. View information
     about the connection between your web browser, your FarmBot, and the
     FarmBot web app servers. Whenever your FarmBot is online and ready for
     action, you will see a green checkmark.`);
-
-  export const SYNC_STATUS =
-    trim(`This is the sync status indicator. Whenever you edit a resource
-    in the web app such as a plant, sequence, or event, your FarmBot will
-    download (sync) this information. Syncing may take up to 10 seconds
-    depending on your internet connection, and longer when FarmBot first
-    boots up.`);
 
   export const CURRENT_POSITION =
     trim(`This is the current position indicator. FarmBot's current X, Y,
@@ -1444,7 +1478,7 @@ export namespace TourContent {
     lot of plants at once? Go to the next step of the tour!`);
 
   export const GRID_AND_ROW_PLANTING =
-    trim(`To add a grid or row of plants, scroll to the bottom of the panel,
+    trim(`To add a grid or row of plants, press the + GRID button,
     enter values into the grid and row planting fields and click PREVIEW.
     The previewed plants will show in the map in grayscale. Make adjustments
     as necessary and when you are happy with the preview, click SAVE.
@@ -1483,7 +1517,8 @@ export namespace TourContent {
   export const SORT_BY =
     trim(`When you program your FarmBot to perform an operation on a group
     of plants, you may want to control the ordering at which FarmBot visits
-    each plant in the group. To do this, select one of the available Sort
+    each plant in the group. To do this, click the sort icon to open the
+    sort menu and select one of the available Sort
     By methods. Once you have chosen a method, advance the tour.`);
 
   export const FINISH_CREATING_THE_GROUP =
@@ -1558,14 +1593,18 @@ export namespace TourContent {
 
   // Monitoring
   export const LOCATION_GRID =
-    trim(`View FarmBot's current location using the axis position display.`);
+    trim(`View FarmBot's current location in the navigation bar.`);
 
   export const VIRTUAL_FARMBOT =
     trim(`Or view FarmBot's current location in the virtual garden.`);
 
+  export const VIRTUAL_FARMBOT_PROFILE =
+    trim(`For a profile view of FarmBot's current location in the virtual
+    garden, open the profile viewer.`);
+
   export const LOGS_TABLE =
-    trim(`View recent log messages here. More detailed log messages can be
-    shown by adjusting filter settings.`);
+    trim(`View recent log messages in the logs pop-up.
+    More detailed log messages can be shown by adjusting filter settings.`);
 
   export const PHOTOS =
     trim(`View photos your FarmBot has taken here.`);
@@ -1580,13 +1619,81 @@ export namespace SetupWizardContent {
     while answering no will display a list of results that can be selected for
     specific troubleshooting tips.`);
 
+  export const RPI =
+    trim(`Inspect the ports on the top edge of the Raspberry Pi and select
+    which Raspberry Pi model is in your FarmBot.`);
+
   export const SEED_DATA =
     trim(`Once you make a selection, we'll automatically add some
     tools, sensors, peripherals, sequences, and more to get you up
     and running faster.`);
 
+  export const PRE_POWER_POSITION =
+    trim(`With the FarmBot still powered off, manually move the gantry,
+    cross-slide, and Z-axis roughly 150mm away from any of its hardstops.
+    In other words, position the gantry partway along the tracks, position
+    the cross-slide partway across the gantry main beam, and position the
+    Z-axis halfway down.`);
+
+  export const PRE_POWER_POSITION_EXPRESS =
+    trim(`With the FarmBot still powered off, manually move the gantry and
+    cross-slide roughly 150mm away from the X and Y axis hardstops.
+    In other words, position the gantry partway along the tracks and position
+    the cross-slide partway across the gantry main beam. Rotate the
+    leadscrew by hand to position the Z-axis fully raised up.`);
+
+  export const DOWNLOAD_OS =
+    trim(`Using a desktop computer or laptop, download the latest
+    FarmBot OS .img file:`);
+
+  export const IMAGER =
+    trim(`Using a desktop computer or laptop, download and install the
+    official Raspberry Pi Imager program from the Raspberry Pi Foundation.
+    This is necessary for installing FarmBot OS onto the microSD card in
+    the next step.`);
+
+  export const COMPUTER_SD_CARD_GENESIS =
+    trim(`Remove the microSD card from the FarmBot's Raspberry Pi.
+    The card slot is located on the back side of the Raspberry Pi,
+    on the right-hand edge. Then connect the microSD card to your computer
+    using a card reader. You may need to use the microSD card to SD card
+    adapter included with your kit.`);
+
+  export const COMPUTER_SD_CARD_EXPRESS =
+    trim(`Remove the microSD card from the FarmBot's Raspberry Pi.
+    The card slot is located on the front side of the Raspberry Pi,
+    on the left-hand edge. Then connect the microSD card to your computer
+    using a card reader. You may need to use the microSD card to SD card
+    adapter included with your kit.`);
+
+  export const FLASH_SD_CARD =
+    trim(`Open up the Raspberry Pi Imager program and click \`CHOOSE OS\`.
+    Then scroll to the bottom of the popup and select **Use custom** *Select a
+    custom .img file from your computer*. Then select the FarmBot OS \`.img\`
+    file you downloaded. Click the \`CHOOSE STORAGE\` button and then select
+    the microSD card (it should show up as a 7.9 GB option). Click \`WRITE\`
+    and if prompted, give your computer permission to perform this action.`);
+
+  export const INSERT_SD_CARD_GENESIS =
+    trim(`Remove the microSD card from your computer and insert it into
+    FarmBot's Raspberry Pi. The card slot is located on the back side of
+    the Raspberry Pi, on the right-hand edge. You do not need to remove the
+    Raspberry Pi from the electronics box to insert the card; we have left
+    enough access room.`);
+
+  export const INSERT_SD_CARD_EXPRESS =
+    trim(`Remove the microSD card from your computer and insert it into
+    FarmBot's Raspberry Pi. The card slot is located on the front side of
+    the Raspberry Pi, on the left-hand edge.`);
+
   export const OFFLINE =
     trim(`Unable to connect to FarmBot. Please reconnect FarmBot to continue.`);
+
+  export const CANT_CONNECT =
+    trim(`I can see the farmbot-xxxx network but my device will not connect`);
+
+  export const CANT_CONNECT_TIP =
+    trim(`Try disabling cellular data or connecting with a different device.`);
 
   export const NO_SETUP_NETWORK =
     trim(`Try waiting three minutes from power on. Check the Raspberry
@@ -1595,14 +1702,19 @@ export namespace SetupWizardContent {
     re-flashing the SD card via Etcher. If possible, ensure line-of-sight
     between devices when trying to connect.`);
 
+  export const AUTO_UPDATE =
+    trim(`Set the time you wish for FarmBot to automatically download and
+    install updates when available. During this time FarmBot will reboot
+    to apply the update, so you should never schedule any events to occur
+    during the same hour. We recommend selecting 3 AM.`);
+
+  export const AUTO_UPDATE_QUESTION =
+    trim(`Did you select a time when you will not need to use your FarmBot?`);
+
   export const MAP_ORIENTATION =
     trim(`Watch the video below showing how to match the virtual FarmBot
     map to your real life FarmBot. The relevant controls are available
     below the video for your convenience.`);
-
-  export const FIND_MAP_ORIGIN =
-    trim(`Find the origin in the map. The origin is at the coordinate (0, 0),
-    with arrows pointing along the X and Y axes.`);
 
   export const PRESS_RIGHT_JOG_BUTTON =
     trim(`Standing from where you will normally view the FarmBot,
@@ -1619,6 +1731,10 @@ export namespace SetupWizardContent {
   export const NO_MOTOR_MOVEMENT =
     trim(`It made sounds like it was trying to move, but didn't move`);
 
+  export const DID_AXIS_MOVE =
+    trim(`Did FarmBot's {{ axis }}-axis move? (Don't worry about the
+    direction right now)`);
+
   export const NO_MOTOR_ACTIVITY =
     trim(`Check motor cable connections. Try again while observing
     electronics box LED activity.`);
@@ -1628,28 +1744,49 @@ export namespace SetupWizardContent {
     your real life FarmBot. Once you have finished watching, proceed to the
     next setup steps to test and set the controls for each axis.`);
 
-  export const X_HOME_PROMPT =
-    trim(`Are FarmBot's gantry wheel plates touching the hardstops at the
-    end of the tracks?`);
+  export const FIND_HOME =
+    trim(`Open the ... menu for the {{ axis }} axis and click **FIND HOME**.`);
 
-  export const HOME_X =
-    trim(`Press the home button or move FarmBot's x-axis (with the controls
-    or manually) until the plates hit the hardstops.`);
+  export const FIND_HOME_Z_EXPRESS =
+    trim(`Automatically finding the Z-axis home position is not enabled by
+    default for Express FarmBots. To manually set the Z home position,
+    use the manual controls to move the Z-axis to the fully raised position.
+    If the Z-axis is not fully raised when the FarmBot reaches the Z=0
+    coordinate, press the E-stop button, rotate the leadscrew by hand to
+    fully raise the Z-axis, and then Unlock the FarmBot. With the Z-axis
+    fully raised, open the ... menu for the Z-axis and click **SET HOME**.`);
 
-  export const Y_HOME_PROMPT =
-    trim(`Is FarmBot's cross-slide plate touching the hardstop at the end of
-    the gantry main beam?`);
+  export const HOME_Z_EXPRESS =
+    trim(`Have you manually set the Z-axis home position with the Z-axis
+    fully raised?`);
 
-  export const HOME_Y =
-    trim(`Press the home button or move FarmBot's y-axis (with the controls
-      or manually) until the plate hits the hardstop.`);
+  export const HOME =
+    trim(`Did FarmBot reach the home position (touching the hardstop) for
+    this axis and set the coordinate to 0? Note: sometimes after a movement,
+    FarmBot will settle into place and coordinates may change by +/-0.5mm
+    from the desired value. If the coordinates are within 1mm of 0, that is
+    acceptable.`);
 
-  export const Z_HOME_PROMPT =
-    trim(`Is FarmBot's z-axis hardstop touching the cross-slide plate?`);
+  export const BOOT_SEQUENCE =
+    trim(`Select the 'Find Home' sequence in the dropdown. FarmBot will
+    execute this sequence every time it boots up. You can modify this
+    sequence or choose a different boot sequence later to have FarmBot
+    perform different functions when it turns on.`);
 
-  export const HOME_Z =
-    trim(`Press the home button or move FarmBot's z-axis (with the controls
-      or manually) until the plate hits the hardstop.`);
+  export const FIND_LENGTH =
+    trim(`Did FarmBot move to the end of the axis and then move back to
+    the home position for this axis?`);
+
+  export const FIND_LENGTH_Z_EXPRESS =
+    trim(`Have you manually set the Z-axis length with the Z-axis fully
+    lowered and then returned the Z-axis to the home position?`);
+
+  export const HOME_AXIS =
+    trim(`Try using the FIND HOME button a few more times. If FarmBot is
+    still unable to reach the home position, check the hardware for
+    resistance. You may also move FarmBot's {{ axis }}-axis with the controls
+    or manually until the plates hit the hardstop. Then open the ... menu
+    and click SET HOME.`);
 
   export const MOVEMENTS_VIDEO =
     trim(`Watch the video below demonstrating movements along the full
@@ -1680,9 +1817,16 @@ export namespace SetupWizardContent {
     trim(`Is the FarmBot able to move reliably along the full length of the
     Z-axis in both directions?`);
 
+  export const AXIS_LENGTH =
+    trim(`Manually enter a value by measuring the usable distance FarmBot
+    can travel along the axis.`);
+
   export const MOVEMENT_STALLS =
     trim(`Inspect the wood raised bed (Express kits) or track extrusions
-    (Genesis kits) for bumps. Use sand paper to smooth out imperfections.`);
+    (Genesis kits) for bumps. Use sand paper to smooth out imperfections.
+    Check the cable carrier for any snap-in tabs that are not fully snapped
+    into place. Tabs may be catching on the cable carrier supports or other
+    parts of the cable carrier.`);
 
   export const MOVEMENT_ALL_X =
     trim(`"Break in" the cable carrier, double check belt tension, and
@@ -1700,9 +1844,47 @@ export namespace SetupWizardContent {
     trim(`Watch the video below and make small adjustments to the motor
     speed and current settings.`);
 
+  export const FIND_AXIS_LENGTH =
+    trim(`Open the ... menu for the {{ axis }} axis and click **FIND LENGTH**.`);
+
+  export const FIND_AXIS_LENGTH_Z_EXPRESS =
+    trim(`Automatically finding the Z-axis length is not enabled by default
+    for Express FarmBots. To manually set the Z length, use the manual controls
+    to move the Z-axis to the fully lowered position. With the Z-axis fully
+    lowered, open the ... menu for the Z-axis and click **SET LENGTH**.
+    Then open the ... menu again and click **MOVE TO HOME**.`);
+
   export const TOGGLE_PERIPHERAL =
-    trim(`Press the {{ toggle }} toggle, wait a few seconds, and then press
+    trim(`Press the **{{ toggle }}** toggle, wait a few seconds, and then press
     the toggle again.`);
+
+  export const ROTARY_TOOL_WARNING =
+    trim(`Before attaching the rotary tool or turning it on, ensure that all
+    hands, feet, hair, and other body parts will be kept away from the tool
+    and a safe distance will be maintained while the rotary tool is attached.
+    Be mindful of debris that may be projected and use appropriate
+    protective equipment. Disconnect the rotary tool when not in use.`);
+
+  export const ESTOP_BUTTON =
+    trim(`Press the physical E-Stop button on top of the electronics box.`);
+
+  export const ESTOP_BUTTON_QUESTION =
+    trim(`Are FarmBot's motors unpowered? (Try moving the Y-axis by hand)`);
+
+  export const UNLOCK_BUTTON_BOX =
+    trim(`Press the physical Unlock button on top of the electronics box.`);
+
+  export const UNLOCK_BUTTON_VIRTUAL =
+    trim(`Press the UNLOCK button below.`);
+
+  export const UNLOCK_BUTTON_QUESTION =
+    trim(`Did FarmBot unlock? (Check the logs or try sending a movement command)`);
+
+  export const CUSTOM_BUTTONS =
+    trim(`Customize which Action or Sequence you want FarmBot to execute
+    when you press Button 3, 4, or 5 on the electronics box. To start, we
+    recommend setting Button 5 to the 'Find Home' sequence. You can change
+    this later from the controls pop-up.`);
 
   export const PROBLEM_GETTING_IMAGE =
     trim(`There is a 'camera not detected' or 'problem getting image' error
@@ -1743,12 +1925,19 @@ export namespace SetupWizardContent {
     trim(`Are you planning on using WiFi or have you connected the ethernet
     cable?`);
 
+  export const CONFIGURATOR_CONTENT =
+    trim(`Using another device, search for and connect to the
+    \`farmbot-xxxx\` WiFi network`);
+
   export const CONFIGURATOR_CONNECTION_PROMPT =
     trim(`Is your phone or computer connected to the FarmBot WiFi network?`);
 
   export const CHECK_CAMERA_CABLE =
-    trim(`Check that the camera is plugged in to a Raspberry Pi USB port
-    and ensure that all connectors are securely fastened.`);
+    trim(`Check that the camera is plugged in correctly to either a
+    Raspberry Pi USB port (Express v1.0 kits and all Genesis kits) or into
+    one of the vertically oriented USB ports on the Farmduino (Express v1.1+
+    kits). For cameras with a 90 degree intermediary connector at the
+    cross-slide, ensure the connectors are fully connected.`);
 
   export const BLACK_IMAGE =
     trim(`Ensure that the camera lens is not covered and there is adequate
@@ -1790,6 +1979,14 @@ export namespace SetupWizardContent {
   export const READ_SOIL_SENSOR =
     trim(`Attach the soil sensor tool to the UTM and press the READ SENSOR
     for the SOIL MOISTURE sensor.`);
+
+  export const PROVIDE_A_DESCRIPTION_PART_1 =
+    trim(`If you already tried the troubleshooting tips above and looked
+    through the`);
+
+  export const PROVIDE_A_DESCRIPTION_PART_3 =
+    trim(`for help, please provide a detailed description of what you need
+    help with and we'll get in touch.`);
 }
 
 export enum DeviceSetting {
@@ -1803,21 +2000,18 @@ export enum DeviceSetting {
   time_zone = `time zone`,
   farmbotLocation = `Location`,
   indoor = `indoor`,
-  camera = `camera`,
   osUpdateTime = `update time`,
   osAutoUpdate = `auto update`,
   farmbotOS = `Farmbot OS`,
   bootSequence = `Boot Sequence`,
-
-  // Firmware
-  firmwareSection = `Firmware`,
   firmware = `Firmware`,
   firmwarePath = `Firmware path`,
-  restartFirmware = `Restart Firmware`,
   flashFirmware = `Flash firmware`,
+  raspberryPiModel = `Raspberry Pi model`,
 
   // Power and Reset
   powerAndReset = `Power and Reset`,
+  restartFirmware = `Restart Firmware`,
   restartFarmbot = `Restart Farmbot`,
   shutdownFarmbot = `Shutdown Farmbot`,
   softReset = `Soft Reset`,
@@ -1832,8 +2026,10 @@ export enum DeviceSetting {
   stopAtHome = `Stop at Home`,
   stopAtMax = `Stop at Max`,
   negativeCoordinatesOnly = `Negative Coordinates Only`,
-  findAxisLength = `Find axis length (mm)`,
-  axisLength = `Set Axis Length (mm)`,
+  findAxisLength = `Find axis length`,
+  setAxisLength = `Set axis length`,
+  axisLength = `Axis Length (mm)`,
+  gantryHeight = `Gantry Height`,
   safeHeight = `Safe Height`,
   fallbackSoilHeight = `Fallback Soil Height`,
 
@@ -1850,7 +2046,7 @@ export enum DeviceSetting {
   microstepsPerStep = `Microsteps per step`,
   alwaysPowerMotors = `Always Power Motors`,
   invertMotors = `Invert Motors`,
-  motorCurrent = `Motor Current`,
+  motorCurrent = `Motor Current (%)`,
   quietMode = `Quiet Mode`,
   enable2ndXMotor = `Enable 2nd X Motor`,
   invert2ndXMotor = `Invert 2nd X Motor`,
@@ -1893,6 +2089,8 @@ export enum DeviceSetting {
   addNewPinBinding = `Add new pin binding`,
 
   // Pin Guard
+  pinGuardLabels = ``,
+  pinGuardTitles = `pin timeout (sec) to state`,
   pinGuard = `Pin Guard`,
   pinGuard1 = `Pin Guard 1`,
   pinGuard2 = `Pin Guard 2`,
@@ -1918,7 +2116,7 @@ export enum DeviceSetting {
   // Farm Designer
   farmDesigner = `Farm Designer`,
   animations = `Plant animations`,
-  trail = `Virtual FarmBot trail`,
+  trail = `Trail`,
   mapMissedSteps = `FarmBot motor load`,
   dynamicMap = `Dynamic map size`,
   mapSize = `Map size`,
@@ -1926,19 +2124,24 @@ export enum DeviceSetting {
   mapOrigin = `Map origin`,
   cropMapImages = `Crop map images`,
   clipPhotosOutOfBounds = `Clip photos out of bounds`,
-  showCameraViewAreaInMap = `Show camera view area in map`,
+  cameraView = `Camera view`,
+  uncroppedCameraView = `Uncropped Camera view`,
   confirmPlantDeletion = `Confirm plant deletion`,
+  defaultPlantDepth = `Default plant depth (mm)`,
 
   // Account
   accountSettings = `Account`,
   accountName = `Your Name`,
   accountEmail = `Email`,
   changePassword = `Change password`,
+  language = `Language`,
   resetAccount = `Reset account`,
   deleteAccount = `Delete account`,
   exportAccountData = `Export data`,
 
   otherSettings = `Other`,
+  customSettings = `Custom Settings`,
+  envEditor = `ENV Editor`,
 
   // Map
   showPlants = `Plants`,
@@ -1963,6 +2166,7 @@ export enum DeviceSetting {
   showReadingsMapLayer = `Show Readings Map Layer`,
   showMoisture = `Moisture`,
   showMoistureInterpolationMapLayer = `Show Moisture Interpolation Map Layer`,
+  show3DMap = `3D Map`,
 
   // Controls
   invertJogButtonXAxis = `X Axis`,
@@ -1975,8 +2179,10 @@ export enum DeviceSetting {
   displayRawEncoderPosition = `Raw encoder position`,
   swapJogButtonsXAndYAxis = `x and y axis`,
   swapXAndYAxisJogButtons = `swap x and y axis jog buttons`,
-  showMotorPositionPlot = `show`,
+  showMotorPositionPlot = `motor position`,
+  showMotorLoadPlot = `motor load`,
   showMotorPositionPlotDisplay = `show motor position plot display`,
+  showMotorLoadPlotDisplay = `show motor load plot display`,
 
   // Sequences
   confirmStepDeletion = `Confirm step deletion`,
@@ -2008,12 +2214,55 @@ export enum DeviceSetting {
   showSecondsInTime = `Show seconds in time`,
   hideWebcamWidget = `Hide Webcam widget`,
   hideSensorsPanel = `Hide Sensors panel`,
+  enable3dElectronicsBox = `Enable 3D electronics box`,
   readSpeakLogsInBrowser = `Read speak logs in browser`,
+  landingPage = `Landing page`,
   browserFarmbotActivityBeep = `Browser FarmBot activity beep`,
   discardUnsavedChanges = `Discard Unsaved Changes`,
   confirmEmergencyUnlock = `Confirm emergency unlock`,
   userInterfaceReadOnlyMode = `User Interface Read Only Mode`,
 
+  // Photos: Filters
+  alwaysHighlightCurrentPhotoInMap = `always highlight current photo in map`,
+  onlyShowCurrentPhotoInMap = `only show current photo in map`,
+  showTakePhotoImages = `show take photo images`,
+  showCalibrationImages = `show calibration images`,
+  showWeedDetectorImages = `show weed detector images`,
+  showSoilHeightImages = `show soil height images`,
+
+  // Photos: Camera settings
+  camera = `camera`,
+  imageResolution = `image resolution`,
+  rotateDuringCapture = `rotate during capture`,
+
+  // Photos: Camera calibration
+  useAlternativeMethod = `use alternative method`,
+  calibrationHue = `calibration hue`,
+  calibrationSaturation = `calibration saturation`,
+  calibrationValue = `calibration value`,
+  calibrationBlur = `calibration blur`,
+  calibrationMorph = `calibration morph`,
+  calibrationIterations = `calibration iterations`,
+  invertHueRangeSelection = `invert hue range selection`,
+  calibrationObjectSeparation = `calibration object separation`,
+  calibrationObjectSeparationAlongAxis = `calibration object separation along axis`,
+  cameraOffsetX = `camera offset x`,
+  cameraOffsetY = `camera offset y`,
+  originLocationInImage = `origin location in image`,
+  pixelCoordinateScale = `pixel coordinate scale`,
+  cameraRotation = `camera rotation`,
+
+  // Photos: Weed detection
+  detectionHue = `detection hue`,
+  detectionSaturation = `detection saturation`,
+  detectionValue = `detection value`,
+  detectionBlur = `detection blur`,
+  detectionMorph = `detection morph`,
+  detectionIterations = `detection iterations`,
+  saveDetectedPlants = `save detected plants`,
+  ignoreDetectionsOutOfBounds = `ignore detections out of bounds`,
+  minimumWeedSize = `minimum weed size`,
+  maximumWeedSize = `maximum weed size`,
 }
 
 export namespace DiagnosticMessages {
@@ -2089,12 +2338,20 @@ export enum Actions {
   LOGOUT = "LOGOUT",
 
   // App
-  OPEN_CONTROLS_POPUP = "OPEN_CONTROLS_POPUP",
   TOGGLE_PLANTS_PANEL_OPTION = "TOGGLE_PLANTS_PANEL_OPTION",
   TOGGLE_WEEDS_PANEL_OPTION = "TOGGLE_WEEDS_PANEL_OPTION",
   TOGGLE_POINTS_PANEL_OPTION = "TOGGLE_POINTS_PANEL_OPTION",
   TOGGLE_SETTINGS_PANEL_OPTION = "TOGGLE_SETTINGS_PANEL_OPTION",
+  TOGGLE_CURVES_PANEL_OPTION = "TOGGLE_CURVES_PANEL_OPTION",
+  TOGGLE_SEQUENCES_PANEL_OPTION = "TOGGLE_SEQUENCES_PANEL_OPTION",
+  SET_METRIC_PANEL_OPTION = "SET_METRIC_PANEL_OPTION",
   BULK_TOGGLE_SETTINGS_PANEL = "BULK_TOGGLE_SETTINGS_PANEL",
+  SET_CONTROLS_PANEL_OPTION = "SET_CONTROLS_PANEL_OPTION",
+  SET_JOBS_PANEL_OPTION = "SET_JOBS_PANEL_OPTION",
+  TOGGLE_POPUP = "TOGGLE_POPUP",
+  OPEN_POPUP = "OPEN_POPUP",
+  CLOSE_POPUP = "CLOSE_POPUP",
+  TOGGLE_HOTKEY_GUIDE = "TOGGLE_HOTKEY_GUIDE",
 
   // Devices
   CHANGE_STEP_SIZE = "CHANGE_STEP_SIZE",
@@ -2107,6 +2364,8 @@ export enum Actions {
   FETCH_OS_RELEASE_NOTES_OK = "FETCH_OS_RELEASE_NOTES_OK",
   FETCH_OS_RELEASE_NOTES_ERROR = "FETCH_OS_RELEASE_NOTES_ERROR",
   STASH_STATUS = "STASH_STATUS",
+  SET_NEEDS_VERSION_CHECK = "SET_NEEDS_VERSION_CHECK",
+  SET_MALFORMED_NOTIFICATION_SENT = "SET_MALFORMED_NOTIFICATION_SENT",
 
   // Draggable
   PUT_DATA_XFER = "PUT_DATA_XFER",
@@ -2118,6 +2377,7 @@ export enum Actions {
   SET_SELECTION_POINT_TYPE = "SET_SELECTION_POINT_TYPE",
   TOGGLE_HOVERED_PLANT = "TOGGLE_HOVERED_PLANT",
   TOGGLE_HOVERED_POINT = "TOGGLE_HOVERED_POINT",
+  TOGGLE_HOVERED_SPREAD = "TOGGLE_HOVERED_SPREAD",
   HOVER_SENSOR_READING = "HOVER_SENSOR_READING",
   HOVER_IMAGE = "HOVER_IMAGE",
   HOVER_PLANT_LIST_ITEM = "HOVER_PLANT_LIST_ITEM",
@@ -2125,6 +2385,7 @@ export enum Actions {
   OF_SEARCH_RESULTS_START = "OF_SEARCH_RESULTS_START",
   OF_SEARCH_RESULTS_OK = "OF_SEARCH_RESULTS_OK",
   OF_SEARCH_RESULTS_NO = "OF_SEARCH_RESULTS_NO",
+  SET_COMPANION_INDEX = "SET_COMPANION_INDEX",
   SET_PLANT_TYPE_CHANGE_ID = "SET_PLANT_TYPE_CHANGE_ID",
   SET_SLUG_BULK = "SET_SLUG_BULK",
   CHOOSE_LOCATION = "CHOOSE_LOCATION",
@@ -2148,12 +2409,18 @@ export enum Actions {
   HIGHLIGHT_MAP_IMAGE = "HIGHLIGHT_MAP_IMAGE",
   SHOW_CAMERA_VIEW_POINTS = "SHOW_CAMERA_VIEW_POINTS",
   TOGGLE_GRID_ID = "TOGGLE_GRID_ID",
+  SET_GRID_START = "SET_GRID_START",
   TOGGLE_SOIL_HEIGHT_LABELS = "TOGGLE_SOIL_HEIGHT_LABELS",
   SET_PROFILE_OPEN = "SET_PROFILE_OPEN",
   SET_PROFILE_AXIS = "SET_PROFILE_AXIS",
   SET_PROFILE_POSITION = "SET_PROFILE_POSITION",
   SET_PROFILE_WIDTH = "SET_PROFILE_WIDTH",
   SET_PROFILE_FOLLOW_BOT = "SET_PROFILE_FOLLOW_BOT",
+  SET_CROP_WATER_CURVE_ID = "SET_CROP_WATER_CURVE_ID",
+  SET_CROP_SPREAD_CURVE_ID = "SET_CROP_SPREAD_CURVE_ID",
+  SET_CROP_HEIGHT_CURVE_ID = "SET_CROP_HEIGHT_CURVE_ID",
+  SET_CROP_STAGE = "SET_CROP_STAGE",
+  SET_CROP_PLANTED_AT = "SET_CROP_PLANTED_AT",
 
   // Regimens
   PUSH_WEEK = "PUSH_WEEK",
@@ -2174,6 +2441,8 @@ export enum Actions {
   // Photos
   SELECT_IMAGE = "SELECT_IMAGE",
   SET_IMAGE_SIZE = "SET_IMAGE_SIZE",
+  TOGGLE_PHOTOS_PANEL_OPTION = "TOGGLE_PHOTOS_PANEL_OPTION",
+  BULK_TOGGLE_PHOTOS_PANEL = "BULK_TOGGLE_PHOTOS_PANEL",
 
   // Farmware
   SELECT_FARMWARE = "SELECT_FARMWARE",
@@ -2185,6 +2454,7 @@ export enum Actions {
   SET_TOUR_STEP = "SET_TOUR_STEP",
   CREATE_TOAST = "CREATE_TOAST",
   REMOVE_TOAST = "REMOVE_TOAST",
+  START_MOVEMENT = "START_MOVEMENT",
 
   // Network
   NETWORK_EDGE_CHANGE = "NETWORK_EDGE_CHANGE",
@@ -2192,6 +2462,7 @@ export enum Actions {
   PING_START = "PING_START",
   PING_OK = "PING_OK",
   PING_NO = "PING_NO",
+  CLEAR_PINGS = "CLEAR_PINGS",
 
   // Sequence Folders
   FOLDER_TOGGLE = "FOLDER_TOGGLE",

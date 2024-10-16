@@ -1,4 +1,5 @@
 import { BotPosition } from "../../devices/interfaces";
+import { DesignerState } from "../../farm_designer/interfaces";
 
 export type PlantGridKey =
   | "startX"
@@ -16,6 +17,7 @@ export interface PlantGridState {
   offsetPacking: boolean;
   cameraView: boolean;
   previous: string;
+  autoPreview: boolean;
 }
 
 export interface PlantGridProps {
@@ -29,6 +31,7 @@ export interface PlantGridProps {
   close?: () => void;
   z?: number;
   meta?: Record<string, string | undefined>;
+  designer?: DesignerState;
 }
 
 export interface PlantGridInitOption {
@@ -40,6 +43,7 @@ export interface PlantGridInitOption {
   radius?: number;
   z?: number;
   meta?: Record<string, string | undefined>;
+  designer?: DesignerState;
 }
 
 interface GridInputPropsBase {
@@ -59,12 +63,4 @@ export interface GridInputProps extends GridInputPropsBase {
 export interface InputCellProps extends GridInputPropsBase {
   gridKey: PlantGridKey;
   itemType: "points" | "plants";
-}
-
-export interface PlantGridLabelData {
-  /** A `font-awesome` icon next to the input box label.  */
-  regular_icon: string;
-  /** What icon should we use if the user has `xy_swap` enabled? */
-  swapped_icon: string;
-  label: string;
 }

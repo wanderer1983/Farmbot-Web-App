@@ -11,6 +11,7 @@ export enum Color {
   red = "#ee6666",
   virtualRed = "#e82f2f",
   soilBackground = "#c39f7a",
+  labelBackground = "#8d7157",
   templateSoilBkgd = "#dddddd",
   gridGray = "#333333",
   gridSoil = "#ccaa88",
@@ -22,4 +23,10 @@ export enum Color {
   blue = "#3377dd",
   cyan = "#14bee6",
   magenta = "#a64d79",
+  curveBlue = "#9fc5e8",
+  curveDarkBlue = "#488cc9",
+  curveGreen = "#b6d7a8",
+  curveDarkGreen = "#95be84",
+  curvePurple = "#b4a7d6",
+  curveDarkPurple = "#9383bc",
 }

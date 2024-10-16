@@ -1,10 +1,13 @@
-import { FirmwareHardware, TaggedDevice, TaggedWizardStepResult } from "farmbot";
+import {
+  FirmwareHardware, TaggedDevice, TaggedWizardStepResult, Xyz,
+} from "farmbot";
 import { WizardStepResult } from "farmbot/dist/resources/api_resources";
 import { NumberConfigKey } from "farmbot/dist/resources/configs/firmware";
 import { GetWebAppConfigValue } from "../config_storage/actions";
 import { BotState } from "../devices/interfaces";
 import { TimeSettings } from "../interfaces";
 import { ResourceIndex } from "../resources/interfaces";
+import { ControlsCheckOptions, PinBindingOptions } from "./checks";
 import { WizardSectionSlug, WizardStepSlug } from "./data";
 
 export interface SetupWizardProps extends WizardOutcomeComponentProps {
@@ -14,15 +17,17 @@ export interface SetupWizardProps extends WizardOutcomeComponentProps {
   device: TaggedDevice | undefined;
 }
 
-export interface WizardStepOutcome {
+interface WizardStepOutcome {
   slug: string;
   description: string;
   tips: string;
   hidden?: boolean;
   detectedProblems?: WizardOutcomeDetectedProblem[];
+  images?: string[];
   component?: React.ComponentType<WizardOutcomeComponentProps>;
+  controlsCheckOptions?: ControlsCheckOptions;
   video?: string;
-  firmwareNumberSettings?: { key: NumberConfigKey, label: string }[];
+  firmwareNumberSettings?: FirmwareSettingInputProps[];
   goToStep?: GoToStep;
 }
 
@@ -65,8 +70,12 @@ export interface WizardStep {
   prerequisites?: WizardStepPrerequisite[];
   content: string;
   video?: string;
+  images?: string[];
   component?: React.ComponentType<WizardStepComponentProps>;
   componentOptions?: ComponentOptions;
+  warning?: string;
+  controlsCheckOptions?: ControlsCheckOptions;
+  pinBindingOptions?: PinBindingOptions;
   question: string;
   outcomes: WizardStepOutcome[];
 }
@@ -82,7 +91,7 @@ export interface WizardToCSection {
   steps: WizardStep[];
 }
 
-export type WizardToC = Partial<Record<WizardSectionSlug, WizardToCSection>>;
+export type WizardToC = Record<WizardSectionSlug, WizardToCSection>;
 export type WizardSteps = WizardStep[];
 
 export type WizardResults = Partial<Record<WizardStepSlug, WizardStepResult>>;
@@ -93,10 +102,15 @@ export interface SetupWizardState extends WizardSectionsOpen {
   stepOpen: WizardStepSlug | undefined;
 }
 
+export interface WizardStepDataProps {
+  firmwareHardware: FirmwareHardware | undefined;
+  getConfigValue?: GetWebAppConfigValue;
+}
+
 export interface WizardHeaderProps {
   reset(): void;
   results: TaggedWizardStepResult[];
-  firmwareHardware: FirmwareHardware | undefined;
+  stepDataProps: WizardStepDataProps;
 }
 
 export interface WizardSectionHeaderProps {
@@ -145,8 +159,18 @@ export interface SetupWizardSettingsProps {
   device: TaggedDevice;
 }
 
+interface FirmwareSettingInputProps {
+  key: NumberConfigKey;
+  label: string;
+  scale?: Xyz;
+  intSize?: "long";
+  inputMax?: number;
+  toInput?: (input: number) => number;
+  fromInput?: (input: number) => number;
+}
+
 export interface FirmwareNumberSettingsProps {
-  firmwareNumberSettings?: { key: NumberConfigKey, label: string }[];
+  firmwareNumberSettings?: FirmwareSettingInputProps[];
   dispatch: Function;
   bot: BotState;
   resources: ResourceIndex;

@@ -5,6 +5,7 @@ import {
 } from "farmbot/dist/resources/api_resources";
 import { FirmwareHardware } from "farmbot";
 import { SettingsPanelState } from "../../interfaces";
+import { BotState } from "../../devices/interfaces";
 
 export interface PinBindingsProps {
   dispatch: Function;
@@ -37,6 +38,7 @@ export interface PinBindingInputGroupProps {
   dispatch: Function;
   resources: ResourceIndex;
   pinBindings: PinBindingListItems[];
+  firmwareHardware: FirmwareHardware | undefined;
 }
 
 export interface PinBindingInputGroupState {
@@ -45,4 +47,17 @@ export interface PinBindingInputGroupState {
   sequenceIdInput: number | undefined;
   specialActionInput: PinBindingSpecialAction | undefined;
   bindingType: PinBindingType;
+}
+
+export interface BoxTopBaseProps {
+  isEditing: boolean;
+  dispatch: Function;
+  resources: ResourceIndex;
+  botOnline: boolean;
+  bot: BotState;
+  firmwareHardware: FirmwareHardware | undefined;
+}
+
+export interface BoxTopProps extends BoxTopBaseProps {
+  threeDimensions: boolean;
 }

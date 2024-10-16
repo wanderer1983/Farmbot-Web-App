@@ -1,4 +1,4 @@
-import { Terminal } from "xterm";
+import { Terminal } from "@xterm/xterm";
 import { AuthState } from "../auth/interfaces";
 
 export const attachTerminal = () => {
@@ -6,6 +6,7 @@ export const attachTerminal = () => {
   const terminal = new Terminal({});
   if (node) {
     terminal.open(node);
+    terminal.resize(84, 24);
   }
   return terminal;
 };

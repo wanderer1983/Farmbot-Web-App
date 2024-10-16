@@ -9,7 +9,7 @@ import {
 } from "farmbot";
 import { resourceReducer, emptyState } from "../resources/reducer";
 import { resourceReady } from "../sync/actions";
-import { threeWayComparison as c3 } from "../util/move";
+import { threeWayComparison as compare3 } from "../util/move";
 import { defensiveClone } from "../util/util";
 import { chain, groupBy } from "lodash";
 import { MessageType } from "../sequences/interfaces";
@@ -22,6 +22,10 @@ const DEFAULT_DEVICE_BODY: TaggedDevice["body"] = {
   lat: undefined,
   lng: undefined,
   indoor: false,
+  rpi: "3",
+  max_log_age_in_days: 0,
+  max_sequence_count: 0,
+  max_sequence_length: 0,
 };
 
 export function fakeDevice(body: Partial<TaggedDevice["body"]> = {}):
@@ -85,6 +89,7 @@ const tr1: TaggedResource = {
     "id": 152,
     "name": "FarmBot 1",
     "email": "farmbot1@farmbot.io",
+    "language": "English",
     "created_at": "2017-09-03T20:01:40.336Z",
     "updated_at": "2017-09-27T14:00:47.326Z",
   },
@@ -185,6 +190,7 @@ const tr7: TaggedPoint = {
     "name": "fenestrate-flower-3632",
     "pointer_type": "Plant",
     "radius": 46,
+    "depth": 0,
     "x": 347,
     "y": 385,
     "z": 0,
@@ -207,6 +213,7 @@ const tr8: TaggedPoint = {
     "name": "alate-fire-7363",
     "pointer_type": "Plant",
     "radius": 36,
+    "depth": 0,
     "x": 727,
     "y": 376,
     "z": 0,
@@ -306,6 +313,7 @@ const tr14: TaggedResource = {
   "body": {
     "id": 14,
     "name": "Trench Digging Tool",
+    "flow_rate_ml_per_s": 0,
   },
   "uuid": "Tool.14.49"
 };
@@ -316,6 +324,7 @@ const tr15: TaggedResource = {
   "body": {
     "id": 15,
     "name": "Berry Picking Tool",
+    "flow_rate_ml_per_s": 0,
   },
   "uuid": "Tool.15.50"
 };
@@ -340,6 +349,18 @@ const tr16: TaggedPoint = {
     z: 5
   },
   uuid: "Point.1397.11"
+};
+
+const tr17: TaggedResource = {
+  specialStatus: SpecialStatus.SAVED,
+  kind: "Sensor",
+  body: {
+    id: 11,
+    pin: 14,
+    label: "Sensor",
+    mode: 0,
+  },
+  uuid: "Sensor.11.5"
 };
 
 const log: TaggedLog = {
@@ -372,6 +393,7 @@ export const FAKE_RESOURCES: TaggedResource[] = [
   tr14,
   tr15,
   tr16,
+  tr17,
   log,
 ];
 const KIND: keyof TaggedResource = "kind"; // Safety first, kids.
@@ -388,6 +410,7 @@ const KIND_PRIORITY: ResourceLookupTable = {
   FarmwareInstallation: 0,
   WebAppConfig: 0,
   SavedGarden: 0,
+  Curve: 0,
   PlantTemplate: 1,
   Peripheral: 1,
   Point: 1,
@@ -406,17 +429,19 @@ const KIND_PRIORITY: ResourceLookupTable = {
   Log: 4,
   WebcamFeed: 4,
   WizardStepResult: 4,
+  Telemetry: 4,
   Crop: 4,
 };
 export function buildResourceIndex(resources: TaggedResource[] = FAKE_RESOURCES,
   state = emptyState()) {
   const sortedResources = repairBrokeReferences(resources)
-    .sort((l, r) => c3(KIND_PRIORITY[l.kind], KIND_PRIORITY[r.kind]));
+    .sort((l, r) => compare3(KIND_PRIORITY[l.kind], KIND_PRIORITY[r.kind]));
   type K = keyof typeof KIND_PRIORITY;
   return chain(sortedResources)
     .groupBy(KIND)
     .toPairs()
-    .sort((l, r) => c3(KIND_PRIORITY[l[0] as K || 4], KIND_PRIORITY[r[0] as K || 4]))
+    .sort((l, r) =>
+      compare3(KIND_PRIORITY[l[0] as K || 4], KIND_PRIORITY[r[0] as K || 4]))
     .map((y) => resourceReady((y as TaggedResource["kind"][])[0], y[1]))
     .reduce(resourceReducer, state)
     .value();

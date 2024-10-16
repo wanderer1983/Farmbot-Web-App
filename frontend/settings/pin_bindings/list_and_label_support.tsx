@@ -14,12 +14,7 @@ export const bindingTypeLabelLookup = (): { [x: string]: string } => ({
   "": t("Sequence"),
 });
 
-export const bindingTypeList = (): DropDownItem[] =>
-  Object.entries(bindingTypeLabelLookup())
-    .filter(([value, _]) => !(value == ""))
-    .map(([value, label]) => ({ label, value }));
-
-export const specialActionLabelLookup = (): { [x: string]: string } => ({
+const specialActionLabelLookup = (): { [x: string]: string } => ({
   [PinBindingSpecialAction.emergency_lock]: t("E-STOP"),
   [PinBindingSpecialAction.emergency_unlock]: t("UNLOCK"),
   [PinBindingSpecialAction.power_off]: t("Shutdown"),
@@ -32,8 +27,11 @@ export const specialActionLabelLookup = (): { [x: string]: string } => ({
 
 export const specialActionList = (): DropDownItem[] =>
   Object.values(PinBindingSpecialAction)
-    .map((action: PinBindingSpecialAction) =>
-      ({ label: specialActionLabelLookup()[action], value: action }));
+    .map((action: PinBindingSpecialAction) => ({
+      label: specialActionLabelLookup()[action],
+      value: action,
+      headingId: PinBindingType.special,
+    }));
 
 export const getSpecialActionLabel =
   (action: PinBindingSpecialAction | undefined) =>

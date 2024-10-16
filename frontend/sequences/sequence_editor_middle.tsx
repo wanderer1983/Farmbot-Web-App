@@ -21,12 +21,13 @@ export class SequenceEditorMiddle
         showName={true}
         dispatch={this.props.dispatch}
         sequence={sequence}
+        sequences={this.props.sequences}
         resources={this.props.resources}
         syncStatus={this.props.syncStatus}
         hardwareFlags={this.props.hardwareFlags}
         farmwareData={this.props.farmwareData}
         getWebAppConfigValue={this.props.getWebAppConfigValue}
-        menuOpen={this.props.menuOpen} />}
+        sequencesState={this.props.sequencesState} />}
     </EmptyStateWrapper>;
   }
 }

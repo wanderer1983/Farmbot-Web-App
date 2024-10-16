@@ -186,6 +186,11 @@ const OTHER_SETTINGS = (): SettingDescriptionProps[] => ([
     setting: BooleanSetting.show_motor_plot,
   },
   {
+    title: DeviceSetting.showMotorLoadPlotDisplay,
+    description: "",
+    setting: BooleanSetting.show_missed_step_plot,
+  },
+  {
     title: DeviceSetting.confirmStepDeletion,
     description: Content.CONFIRM_STEP_DELETION,
     setting: BooleanSetting.confirm_step_deletion,
@@ -218,7 +223,7 @@ const OTHER_SETTINGS = (): SettingDescriptionProps[] => ([
   },
 ]);
 
-export interface LogLevelSettingDescriptionProps {
+interface LogLevelSettingDescriptionProps {
   setting: WebAppNumberConfigKey;
   title: DeviceSetting;
   description: string;
@@ -269,7 +274,7 @@ const LOG_LEVEL_SETTINGS = (): LogLevelSettingDescriptionProps[] => ([
   },
 ]);
 
-export interface LogEnableSettingDescriptionProps {
+interface LogEnableSettingDescriptionProps {
   setting: ConfigurationName;
   title: DeviceSetting;
   description: string;

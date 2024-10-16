@@ -10,10 +10,10 @@ end
 SimpleCov.coverage_dir("coverage_api")
 
 if ENV["CODECOV_TOKEN"]
-  require "codecov"
+  require "simplecov-cobertura"
   SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
     SimpleCov::Formatter::HTMLFormatter,
-    SimpleCov::Formatter::Codecov,
+    SimpleCov::Formatter::CoberturaFormatter,
   ])
 else
   SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
@@ -21,6 +21,7 @@ else
   ])
 end
 require "pry"
+require "webmock/rspec"
 
 ENV["RAILS_ENV"] ||= "test"
 require File.expand_path("../../config/environment", __FILE__)
@@ -68,11 +69,6 @@ require_relative "./fake_sequence"
 
 Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 
-SmarfDoc.config do |c|
-  c.template_file = "api_docs.md.erb"
-  c.output_file = "api_docs.md"
-end
-
 require "database_cleaner"
 DatabaseCleaner.strategy = :truncation
 # then, whenever you need to clean the DB
@@ -87,24 +83,13 @@ RSpec.configure do |config|
   config.include Helpers
   config.infer_spec_type_from_file_location!
   config.order = "random"
-  if ENV["DOCS"]
-    config.after(:each, type: :controller) do
-      if request.path.length > 0 || response.body.length > 0
-        SmarfDoc.run!(NiceResponse.new(request), response)
-      end
-    end
-
-    config.after(:suite) do
-      SmarfDoc.finish!
-    end
-  end
 end
 
 FAKE_ATTACHMENT_URL = "https://cdn.shopify.com/s/files/1/2040/0" \
                       "289/files/FarmBot.io_Trimmed_Logo_Gray_o" \
                       "n_Transparent_1_434x200.png?v=1525220371"
 
-def simulate_fbos_request(version = "10.1.2")
+def simulate_fbos_request(version = "17.1.2")
   ua = "FARMBOTOS/#{version} (RPI3) RPI3 (#{version})"
   allow(request).to receive(:user_agent).and_return(ua)
   request.env["HTTP_USER_AGENT"] = ua
@@ -138,9 +123,11 @@ def destroy_everything!
   Device.update_all(mounted_tool_id: nil)
   [
     Primitive,
+    Curve,
     FarmEvent,
     Release,
     WizardStepResult,
+    AiFeedback,
     FarmwareEnv,
     Alert,
     Sensor,
@@ -158,6 +145,7 @@ def destroy_everything!
     SensorReading,
     FarmwareInstallation,
     Tool,
+    Telemetry,
     Delayed::Job,
     Delayed::Backend::ActiveRecord::Job,
     Fragment,

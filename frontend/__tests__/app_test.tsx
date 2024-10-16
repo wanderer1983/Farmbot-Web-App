@@ -6,6 +6,11 @@ jest.mock("bowser", () => ({
 let mockPath = "";
 jest.mock("../history", () => ({
   getPathArray: () => mockPath.split("/"),
+  push: jest.fn(),
+}));
+
+jest.mock("../hotkeys", () => ({
+  HotKeys: () => <div />,
 }));
 
 import React from "react";
@@ -24,8 +29,12 @@ import { fakeTimeSettings } from "../__test_support__/fake_time_settings";
 import { error, warning } from "../toast/toast";
 import { fakePings } from "../__test_support__/fake_state/pings";
 import { auth } from "../__test_support__/fake_state/token";
-import { fakeHelpState } from "../__test_support__/fake_designer_state";
+import {
+  fakeHelpState, fakeMenuOpenState,
+} from "../__test_support__/fake_designer_state";
 import { Path } from "../internal_urls";
+import { push } from "../history";
+import { app } from "../__test_support__/fake_state/app";
 
 const FULLY_LOADED: ResourceName[] = [
   "Sequence", "Regimen", "FarmEvent", "Point", "Tool", "Device"];
@@ -42,6 +51,8 @@ const fakeProps = (): AppProps => ({
   xySwap: false,
   animate: false,
   getConfigValue: jest.fn(),
+  sourceFwConfig: jest.fn(),
+  sourceFbosConfig: jest.fn(),
   helpState: fakeHelpState(),
   resources: buildResourceIndex().index,
   alertCount: 0,
@@ -51,22 +62,12 @@ const fakeProps = (): AppProps => ({
   apiFirmwareValue: undefined,
   authAud: undefined,
   wizardStepResults: [],
-  toastMessages: {},
-  controlsPopupOpen: false,
-});
-
-describe("<App />: Controls Pop-Up", () => {
-  it("renders controls pop-up", () => {
-    mockPath = Path.mock(Path.plants());
-    const wrapper = mount(<App {...fakeProps()} />);
-    expect(wrapper.html()).toContain("controls-popup");
-  });
-
-  it("doesn't render controls pop-up", () => {
-    mockPath = Path.mock(Path.controls());
-    const wrapper = mount(<App {...fakeProps()} />);
-    expect(wrapper.html()).not.toContain("controls-popup");
-  });
+  telemetry: [],
+  appState: app,
+  feeds: [],
+  peripherals: [],
+  sequences: [],
+  menuOpen: fakeMenuOpenState(),
 });
 
 describe("<App />: Loading", () => {
@@ -123,6 +124,22 @@ describe("<App />: Loading", () => {
     mount(<App {...fakeProps()} />);
     expect(warning).toHaveBeenCalled();
   });
+
+  it("navigates to landing page", () => {
+    mockPath = Path.mock(Path.app());
+    const p = fakeProps();
+    p.getConfigValue = () => "controls";
+    mount(<App {...p} />);
+    expect(push).toHaveBeenCalledWith(Path.controls());
+  });
+
+  it("doesn't navigate to landing page", () => {
+    mockPath = Path.mock(Path.controls());
+    const p = fakeProps();
+    p.getConfigValue = () => "controls";
+    mount(<App {...p} />);
+    expect(push).not.toHaveBeenCalled();
+  });
 });
 
 describe("<App />: NavBar", () => {
@@ -138,7 +155,6 @@ describe("<App />: NavBar", () => {
       "Events",
       "Points",
       "Weeds",
-      "Controls",
       "Photos",
       "Tools",
       "Messages",

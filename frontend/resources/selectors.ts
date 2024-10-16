@@ -4,9 +4,7 @@ import {
   TaggedGenericPointer,
   TaggedPlantPointer,
   TaggedRegimen,
-  TaggedResource,
   TaggedSequence,
-  TaggedTool,
   TaggedToolSlotPointer,
   TaggedUser,
   TaggedDevice,
@@ -22,11 +20,9 @@ import {
   isTaggedWeedPointer,
 } from "./tagged_resources";
 import { betterCompact, bail } from "../util";
-import { findAllById } from "./selectors_by_id";
 import { selectAllPoints, selectAllActivePoints } from "./selectors_by_kind";
 import { assertUuid } from "./util";
 import { joinKindAndId } from "./reducer_support";
-import { chain } from "lodash";
 import { getWebAppConfig } from "./getters";
 import { TimeSettings } from "../interfaces";
 import { BooleanSetting } from "../session_keys";
@@ -55,21 +51,9 @@ export const findUuid =
     if (uuid) {
       return uuid;
     } else {
-      throw new Error("UUID not found for id " + id);
+      throw new Error("UUID not found for id " + id + " of kind " + kind);
     }
   };
-
-export const isKind = (resourceName: ResourceName) => (tr: TaggedResource) =>
-  tr.kind === resourceName;
-
-export function groupPointsByType(index: ResourceIndex) {
-  return chain(selectAllActivePoints(index))
-    // If this fails to compile....
-    .tap(x => x[0].body.pointer_type)
-    // ... this line must be updated:
-    .groupBy("body.pointer_type")
-    .value();
-}
 
 export function findPointerByTypeAndId(index: ResourceIndex,
   pt: string,
@@ -123,7 +107,7 @@ export function selectCurrentToolSlot(index: ResourceIndex, uuid: string) {
   }
 }
 
-export function getRegimenByUUID(index: ResourceIndex, uuid: string) {
+function getRegimenByUUID(index: ResourceIndex, uuid: string) {
   assertUuid("Regimen", uuid);
   return index.references[uuid];
 }
@@ -137,13 +121,6 @@ export function getSequenceByUUID(index: ResourceIndex,
   } else {
     throw new Error("BAD Sequence UUID;");
   }
-}
-
-/** FINDS: All tools that are in use. */
-export function toolsInUse(index: ResourceIndex): TaggedTool[] {
-  const ids = betterCompact(selectAllToolSlotPointers(index)
-    .map(ts => ts.body.tool_id));
-  return findAllById(index, ids, "Tool") as TaggedTool[];
 }
 
 export function maybeGetSequence(index: ResourceIndex,
@@ -167,19 +144,19 @@ export function maybeGetToolSlot(index: ResourceIndex,
 }
 
 /** Return the UTC offset of current bot if possible. If not, use UTC (0). */
-export function maybeGetTimeOffset(index: ResourceIndex): number {
+function maybeGetTimeOffset(index: ResourceIndex): number {
   const dev = maybeGetDevice(index);
   return dev ? dev.body.tz_offset_hrs : 0;
 }
 
 /** Return 12/24hr time format preference if possible. If not, use 12hr. */
-export function maybeGet24HourTimeSetting(index: ResourceIndex): boolean {
+function maybeGet24HourTimeSetting(index: ResourceIndex): boolean {
   const conf = getWebAppConfig(index);
   return conf ? conf.body[BooleanSetting.time_format_24_hour] : false;
 }
 
 /** Return seconds time format preference if possible. */
-export function maybeGetSecondsTimeSetting(index: ResourceIndex): boolean {
+function maybeGetSecondsTimeSetting(index: ResourceIndex): boolean {
   const conf = getWebAppConfig(index);
   return conf ? conf.body[BooleanSetting.time_format_seconds] : false;
 }

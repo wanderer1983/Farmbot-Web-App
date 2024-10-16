@@ -5,9 +5,10 @@ import {
   CheckedAxisLength, AxisNumberProperty, BotSize, MapTransformProps, Mode,
   TaggedPlant,
 } from "./interfaces";
-import { lastUrlChunk, trim } from "../../util";
+import { trim } from "../../util";
 import { store } from "../../redux/store";
 import { Path } from "../../internal_urls";
+import { isMobile } from "../../screen_size";
 
 /*
  * Farm Designer Map Utilities
@@ -54,6 +55,7 @@ export function round(num: number) {
 /** Status of farm designer side panel. */
 export enum MapPanelStatus {
   open = "open",
+  mobileClosed = "mobileClosed",
   closed = "closed",
   short = "short",
 }
@@ -61,10 +63,10 @@ export enum MapPanelStatus {
 /** Get farm designer side panel status. */
 export const getPanelStatus = (): MapPanelStatus => {
   if (Path.equals(Path.designer())) {
-    return MapPanelStatus.closed;
+    return isMobile() ? MapPanelStatus.mobileClosed : MapPanelStatus.closed;
   }
   const mode = getMode();
-  if (window.innerWidth <= 450 &&
+  if (isMobile() &&
     (mode === Mode.locationInfo ||
       mode === Mode.clickToAdd)) {
     return MapPanelStatus.short;
@@ -76,6 +78,7 @@ export const getPanelStatus = (): MapPanelStatus => {
 export const mapPanelClassName = () => {
   switch (getPanelStatus()) {
     case MapPanelStatus.short: return "short-panel";
+    case MapPanelStatus.mobileClosed: return "panel-closed-mobile";
     case MapPanelStatus.closed: return "panel-closed";
     case MapPanelStatus.open:
     default:
@@ -88,7 +91,8 @@ export const getMapPadding =
   (panelStatus: MapPanelStatus): { left: number, top: number } => {
     switch (panelStatus) {
       case MapPanelStatus.short: return { left: 20, top: 350 };
-      case MapPanelStatus.closed: return { left: 20, top: 160 };
+      case MapPanelStatus.mobileClosed: return { left: 20, top: 160 };
+      case MapPanelStatus.closed: return { left: 20, top: 110 };
       case MapPanelStatus.open:
       default:
         return { left: 468, top: 110 };
@@ -100,7 +104,7 @@ const leftOrTop: Record<"x" | "y", "top" | "left"> = { x: "left", y: "top" };
 
 type XYCoordinate = { x: number, y: number };
 
-export interface ScreenToGardenParams {
+interface ScreenToGardenParams {
   page: XYCoordinate;
   scroll: { left: number, top: number };
   zoomLvl: number;
@@ -249,12 +253,12 @@ export function getBotSize(
 /** Calculate map dimensions */
 export function getMapSize(
   mapTransformProps: MapTransformProps,
-  gridOffset: AxisNumberProperty,
+  gridOffset?: AxisNumberProperty,
 ): { w: number, h: number } {
   const { gridSize, xySwap } = mapTransformProps;
   const mapSize = {
-    x: gridSize.x + gridOffset.x * 2,
-    y: gridSize.y + gridOffset.y * 2
+    x: gridSize.x + (gridOffset?.x || 0) * 2,
+    y: gridSize.y + (gridOffset?.y || 0) * 2
   };
   return {
     w: xySwap ? mapSize.y : mapSize.x,
@@ -294,7 +298,7 @@ export const getMode = (): Mode => {
     return Mode.clickToAdd;
   }
   if (savedGardenOpen()) { return Mode.templateView; }
-  if (!isNaN(parseInt(lastUrlChunk()))) { return Mode.editPlant; }
+  if (Path.lastChunkIsNum()) { return Mode.editPlant; }
   if (Path.getSlug(Path.plants()) === "select") {
     return Mode.boxSelect;
   }
@@ -323,7 +327,7 @@ export const savedGardenOpen = () =>
     ? parseInt(Path.getSlug(Path.savedGardens()))
     : false;
 
-export const getZoomLevelFromMap = (map: Element) =>
+const getZoomLevelFromMap = (map: Element) =>
   parseFloat((window.getComputedStyle(map).transform || "(1").split("(")[1]);
 
 /** Get the garden map coordinate of a cursor or screen interaction. */
@@ -340,7 +344,7 @@ export const getGardenCoordinates = (props: {
     const zoomLvl = getZoomLevelFromMap(map);
     const params: ScreenToGardenParams = {
       page: { x: props.pageX, y: props.pageY },
-      scroll: { left: page.scrollLeft, top: map.scrollTop * zoomLvl },
+      scroll: { left: page.scrollLeft, top: page.scrollTop },
       mapTransformProps: props.mapTransformProps,
       gridOffset: props.gridOffset,
       zoomLvl,

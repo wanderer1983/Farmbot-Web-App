@@ -1,4 +1,3 @@
-import { box } from "boxed_value";
 import { WDENVKey, Translation, FormatTranslationMap } from "./interfaces";
 import { snakeCase, get, isUndefined } from "lodash";
 import { NumericKeyName } from "../image_workspace";
@@ -50,10 +49,19 @@ export const WD_KEY_DEFAULTS = {
   WEED_DETECTOR_S_LO: 50,
   WEED_DETECTOR_V_HI: 255,
   WEED_DETECTOR_V_LO: 50,
+  WEED_DETECTOR_save_detected_plants: SPECIAL_VALUES.FALSE,
+  WEED_DETECTOR_use_bounds: SPECIAL_VALUES.TRUE,
+  WEED_DETECTOR_min_radius: 1.5,
+  WEED_DETECTOR_max_radius: 50,
 };
 
 export type WEED_DETECTOR_KEY_PART =
-  | "blur" | "morph" | "iteration" | NumericKeyName;
+  | "blur" | "morph" | "iteration"
+  | "save_detected_plants"
+  | "use_bounds"
+  | "min_radius"
+  | "max_radius"
+  | NumericKeyName;
 
 export type CAMERA_CALIBRATION_KEY_PART =
   | WEED_DETECTOR_KEY_PART
@@ -72,7 +80,7 @@ export type CAMERA_CALIBRATION_KEY_PART =
 export const EVERY_WD_KEY: WDENVKey[] =
   Object.keys(WD_KEY_DEFAULTS).map((x: WDENVKey) => x);
 
-export const isWDENVKey = (key: unknown): key is WDENVKey =>
+const isWDENVKey = (key: unknown): key is WDENVKey =>
   (EVERY_WD_KEY as string[]).includes("" + key);
 
 export const namespace = <T>(
@@ -92,6 +100,8 @@ export const DEFAULT_FORMATTER: Translation = {
       case "CAMERA_CALIBRATION_image_bot_origin_location":
       case "CAMERA_CALIBRATION_invert_hue_selection":
       case "CAMERA_CALIBRATION_easy_calibration":
+      case "WEED_DETECTOR_save_detected_plants":
+      case "WEED_DETECTOR_use_bounds":
         return ("" + (SPECIAL_VALUES[val] || val));
       default:
         return val;
@@ -99,10 +109,10 @@ export const DEFAULT_FORMATTER: Translation = {
   },
   parse: (__, val) => {
     try {
-      const b = box(JSON.parse(val));
-      switch (b.kind) {
+      const parsed = JSON.parse(val);
+      switch (typeof parsed) {
         case "number":
-          return b.value;
+          return parsed;
         case "boolean":
         case "string":
           return getSpecialValue(val);
@@ -129,6 +139,7 @@ export function getSpecialValue(key: string | number):
   SPECIAL_VALUES {
 
   const k = snakeCase(("" + key).toUpperCase()).toUpperCase();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const v = get(SPECIAL_VALUES, k, NaN) as number | undefined;
 
   if (isUndefined(v) || isNaN(v)) {

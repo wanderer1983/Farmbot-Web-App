@@ -14,6 +14,10 @@ import { StepParams } from "../../interfaces";
 import { editStep } from "../../../api/crud";
 import { joinKindAndId } from "../../../resources/reducer_support";
 import { t } from "../../../i18next_wrapper";
+import {
+  getFwHardwareValue, hasExtraButtons,
+} from "../../../settings/firmware/firmware_hardware_support";
+import { getFbosConfig } from "../../../resources/getters";
 
 /** `headingIds` required to group the four kinds of pins. */
 export enum PinGroupName {
@@ -110,10 +114,20 @@ export function pinDropdowns(
 
 const pinsAsDropDownsWritePin = (
   resources: ResourceIndex, showPins: boolean,
+): DropDownItem[] => {
+  const firmwareHardware = getFwHardwareValue(getFbosConfig(resources));
+  return [
+    ...peripheralsAsDropDowns(resources),
+    ...(hasExtraButtons(firmwareHardware) ? boxLedsAsDropDowns() : []),
+    ...(showPins ? pinDropdowns(n => n) : []),
+  ];
+};
+
+const pinsAsDropDownsTogglePin = (
+  resources: ResourceIndex, showPins: boolean,
 ): DropDownItem[] =>
   [
     ...peripheralsAsDropDowns(resources),
-    ...boxLedsAsDropDowns(),
     ...(showPins ? pinDropdowns(n => n) : []),
   ];
 
@@ -130,9 +144,8 @@ export const pinsAsDropdowns =
   (kind: "read_pin" | "write_pin" | "toggle_pin") => {
     switch (kind) {
       case "read_pin": return pinsAsDropDownsReadPin;
-      case "write_pin":
-      case "toggle_pin":
-        return pinsAsDropDownsWritePin;
+      case "write_pin": return pinsAsDropDownsWritePin;
+      case "toggle_pin": return pinsAsDropDownsTogglePin;
     }
 
   };

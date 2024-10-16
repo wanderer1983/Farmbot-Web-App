@@ -67,8 +67,8 @@ describe("<ToolbaySlot />", () => {
 
   it("handles bad data", () => {
     const p = fakeProps();
-    p.pulloutDirection = 1.1;
-    p.quadrant = 1.1;
+    p.pulloutDirection = 1.1 as ToolPulloutDirection;
+    p.quadrant = 1.1 as BotOriginQuadrant;
     const wrapper = svgMount(<ToolbaySlot {...p} />);
     expect(wrapper.find("use").props().transform).toEqual("rotate(0, 10, 20)");
   });
@@ -311,7 +311,7 @@ describe("<ToolSVG />", () => {
 
   it("renders trough", () => {
     const wrapper = shallow(<ToolSVG {...fakeProps()} />);
-    expect(wrapper.find("svg").props().viewBox).toEqual("-25 0 50 1");
+    expect(wrapper.find("svg").props().viewBox).toEqual("-40 0 80 1");
   });
 });
 

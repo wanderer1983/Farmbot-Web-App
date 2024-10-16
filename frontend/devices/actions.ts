@@ -17,6 +17,7 @@ import {
   SpeedOverwrite,
   Xyz,
   AxisOverwrite,
+  RpcRequestBodyItem,
 } from "farmbot";
 import { oneOf, versionOK, trim } from "../util";
 import { Actions, Content } from "../constants";
@@ -43,7 +44,8 @@ const BAD_WORDS = ["WPA", "PSK", "PASSWORD", "NERVES"];
 const MESSAGE: keyof Log = "message";
 
 export function isLog(x: unknown): x is Log {
-  const msg = get(x, MESSAGE);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  const msg = get(x, MESSAGE) as unknown;
   const yup = isObject(x) && isString(msg);
   if (yup) {
     if (oneOf(BAD_WORDS, msg.toUpperCase())) { // SECURITY CRITICAL CODE.
@@ -77,6 +79,28 @@ const maybeAlertLocked = () =>
   store.getState().bot.hardware.informational_settings.locked &&
   error(t("Command not available while locked."),
     { title: t("Emergency stop active") });
+
+/** Send RPC. */
+export function sendRPC(command: RpcRequestBodyItem) {
+  maybeNoop();
+  getDevice()
+    .send(rpcRequest([command]))
+    .then(maybeNoop, commandErr());
+}
+
+/** Request bot state update. */
+export function readStatus() {
+  getDevice()
+    .readStatus()
+    .then(noop, noop);
+}
+
+/** Request bot state update and return promise. */
+export function readStatusReturnPromise() {
+  return getDevice()
+    .readStatus()
+    .then(noop, noop);
+}
 
 /** Update FBOS. */
 export function checkControllerUpdates() {
@@ -287,7 +311,7 @@ export function MCUFactoryReset() {
     return;
   }
   maybeNoop();
-  return getDevice().resetMCU().catch(commandErr("MCU Reset"));
+  getDevice().resetMCU().catch(commandErr("MCU Reset"));
 }
 
 /** Toggle a firmware setting. */

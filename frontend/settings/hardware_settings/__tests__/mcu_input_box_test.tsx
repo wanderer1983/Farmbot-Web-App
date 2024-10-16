@@ -46,7 +46,7 @@ describe("McuInputBox", () => {
   it("handles bad input", () => {
     const mib = new McuInputBox(fakeProps());
     expect(() => mib.clampInputAndWarn("QQQ", "short"))
-      .toThrowError("Bad input in mcu_input_box. Impossible?");
+      .toThrow("Bad input in mcu_input_box. Impossible?");
     expect(warning)
       .toHaveBeenCalledWith("Please enter a number between 0 and 32,000");
   });
@@ -86,6 +86,16 @@ describe("McuInputBox", () => {
     const wrapper = shallow(<McuInputBox {...p} />);
     wrapper.find("BlurableInput").simulate("commit",
       { currentTarget: { value: "1" } });
+    expect(updateMCU).not.toHaveBeenCalled();
+  });
+
+  it("doesn't update when values match after scaling function", () => {
+    const p = fakeProps();
+    bot.hardware.mcu_params.encoder_enabled_x = 1;
+    p.fromInput = () => 1;
+    const wrapper = shallow(<McuInputBox {...p} />);
+    wrapper.find("BlurableInput").simulate("commit",
+      { currentTarget: { value: "0" } });
     expect(updateMCU).not.toHaveBeenCalled();
   });
 

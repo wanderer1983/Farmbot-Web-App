@@ -27,7 +27,7 @@ import {
   ToolsProps, ToolsState, ToolSlotInventoryItemProps, ToolInventoryItemProps,
 } from "./interfaces";
 import { mapStateToProps } from "./state_to_props";
-import { mapPointClickAction } from "../farm_designer/map/actions";
+import { mapPointClickAction, selectPoint } from "../farm_designer/map/actions";
 import { getMode } from "../farm_designer/map/util";
 import { Mode } from "../farm_designer/map/interfaces";
 import { SearchField } from "../ui/search_field";
@@ -38,6 +38,8 @@ import { DEFAULT_CRITERIA } from "../point_groups/criteria/interfaces";
 import { GroupInventoryItem } from "../point_groups/group_inventory_item";
 import { pointGroupSubset } from "../plants/select_plants";
 import { Path } from "../internal_urls";
+import { UTMProfile } from "../farm_designer/map/profile/tools";
+import { ToolPulloutDirection } from "farmbot/dist/resources/api_resources";
 
 export class RawTools extends React.Component<ToolsProps, ToolsState> {
   state: ToolsState = { searchTerm: "", groups: false };
@@ -67,9 +69,24 @@ export class RawTools extends React.Component<ToolsProps, ToolsState> {
             { mounted_tool_id: tool_id }));
           this.props.dispatch(save(this.props.device.uuid));
         }}
+        noUTM={this.noUTM}
         isActive={this.props.isActive}
         filterSelectedTool={true}
         filterActiveTools={false} />
+      <svg className={"utm-and-mounted-tool-graphic"}
+        viewBox={"-60 -50 120 140"}>
+        <UTMProfile profileAxis={"y"} expanded={true} getX={() => 0}
+          position={{ x: 0, y: 0 }} selectionWidth={1}
+          mountedToolInfo={{
+            name: this.mountedTool?.body.name,
+            pulloutDirection: ToolPulloutDirection.POSITIVE_X,
+            noUTM: this.noUTM,
+            flipped: false,
+          }} reversed={false}
+          hidePositionIndicator={true}
+          gantryHeight={0}
+          botPosition={{ x: 0, y: 0, z: 0 }} />
+      </svg>
       <ToolVerification sensors={this.props.sensors} bot={this.props.bot} />
     </div>;
 
@@ -93,6 +110,7 @@ export class RawTools extends React.Component<ToolsProps, ToolsState> {
             toolSlot={toolSlot}
             isActive={this.props.isActive}
             tools={this.props.tools}
+            noUTM={this.noUTM}
             toolTransformProps={this.props.toolTransformProps} />)}
     </div>;
 
@@ -156,7 +174,8 @@ export class RawTools extends React.Component<ToolsProps, ToolsState> {
         panel={Panel.Tools}
         linkTo={!hasTools ? Path.tools("add") : undefined}
         title={!hasTools ? this.strings.titleText : undefined}>
-        <SearchField searchTerm={this.state.searchTerm}
+        <SearchField nameKey={"tools"}
+          searchTerm={this.state.searchTerm}
           placeholder={this.strings.placeholder}
           onChange={searchTerm => this.setState({ searchTerm })} />
       </DesignerPanelTop>
@@ -210,6 +229,7 @@ export const ToolSlotInventoryItem = (props: ToolSlotInventoryItemProps) => {
         mapPointClickAction(props.dispatch, props.toolSlot.uuid)();
         props.dispatch(setToolHover(undefined));
       } else {
+        props.dispatch(selectPoint([props.toolSlot.uuid]));
         push(Path.toolSlots(id));
       }
     }}
@@ -237,6 +257,7 @@ export const ToolSlotInventoryItem = (props: ToolSlotInventoryItemProps) => {
                 props.dispatch(edit(props.toolSlot, update));
                 props.dispatch(save(props.toolSlot.uuid));
               }}
+              noUTM={props.noUTM}
               isActive={props.isActive}
               filterSelectedTool={false}
               filterActiveTools={true} />
@@ -244,7 +265,7 @@ export const ToolSlotInventoryItem = (props: ToolSlotInventoryItemProps) => {
       </Col>
       <Col xs={4} className={"tool-slot-position-info"}>
         <p className="tool-slot-position">
-          <i>{botPositionLabel({ x, y, z }, gantry_mounted)}</i>
+          <i>{botPositionLabel({ x, y, z }, { gantryMounted: gantry_mounted })}</i>
         </p>
       </Col>
     </Row>

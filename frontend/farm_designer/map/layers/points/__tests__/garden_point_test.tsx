@@ -33,9 +33,11 @@ describe("<GardenPoint/>", () => {
     cameraViewGridId: undefined,
     cameraCalibrationData: fakeCameraCalibrationData(),
     cropPhotos: false,
+    showUncroppedArea: false,
     soilHeightLabels: false,
     getSoilHeightColor: () => "rgb(128, 128, 128)",
     current: false,
+    animate: false,
   });
 
   it("renders point", () => {
@@ -55,7 +57,7 @@ describe("<GardenPoint/>", () => {
     expect(wrapper.find("#point-radius").props().strokeDasharray).toEqual("4 5");
   });
 
-  it("hovers point", () => {
+  it("hovers point: not animated", () => {
     const p = fakeProps();
     const wrapper = svgMount(<GardenPoint {...p} />);
     wrapper.find("g").simulate("mouseEnter");
@@ -63,6 +65,19 @@ describe("<GardenPoint/>", () => {
       type: Actions.TOGGLE_HOVERED_POINT,
       payload: p.point.uuid
     });
+    expect(wrapper.html()).not.toContain("animate");
+  });
+
+  it("hovers point: animated", () => {
+    const p = fakeProps();
+    p.animate = true;
+    const wrapper = svgMount(<GardenPoint {...p} />);
+    wrapper.find("g").simulate("mouseEnter");
+    expect(p.dispatch).toHaveBeenCalledWith({
+      type: Actions.TOGGLE_HOVERED_POINT,
+      payload: p.point.uuid
+    });
+    expect(wrapper.html()).toContain("animate");
   });
 
   it("is hovered", () => {

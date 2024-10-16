@@ -1,10 +1,15 @@
-import { BotPosition, BotState, UserEnv } from "../devices/interfaces";
+import {
+  BotPosition, BotState, SourceFwConfig, UserEnv,
+} from "../devices/interfaces";
 import {
   Vector3, McuParams, Xyz, AxisState, SyncStatus, TaggedSequence,
-  FirmwareHardware, TaggedPeripheral, TaggedWebcamFeed,
+  FirmwareHardware, TaggedPeripheral, TaggedWebcamFeed, TaggedLog,
 } from "farmbot";
-import { ResourceIndex, UUID } from "../resources/interfaces";
+import { ResourceIndex } from "../resources/interfaces";
 import { GetWebAppConfigValue } from "../config_storage/actions";
+import { MovementState } from "../interfaces";
+import { PinBindingListItems } from "../settings/pin_bindings/interfaces";
+import { RunButtonMenuOpen } from "../sequences/interfaces";
 
 export interface AxisDisplayGroupProps {
   position: BotPosition;
@@ -15,6 +20,7 @@ export interface AxisDisplayGroupProps {
   busy?: boolean;
   style?: React.CSSProperties;
   highlightAxis?: Xyz;
+  noValues?: boolean;
 }
 
 export interface AxisProps {
@@ -26,13 +32,15 @@ export interface AxisProps {
   busy: boolean | undefined;
   index: number;
   highlight?: boolean;
+  noValues?: boolean;
 }
 
 export interface AxisInputBoxGroupProps {
-  onCommit: (v: Vector3) => void;
+  onCommit: (v: Vector3) => Promise<false | void>;
   position: BotPosition;
   disabled: boolean | undefined;
   locked: boolean;
+  dispatch: Function;
 }
 
 export interface AxisInputBoxGroupState {
@@ -51,7 +59,7 @@ export interface PinnedSequencesProps {
   syncStatus: SyncStatus | undefined;
   sequences: TaggedSequence[];
   resources: ResourceIndex;
-  menuOpen: UUID | undefined;
+  menuOpen: RunButtonMenuOpen;
   dispatch: Function;
 }
 
@@ -62,9 +70,13 @@ export interface DesignerControlsProps {
   peripherals: TaggedPeripheral[];
   sequences: TaggedSequence[];
   resources: ResourceIndex;
-  menuOpen: UUID | undefined;
+  menuOpen: RunButtonMenuOpen;
   firmwareSettings: McuParams;
   getConfigValue: GetWebAppConfigValue;
+  sourceFwConfig: SourceFwConfig;
   env: UserEnv;
   firmwareHardware: FirmwareHardware | undefined;
+  movementState: MovementState;
+  pinBindings: PinBindingListItems[];
+  logs: TaggedLog[];
 }

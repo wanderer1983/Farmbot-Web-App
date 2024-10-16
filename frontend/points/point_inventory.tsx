@@ -39,6 +39,7 @@ import { createGroup } from "../point_groups/actions";
 import { pointGroupSubset } from "../plants/select_plants";
 import { push } from "../history";
 import { Path } from "../internal_urls";
+import { deleteAllIds } from "../api/delete_points_handler";
 
 interface PointsSectionProps {
   title: string;
@@ -63,19 +64,22 @@ const PointsSection = (props: PointsSectionProps) => {
       {props.color && <Saucer color={props.color} />}
       <label>{`${props.title} (${genericPoints.length})`}</label>
       <i className={`fa fa-caret-${isOpen ? "up" : "down"}`} />
-      {toggleAction && <ToggleButton
+      {isOpen && toggleAction && <ToggleButton
         toggleValue={props.toggleValue}
         customText={{ textFalse: t("off"), textTrue: t("on") }}
         toggleAction={e => { e.stopPropagation(); toggleAction(); }} />}
+      {isOpen && <button className={"fb-button red delete"}
+        title={t("delete all")}
+        onClick={e => {
+          e.stopPropagation();
+          confirm(t("Delete all {{ count }} points in section?",
+            { count: genericPoints.length })) &&
+            dispatch(deletePoints("points", { meta: props.metaQuery }));
+        }}>
+        {t("delete all")}
+      </button>}
     </div>
     <Collapse isOpen={isOpen}>
-      <button className={"fb-button red delete"}
-        title={t("delete all")}
-        onClick={() => confirm(t("Delete all {{ count }} points in section?",
-          { count: genericPoints.length })) &&
-          dispatch(deletePoints("points", { meta: props.metaQuery }))}>
-        {t("delete all")}
-      </button>
       {!isUndefined(averageZ) &&
         <EditSoilHeight
           sourceFbosConfig={props.sourceFbosConfig}
@@ -155,6 +159,7 @@ export class RawPoints extends React.Component<PointsProps, PointsState> {
   navigate = (id: number | undefined) => () => push(Path.groups(id));
 
   render() {
+    const { dispatch } = this.props;
     const gridIds = compact(uniq(this.props.genericPoints
       .map(p => p.body.meta.gridId)));
     const points = orderedPoints(this.props.genericPoints, this.state)
@@ -170,10 +175,14 @@ export class RawPoints extends React.Component<PointsProps, PointsState> {
     const filteredGroups = pointGroups
       .filter(p => p.body.name.toLowerCase()
         .includes(this.state.searchTerm.toLowerCase()));
+    const standardPoints = points
+      .filter(p => !soilHeightPoint(p))
+      .filter(p => !p.body.meta.gridId);
     return <DesignerPanel panelName={"point-inventory"} panel={Panel.Points}>
       <DesignerNavTabs />
       <DesignerPanelTop panel={Panel.Points}>
-        <SearchField searchTerm={this.state.searchTerm}
+        <SearchField nameKey={"points"}
+          searchTerm={this.state.searchTerm}
           placeholder={t("Search your points...")}
           customLeftIcon={<PointSortMenu
             sortOptions={this.state} onChange={u => this.setState(u)} />}
@@ -184,7 +193,7 @@ export class RawPoints extends React.Component<PointsProps, PointsState> {
           panel={Panel.Points}
           toggleOpen={this.toggleOpen("groups")}
           itemCount={pointGroups.length}
-          addNew={() => this.props.dispatch(createGroup({
+          addNew={() => dispatch(createGroup({
             criteria: {
               ...DEFAULT_CRITERIA,
               string_eq: { pointer_type: ["GenericPointer"] },
@@ -199,17 +208,24 @@ export class RawPoints extends React.Component<PointsProps, PointsState> {
               group={group}
               allPoints={this.props.allPoints}
               hovered={false}
-              dispatch={this.props.dispatch}
+              dispatch={dispatch}
               onClick={this.navigate(group.body.id)}
             />)}
         </PanelSection>
         <PanelSection isOpen={this.props.pointsPanelState.points}
           panel={Panel.Points}
           toggleOpen={this.toggleOpen("points")}
-          itemCount={this.props.genericPoints.length}
+          itemCount={standardPoints.length}
           addNew={() => push(Path.points("add"))}
           addTitle={t("add point")}
           addClassName={"plus-point"}
+          extraHeaderContent={this.props.pointsPanelState.points &&
+            standardPoints.length > 0 &&
+            <button className={"fb-button red delete"}
+              title={t("delete all")}
+              onClick={deleteAllIds("points", standardPoints)}>
+              {t("delete all")}
+            </button>}
           title={t("Points")}>
           <EmptyStateWrapper
             notEmpty={this.props.genericPoints.length > 0}
@@ -217,66 +233,64 @@ export class RawPoints extends React.Component<PointsProps, PointsState> {
             title={t("No points yet.")}
             text={Content.NO_POINTS}
             colorScheme={"points"}>
-            {points
-              .filter(p => !soilHeightPoint(p))
-              .filter(p => !p.body.meta.gridId).map(p =>
-                <PointInventoryItem
-                  key={p.uuid}
-                  tpp={p}
-                  hovered={this.props.hoveredPoint === p.uuid}
-                  dispatch={this.props.dispatch} />)}
-            {sortedSoilHeightPoints.length > 0 &&
-              <PointsSection
-                title={soilHeightPointColors.length > 1
-                  ? t("All Soil Height")
-                  : t("Soil Height")}
-                isOpen={this.props.pointsPanelState.soilHeight}
-                toggleOpen={this.toggleOpen("soilHeight")}
-                toggleValue={this.props.soilHeightLabels}
-                toggleAction={() => this.props.dispatch({
-                  type: Actions.TOGGLE_SOIL_HEIGHT_LABELS, payload: undefined
-                })}
-                genericPoints={sortedSoilHeightPoints}
-                metaQuery={soilHeightQuery}
-                getColorOverride={getSoilHeightColor(sortedSoilHeightPoints)}
-                averageZ={round(mean(sortedSoilHeightPoints.map(p => p.body.z)))}
-                sourceFbosConfig={this.props.sourceFbosConfig}
-                hoveredPoint={this.props.hoveredPoint}
-                dispatch={this.props.dispatch} />}
-            {soilHeightPointColors.length > 1 &&
-              soilHeightPointColors.map(color =>
-                <PointsSection key={color}
-                  title={t("Soil Height")}
-                  color={color}
-                  isOpen={this.state.soilHeightColors.includes(color)}
-                  toggleOpen={this.toggleSoilHeightPointColor(color)}
-                  genericPoints={sortedSoilHeightPoints
-                    .filter(p => p.body.meta.color == color)}
-                  metaQuery={soilHeightColorQuery(color)}
-                  getColorOverride={getSoilHeightColor(sortedSoilHeightPoints)}
-                  averageZ={round(mean(sortedSoilHeightPoints
-                    .filter(p => p.body.meta.color == color).map(p => p.body.z)))}
-                  hoveredPoint={this.props.hoveredPoint}
-                  dispatch={this.props.dispatch} />)}
-            {gridIds.map(gridId => {
-              const gridPoints = points.filter(p => p.body.meta.gridId == gridId);
-              const pointName = gridPoints[0].body.name;
-              return <PointsSection
-                key={gridId}
-                title={t("{{ name }} Grid", { name: pointName })}
-                isOpen={this.state.gridIds.includes(gridId)}
-                toggleOpen={this.toggleGrid(gridId)}
-                toggleValue={!this.props.gridIds.includes(gridId)}
-                toggleAction={() => this.props.dispatch({
-                  type: Actions.TOGGLE_GRID_ID, payload: gridId
-                })}
-                genericPoints={gridPoints}
-                metaQuery={{ gridId }}
-                hoveredPoint={this.props.hoveredPoint}
-                dispatch={this.props.dispatch} />;
-            })}
+            {standardPoints.map(p =>
+              <PointInventoryItem
+                key={p.uuid}
+                tpp={p}
+                hovered={this.props.hoveredPoint === p.uuid}
+                dispatch={dispatch} />)}
           </EmptyStateWrapper>
         </PanelSection>
+        {sortedSoilHeightPoints.length > 0 &&
+          <PointsSection
+            title={soilHeightPointColors.length > 1
+              ? t("All Soil Height")
+              : t("Soil Height")}
+            isOpen={this.props.pointsPanelState.soilHeight}
+            toggleOpen={this.toggleOpen("soilHeight")}
+            toggleValue={this.props.soilHeightLabels}
+            toggleAction={() => dispatch({
+              type: Actions.TOGGLE_SOIL_HEIGHT_LABELS, payload: undefined
+            })}
+            genericPoints={sortedSoilHeightPoints}
+            metaQuery={soilHeightQuery}
+            getColorOverride={getSoilHeightColor(sortedSoilHeightPoints)}
+            averageZ={round(mean(sortedSoilHeightPoints.map(p => p.body.z)))}
+            sourceFbosConfig={this.props.sourceFbosConfig}
+            hoveredPoint={this.props.hoveredPoint}
+            dispatch={dispatch} />}
+        {soilHeightPointColors.length > 1 &&
+          soilHeightPointColors.map(color =>
+            <PointsSection key={color}
+              title={t("Soil Height")}
+              color={color}
+              isOpen={this.state.soilHeightColors.includes(color)}
+              toggleOpen={this.toggleSoilHeightPointColor(color)}
+              genericPoints={sortedSoilHeightPoints
+                .filter(p => p.body.meta.color == color)}
+              metaQuery={soilHeightColorQuery(color)}
+              getColorOverride={getSoilHeightColor(sortedSoilHeightPoints)}
+              averageZ={round(mean(sortedSoilHeightPoints
+                .filter(p => p.body.meta.color == color).map(p => p.body.z)))}
+              hoveredPoint={this.props.hoveredPoint}
+              dispatch={dispatch} />)}
+        {gridIds.map(gridId => {
+          const gridPoints = points.filter(p => p.body.meta.gridId == gridId);
+          const pointName = gridPoints[0].body.name;
+          return <PointsSection
+            key={gridId}
+            title={t("{{ name }} Grid", { name: pointName })}
+            isOpen={this.state.gridIds.includes(gridId)}
+            toggleOpen={this.toggleGrid(gridId)}
+            toggleValue={!this.props.gridIds.includes(gridId)}
+            toggleAction={() => dispatch({
+              type: Actions.TOGGLE_GRID_ID, payload: gridId
+            })}
+            genericPoints={gridPoints}
+            metaQuery={{ gridId }}
+            hoveredPoint={this.props.hoveredPoint}
+            dispatch={dispatch} />;
+        })}
       </DesignerPanelContent>
     </DesignerPanel>;
   }

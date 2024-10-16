@@ -10,12 +10,13 @@ import { Actions, Content } from "../../constants";
 import { t } from "../../i18next_wrapper";
 import { API } from "../../api";
 import { highlight, goToHardReset } from "../maybe_highlight";
+import { isJobDone } from "../../devices/jobs";
 
 /**
  * FBOS versions older than this can't connect to the available OTA system
  * and must manually flash the SD card to upgrade.
  */
-export const OLDEST_OTA_ABLE_VERSION = "11.1.0";
+const OLDEST_OTA_ABLE_VERSION = "11.1.0";
 
 /** FBOS update button states. */
 enum UpdateButton {
@@ -54,13 +55,9 @@ const buttonProps =
     }
   };
 
-/** FBOS update download in progress. */
-const isWorking = (job: JobProgress | undefined) =>
-  job && (job.status == "working");
-
 /** FBOS update download progress. */
 export function downloadProgress(job: JobProgress | undefined) {
-  if (job && isWorking(job)) {
+  if (job && !isJobDone(job)) {
     switch (job.unit) {
       case "bytes":
         const kiloBytes = Math.round(job.bytes / 1024);
@@ -125,7 +122,7 @@ export const OsUpdateButton = (props: OsUpdateButtonProps) => {
   return <button
     className={`fb-button ${buttonStatusProps.color}`}
     title={buttonStatusProps.hoverText}
-    disabled={isWorking(osUpdateJob) || !botOnline}
+    disabled={!isJobDone(osUpdateJob) || !botOnline}
     onPointerEnter={() => dispatch(fetchOsUpdateVersion(target))}
     onClick={tooOld ? onTooOld(dispatch) : checkControllerUpdates}>
     {downloadProgress(osUpdateJob) || buttonStatusProps.text}

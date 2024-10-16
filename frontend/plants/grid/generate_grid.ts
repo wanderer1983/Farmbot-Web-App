@@ -3,6 +3,7 @@ import {
 } from "farmbot/dist/resources/api_resources";
 import { range } from "lodash";
 import { PlantGridData, PlantGridInitOption } from "./interfaces";
+import { DesignerState } from "../../farm_designer/interfaces";
 
 const generateXs =
   (start: number, count: number, spacing: number, offsetCol: boolean) =>
@@ -36,19 +37,25 @@ const createPlantGridMapper = (
   openfarm_slug: string,
   cropName: string,
   meta: Record<string, string | undefined>,
+  designer: DesignerState | undefined,
 ) =>
   (vec: [number, number]): PlantPointer => {
     const [x, y] = vec;
     return {
       name: cropName,
       radius: 25,
+      depth: 0,
       z: 0,
       x,
       y,
       openfarm_slug,
       pointer_type: "Plant",
-      plant_stage: "planted",
+      plant_stage: designer?.cropStage || "planned",
+      planted_at: designer?.cropPlantedAt,
       meta,
+      water_curve_id: designer?.cropWaterCurveId,
+      spread_curve_id: designer?.cropSpreadCurveId,
+      height_curve_id: designer?.cropHeightCurveId,
     };
   };
 
@@ -77,6 +84,6 @@ export const initPlantGrid =
     const mapper: (vec: [number, number]) => GenericPointer | PlantPointer =
       !p.openfarm_slug
         ? createPointGridMapper(p.radius, p.z, p.itemName, meta)
-        : createPlantGridMapper(p.openfarm_slug, p.itemName, meta);
+        : createPlantGridMapper(p.openfarm_slug, p.itemName, meta, p.designer);
     return vectorGrid(p.grid, p.offsetPacking).map(mapper);
   };

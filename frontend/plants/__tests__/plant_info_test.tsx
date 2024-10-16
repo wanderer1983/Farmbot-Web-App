@@ -20,6 +20,9 @@ import { push } from "../../history";
 import { fakeTimeSettings } from "../../__test_support__/fake_time_settings";
 import { edit, save, destroy } from "../../api/crud";
 import { DesignerPanelHeader } from "../../farm_designer/designer_panel";
+import {
+  fakeBotSize, fakeMovementState,
+} from "../../__test_support__/fake_bot_data";
 
 describe("<PlantInfo />", () => {
   const fakeProps = (): EditPlantInfoProps => ({
@@ -30,6 +33,14 @@ describe("<PlantInfo />", () => {
     getConfigValue: jest.fn(),
     farmwareEnvs: [],
     soilHeightPoints: [],
+    arduinoBusy: false,
+    currentBotLocation: { x: 0, y: 0, z: 0 },
+    botOnline: true,
+    movementState: fakeMovementState(),
+    sourceFbosConfig: () => ({ value: 0, consistent: true }),
+    botSize: fakeBotSize(),
+    curves: [],
+    plants: [],
   });
 
   it("renders", () => {
@@ -37,8 +48,8 @@ describe("<PlantInfo />", () => {
     ["Strawberry Plant 1", "Plant Type", "Strawberry"].map(string =>
       expect(wrapper.text().toLowerCase()).toContain(string.toLowerCase()));
     const buttons = wrapper.find("button");
-    expect(buttons.at(0).text()).toEqual("Move FarmBot to this plant");
-    expect(buttons.at(1).text()).toEqual("Planned");
+    expect(buttons.at(0).text()).toEqual("GO (X, Y)");
+    expect(buttons.at(2).text()).toEqual("Planned");
   });
 
   it("renders: no plant", () => {
@@ -87,7 +98,7 @@ describe("<PlantInfo />", () => {
   it("gets template id", () => {
     mockPath = Path.mock(Path.plantTemplates(2));
     const p = fakeProps();
-    p.openedSavedGarden = "uuid";
+    p.openedSavedGarden = 1;
     const wrapper = mount<PlantInfo>(<PlantInfo {...p} />);
     expect(wrapper.instance().stringyID).toEqual("2");
   });
@@ -139,7 +150,7 @@ describe("<PlantInfo />", () => {
 
   it("destroys plant", () => {
     const wrapper = mount<PlantInfo>(<PlantInfo {...fakeProps()} />);
-    wrapper.instance().destroy("uuid");
+    wrapper.instance().destroy("uuid")();
     expect(destroy).toHaveBeenCalledWith("uuid", false);
   });
 
@@ -147,7 +158,7 @@ describe("<PlantInfo />", () => {
     const p = fakeProps();
     p.getConfigValue = jest.fn(() => false);
     const wrapper = mount<PlantInfo>(<PlantInfo {...p} />);
-    wrapper.instance().destroy("uuid");
+    wrapper.instance().destroy("uuid")();
     expect(destroy).toHaveBeenCalledWith("uuid", true);
   });
 });

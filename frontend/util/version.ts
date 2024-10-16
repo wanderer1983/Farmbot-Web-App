@@ -1,4 +1,4 @@
-import { isString, isUndefined } from "lodash";
+import { isUndefined } from "lodash";
 import { BotState, Feature, MinOsFeatureLookup } from "../devices/interfaces";
 import { TaggedDevice } from "farmbot";
 
@@ -73,30 +73,10 @@ export function semverCompare(left: string, right: string): SemverResult {
 }
 
 /**
- * Conditionally display firmware settings based on
- * the user's current Arduino firmware version.
- *
- * @param current installed firmware version string ("0.0.0")
- * @param min minimum firmware version string required ("0.0.0")
- */
-export function minFwVersionCheck(current: string | undefined, min: string) {
-  if (isString(current)) {
-    switch (semverCompare(current, min)) {
-      case SemverResult.LEFT_IS_GREATER:
-      case SemverResult.EQUAL:
-        return true;
-      default:
-        return false;
-    }
-  } else {
-    return false;
-  }
-}
-
-/**
  * for shouldDisplay()
  */
 export enum MinVersionOverride {
+  DEMO = "99.99.99",
   NEVER = "999.999.999",
 }
 
@@ -104,16 +84,9 @@ export enum FbosVersionFallback {
   NULL = "0.0.0",
 }
 
-export const fallbackData: MinOsFeatureLookup = {
-  [Feature.calibration_total_retries]: "14.6.2",
-  [Feature.pin_reporting]: MinVersionOverride.NEVER,
-  [Feature.farmduino_k16]: MinVersionOverride.NEVER,
-  [Feature.express_k11]: MinVersionOverride.NEVER,
+const fallbackData: MinOsFeatureLookup = {
+  [Feature.express_k12]: MinVersionOverride.NEVER, // available: "15.4.6",
   [Feature.planted_at_now]: MinVersionOverride.NEVER,
-  [Feature.sort_type_optimized]: MinVersionOverride.NEVER,
-  [Feature.sort_type_alternating]: MinVersionOverride.NEVER,
-  [Feature.toggle_peripheral]: MinVersionOverride.NEVER,
-  [Feature.boot_sequence]: MinVersionOverride.NEVER,
 };
 
 /**

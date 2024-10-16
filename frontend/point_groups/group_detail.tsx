@@ -7,7 +7,7 @@ import {
   selectAllTools,
 } from "../resources/selectors";
 import { getPathArray } from "../history";
-import { GroupDetailActive } from "./group_detail_active";
+import { GroupDetailActive, GroupSortSelection } from "./group_detail_active";
 import { uniq } from "lodash";
 import { UUID } from "../resources/interfaces";
 import {
@@ -23,6 +23,11 @@ import { BooleanSetting, NumericSetting } from "../session_keys";
 import { isBotOriginQuadrant } from "../farm_designer/interfaces";
 import { validPointTypes } from "../plants/select_plants";
 import { Path } from "../internal_urls";
+import { destroy } from "../api/crud";
+import { ResourceTitle } from "../sequences/panel/editor";
+import { Popover } from "../ui";
+import { pointsSelectedByGroup } from "./criteria/apply";
+import { PointGroupSortType } from "farmbot/dist/resources/api_resources";
 
 export interface GroupDetailProps {
   dispatch: Function;
@@ -35,6 +40,7 @@ export interface GroupDetailProps {
   selectionPointType: PointType[] | undefined;
   tools: TaggedTool[];
   toolTransformProps: ToolTransformProps;
+  tryGroupSortType: PointGroupSortType | undefined;
 }
 
 /** Find a group from a URL-provided ID. */
@@ -46,7 +52,10 @@ export const findGroupFromUrl = (groups: TaggedPointGroup[]) => {
 };
 
 export function mapStateToProps(props: Everything): GroupDetailProps {
-  const { hoveredPlantListItem, editGroupAreaInMap, selectionPointType } =
+  const {
+    hoveredPlantListItem, editGroupAreaInMap, selectionPointType,
+    tryGroupSortType,
+  } =
     props.resources.consumers.farm_designer;
   const getWebAppConfig = getWebAppConfigValue(() => props);
   const xySwap = !!getWebAppConfig(BooleanSetting.xy_swap);
@@ -64,6 +73,7 @@ export function mapStateToProps(props: Everything): GroupDetailProps {
     selectionPointType,
     tools: selectAllTools(props.resources.index),
     toolTransformProps: { quadrant, xySwap },
+    tryGroupSortType,
   };
 }
 
@@ -95,8 +105,28 @@ export class RawGroupDetail extends React.Component<GroupDetailProps, {}> {
       <DesignerPanelHeader
         panelName={Panel.Groups}
         panel={Panel.Groups}
-        backTo={panelInfo(group).backTo}
-        title={panelInfo(group).title} />
+        titleElement={<ResourceTitle
+          key={group?.body.name}
+          resource={group}
+          save={true}
+          fallback={t("No Group selected")}
+          dispatch={this.props.dispatch} />}
+        backTo={panelInfo(group).backTo}>
+        <div className={"panel-header-icon-group"}>
+          {group &&
+            <Popover
+              target={<i className={"fa fa-sort fb-icon-button"}
+                title={t("Sort by")} />}
+              content={
+                <GroupSortSelection group={group} dispatch={this.props.dispatch}
+                  pointsSelectedByGroup={pointsSelectedByGroup(
+                    group, this.props.allPoints)} />} />}
+          {group &&
+            <i className={"fa fa-trash fb-icon-button"}
+              title={t("Delete group")}
+              onClick={() => this.props.dispatch(destroy(group.uuid))} />}
+        </div>
+      </DesignerPanelHeader>
       <DesignerPanelContent panelName={"groups"}>
         {group
           ? <GroupDetailActive {...this.props} group={group} />

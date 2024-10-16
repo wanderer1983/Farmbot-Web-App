@@ -15,6 +15,17 @@ jest.mock("../../api/delete_points", () => ({
   deletePoints: jest.fn(),
 }));
 
+import { PopoverProps } from "../../ui/popover";
+jest.mock("../../ui/popover", () => ({
+  Popover: ({ target, content }: PopoverProps) => <div>{target}{content}</div>,
+}));
+
+let mockValue: number | boolean = 0;
+jest.mock("../../config_storage/actions", () => ({
+  setWebAppConfigValue: jest.fn(),
+  getWebAppConfigValue: jest.fn(x => { x(); return () => mockValue; }),
+}));
+
 import React from "react";
 import {
   RawPlants as Plants, PlantInventoryProps, mapStateToProps, PanelSection,
@@ -22,7 +33,7 @@ import {
 } from "../plant_inventory";
 import { mount, shallow } from "enzyme";
 import {
-  fakePlant, fakePointGroup, fakeSavedGarden,
+  fakePlant, fakePointGroup, fakeSavedGarden, fakeWebAppConfig,
 } from "../../__test_support__/fake_state/resources";
 import { fakeState } from "../../__test_support__/fake_state";
 import { SearchField } from "../../ui/search_field";
@@ -34,6 +45,10 @@ import { deletePoints } from "../../api/delete_points";
 import { Panel } from "../../farm_designer/panel_header";
 import { plantsPanelState } from "../../__test_support__/panel_state";
 import { Path } from "../../internal_urls";
+import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
+import { changeBlurableInput } from "../../__test_support__/helpers";
+import { setWebAppConfigValue } from "../../config_storage/actions";
+import { NumericSetting } from "../../session_keys";
 
 describe("<PlantInventory />", () => {
   const fakeProps = (): PlantInventoryProps => ({
@@ -47,14 +62,24 @@ describe("<PlantInventory />", () => {
     plantPointerCount: 0,
     openedSavedGarden: undefined,
     plantsPanelState: plantsPanelState(),
+    getConfigValue: () => 0,
   });
 
   it("renders", () => {
     const wrapper = mount(<Plants {...fakeProps()} />);
-    ["Strawberry Plant",
-      "11 days old"].map(string => expect(wrapper.text()).toContain(string));
-    expect(wrapper.find("input").props().placeholder)
+    ["Strawberry Plant 1",
+      "planned"].map(string => expect(wrapper.text()).toContain(string));
+    expect(wrapper.find("input").first().props().placeholder)
       .toEqual("Search your plants...");
+  });
+
+  it("changes number setting", () => {
+    mockValue = 0;
+    const p = fakeProps();
+    const wrapper = mount(<Plants {...p} />);
+    changeBlurableInput(wrapper, "100", 1);
+    expect(setWebAppConfigValue).toHaveBeenCalledWith(
+      NumericSetting.default_plant_depth, 100);
   });
 
   it("renders groups", () => {
@@ -65,7 +90,10 @@ describe("<PlantInventory />", () => {
     const group2 = fakePointGroup();
     group2.body.name = "Weed Group";
     group2.body.criteria.string_eq = { pointer_type: ["Weed"] };
-    p.groups = [group1, group2];
+    const group3 = fakePointGroup();
+    group3.body.name = "Weed Group";
+    group3.body.criteria.string_eq = {};
+    p.groups = [group1, group2, group3];
     const wrapper = mount(<Plants {...p} />);
     expect(wrapper.text()).toContain("Groups (1)");
   });
@@ -117,9 +145,23 @@ describe("<PlantInventory />", () => {
 
   it("deletes all plants", () => {
     window.confirm = () => true;
-    const wrapper = shallow(<Plants {...fakeProps()} />);
-    wrapper.find(PanelSection).at(1).find("button").simulate("click");
+    const p = fakeProps();
+    p.plantsPanelState.plants = true;
+    const wrapper = mount(<Plants {...p} />);
+    const plantsSection = wrapper.find(PanelSection).at(2);
+    expect(plantsSection.text().toLowerCase()).toContain("delete all");
+    plantsSection.find("button").simulate("click");
     expect(deletePoints).toHaveBeenCalledWith("plants", { pointer_type: "Plant" });
+  });
+
+  it("doesn't show delete all button", () => {
+    window.confirm = () => true;
+    const p = fakeProps();
+    p.plantsPanelState.plants = true;
+    p.openedSavedGarden = 1;
+    const wrapper = mount(<Plants {...p} />);
+    const plantsSection = wrapper.find(PanelSection).at(2);
+    expect(plantsSection.text().toLowerCase()).not.toContain("delete all");
   });
 
   it("has link to crops", () => {
@@ -159,10 +201,15 @@ describe("<PlantInventory />", () => {
 
 describe("mapStateToProps()", () => {
   it("returns props", () => {
+    mockValue = false;
     const state = fakeState();
+    const webAppConfig = fakeWebAppConfig();
+    webAppConfig.body.show_plants = false;
+    state.resources = buildResourceIndex([webAppConfig]);
     state.resources.consumers.farm_designer.hoveredPlantListItem = "uuid";
     const result = mapStateToProps(state);
     expect(result.hoveredPlantListItem).toEqual("uuid");
+    expect(result.getConfigValue("show_plants")).toEqual(false);
   });
 });
 

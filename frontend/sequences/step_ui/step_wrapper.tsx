@@ -1,7 +1,7 @@
 import React from "react";
 import { ErrorBoundary } from "../../error_boundary";
 import { TaggedSequence, SequenceBodyItem } from "farmbot";
-import { StepState } from "../interfaces";
+import { SequenceReducerState, StepState } from "../interfaces";
 import { stringifySequenceData } from "../step_tiles";
 import { Row, Col } from "../../ui";
 import { StepHeader } from "./step_header";
@@ -9,6 +9,18 @@ import { getWebAppConfigValueFromResources } from "../../config_storage/actions"
 import { ResourceIndex } from "../../resources/interfaces";
 import { BooleanSetting } from "../../session_keys";
 import { findSequenceById } from "../../resources/selectors";
+
+interface StateToggle {
+  enabled: boolean;
+  toggle(): void;
+}
+
+export enum StateToggleKey {
+  monacoEditor = "monacoEditor",
+  luaExpanded = "luaExpanded",
+}
+
+export type StateToggles = Partial<Record<StateToggleKey, StateToggle>>;
 
 export interface StepWrapperProps {
   children?: React.ReactNode;
@@ -21,11 +33,10 @@ export interface StepWrapperProps {
   readOnly: boolean;
   index: number;
   resources: ResourceIndex;
-  monacoEditor?: boolean;
-  toggleMonacoEditor?(): void;
+  stateToggles?: StateToggles;
   links?: React.ReactElement[];
-  pinnedView?: boolean;
-  togglePinnedView?(): void;
+  enableMarkdown?: boolean;
+  sequencesState: SequenceReducerState;
 }
 
 export class StepWrapper extends React.Component<StepWrapperProps, StepState> {
@@ -49,6 +60,8 @@ export class StepWrapper extends React.Component<StepWrapperProps, StepState> {
       : undefined;
   }
 
+  setKey = (updateKey: string) => this.setState({ updateKey });
+
   render() {
     const confirmStepDeletion =
       !!this.getConfigValue(BooleanSetting.confirm_step_deletion);
@@ -56,25 +69,23 @@ export class StepWrapper extends React.Component<StepWrapperProps, StepState> {
     const executeSequence = step.kind == "execute" && step.args.sequence_id
       ? findSequenceById(this.props.resources, step.args.sequence_id).body
       : undefined;
-    const pinnedSequence = executeSequence?.pinned ? executeSequence : undefined;
     return <div className={`step-wrapper ${this.props.className}`}>
       <StepHeader
         className={this.props.className}
         helpText={this.props.helpText}
+        enableMarkdown={this.props.enableMarkdown}
         links={this.props.links}
         currentSequence={this.props.currentSequence}
         currentStep={this.props.currentStep}
         dispatch={this.props.dispatch}
         readOnly={this.props.readOnly}
         index={this.props.index}
+        sequencesState={this.props.sequencesState}
         executeSequence={executeSequence}
-        pinnedSequence={pinnedSequence}
-        pinnedView={this.props.pinnedView}
-        togglePinnedView={this.props.togglePinnedView}
         viewRaw={!!this.viewRaw}
         toggleViewRaw={this.toggleViewRaw}
-        monacoEditor={this.props.monacoEditor}
-        toggleMonacoEditor={this.props.toggleMonacoEditor}
+        stateToggles={this.props.stateToggles}
+        setKey={this.setKey}
         confirmStepDeletion={confirmStepDeletion}>
         {this.props.warning}
       </StepHeader>
@@ -83,9 +94,9 @@ export class StepWrapper extends React.Component<StepWrapperProps, StepState> {
         : <Row>
           <Col sm={12}>
             <div className={[
-              "step-content", this.props.className, pinnedSequence?.color,
+              "step-content", this.props.className, executeSequence?.color,
             ].join(" ")}>
-              <ErrorBoundary>
+              <ErrorBoundary key={this.state.updateKey}>
                 {this.props.children}
               </ErrorBoundary>
             </div>

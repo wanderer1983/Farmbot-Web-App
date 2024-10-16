@@ -2,36 +2,52 @@ import React from "react";
 import { FormattedPlantInfo } from "./map_state_to_props";
 import { push } from "../history";
 import { BlurableInput, Row, Col, Help } from "../ui";
-import { PlantOptions } from "../farm_designer/interfaces";
-import { PlantStage, TaggedFarmwareEnv, TaggedGenericPointer, Xyz } from "farmbot";
+import {
+  PlantStage, TaggedCurve, TaggedFarmwareEnv, TaggedGenericPointer,
+  TaggedPlantPointer, Xyz,
+} from "farmbot";
 import moment, { Moment } from "moment";
 import { Link } from "../link";
 import { DesignerPanelContent } from "../farm_designer/designer_panel";
 import { parseIntInput } from "../util";
 import { isUndefined, startCase } from "lodash";
 import { t } from "../i18next_wrapper";
-import { TimeSettings } from "../interfaces";
+import { MovementState, TimeSettings } from "../interfaces";
 import { EditPlantStatus } from "./edit_plant_status";
 import {
-  fetchInterpolationOptions, interpolatedZ,
+  getZAtLocation,
 } from "../farm_designer/map/layers/points/interpolation_map";
 import { Path } from "../internal_urls";
 import { Actions } from "../constants";
+import { daysOldText } from "./plant_inventory_item";
+import { GoToThisLocationButton } from "../farm_designer/move_to";
+import { BotPosition, SourceFbosConfig } from "../devices/interfaces";
+import { AllCurveInfo, CURVE_KEY_LOOKUP } from "./curve_info";
+import { BotSize } from "../farm_designer/map/interfaces";
+import { UpdatePlant } from "./plant_info";
 
 export interface PlantPanelProps {
   info: FormattedPlantInfo;
-  onDestroy(uuid: string): void;
-  updatePlant(uuid: string, update: PlantOptions): void;
+  updatePlant: UpdatePlant;
   inSavedGarden: boolean;
   dispatch: Function;
   timeSettings?: TimeSettings;
   soilHeightPoints: TaggedGenericPointer[];
   farmwareEnvs: TaggedFarmwareEnv[];
+  botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
+  sourceFbosConfig: SourceFbosConfig;
+  botSize: BotSize;
+  curves: TaggedCurve[];
+  plants: TaggedPlantPointer[];
 }
 
 interface EditPlantProperty {
   uuid: string;
-  updatePlant(uuid: string, update: PlantOptions): void;
+  updatePlant: UpdatePlant;
 }
 
 export interface EditPlantStatusProps extends EditPlantProperty {
@@ -39,7 +55,7 @@ export interface EditPlantStatusProps extends EditPlantProperty {
 }
 
 export interface EditDatePlantedProps extends EditPlantProperty {
-  datePlanted: Moment;
+  datePlanted: Moment | undefined;
   timeSettings: TimeSettings;
 }
 
@@ -47,9 +63,10 @@ export const EditDatePlanted = (props: EditDatePlantedProps) => {
   const { datePlanted, updatePlant, uuid, timeSettings } = props;
   return <BlurableInput
     type="date"
-    value={datePlanted.utcOffset(timeSettings.utcOffset).format("YYYY-MM-DD")}
+    value={datePlanted?.utcOffset(timeSettings.utcOffset)
+      .format("YYYY-MM-DD") || ""}
     onCommit={e => updatePlant(uuid, {
-      planted_at: moment(e.currentTarget.value)
+      planted_at: "" + moment(e.currentTarget.value)
         .utcOffset(timeSettings.utcOffset).toISOString()
     })} />;
 };
@@ -62,9 +79,12 @@ export interface EditPlantLocationProps extends EditPlantProperty {
 
 export const EditPlantLocation = (props: EditPlantLocationProps) => {
   const { plantLocation, updatePlant, uuid } = props;
-  const soilZ = interpolatedZ({ x: plantLocation.x, y: plantLocation.y },
-    props.soilHeightPoints,
-    fetchInterpolationOptions(props.farmwareEnvs));
+  const soilZ = getZAtLocation({
+    x: plantLocation.x,
+    y: plantLocation.y,
+    points: props.soilHeightPoints,
+    farmwareEnvs: props.farmwareEnvs,
+  });
   return <Row>
     {["x", "y", "z"].map((axis: Xyz) =>
       <Col xs={4} key={axis}>
@@ -101,46 +121,24 @@ export const EditPlantRadius = (props: EditPlantRadiusProps) =>
     </Col>
   </Row>;
 
-interface MoveToPlantProps {
-  x: number;
-  y: number;
-  z: number;
-  dispatch: Function;
+export interface EditPlantDepthProps extends EditPlantProperty {
+  depth: number;
 }
 
-const MoveToPlant = (props: MoveToPlantProps) =>
-  <button className={"fb-button gray no-float"}
-    style={{ marginTop: "1rem" }}
-    title={t("Move to this plant")}
-    onClick={() => push(Path.location({ x: props.x, y: props.y, z: props.z }))}>
-    {t("Move FarmBot to this plant")}
-  </button>;
-
-interface DeleteButtonsProps {
-  destroy(): void;
-}
-
-const DeleteButtons = (props: DeleteButtonsProps) =>
-  <div className={"plant-delete-buttons"}>
-    <div className={"plant-delete-button-label"}>
-      <label>
-        {t("Delete this plant")}
-      </label>
-    </div>
-    <button
-      className="fb-button red no-float"
-      title={t("Delete")}
-      onClick={props.destroy}>
-      {t("Delete")}
-    </button>
-    <button
-      className="fb-button gray no-float"
-      style={{ marginRight: "10px" }}
-      title={t("Delete multiple")}
-      onClick={() => push(Path.plants("select"))}>
-      {t("Delete multiple")}
-    </button>
-  </div>;
+export const EditPlantDepth = (props: EditPlantDepthProps) =>
+  <Row>
+    <Col xs={6}>
+      <label style={{ marginTop: 0 }}>{t("depth (mm)")}</label>
+      <BlurableInput
+        type="number"
+        name="depth"
+        value={props.depth}
+        min={0}
+        onCommit={e => props.updatePlant(props.uuid, {
+          depth: parseIntInput(e.currentTarget.value)
+        })} />
+    </Col>
+  </Row>;
 
 interface ListItemProps {
   name?: string;
@@ -150,9 +148,9 @@ interface ListItemProps {
 export const ListItem = (props: ListItemProps) =>
   <li>
     {props.name &&
-      <p>
+      <label>
         {props.name}
-      </p>}
+      </label>}
     <div className={"plant-info-field-data"}>
       {props.children}
     </div>
@@ -160,16 +158,12 @@ export const ListItem = (props: ListItemProps) =>
 
 export function PlantPanel(props: PlantPanelProps) {
   const {
-    info, onDestroy, updatePlant, dispatch, inSavedGarden, timeSettings
+    info, updatePlant, dispatch, inSavedGarden, timeSettings
   } = props;
   const { slug, plantedAt, daysOld, uuid, plantStatus } = info;
   const { x, y, z } = info;
-  const destroy = () => onDestroy(uuid);
   const commonProps = { uuid, updatePlant };
   return <DesignerPanelContent panelName={"plants"}>
-    <label>
-      {t("Plant Info")}
-    </label>
     <ul>
       <ListItem name={t("Plant Type")}>
         <Link
@@ -177,7 +171,7 @@ export function PlantPanel(props: PlantPanelProps) {
           to={Path.cropSearch(slug)}>
           {startCase(slug)}
         </Link>
-        <i className={"fa fa-pencil"}
+        <i className={"fa fa-pencil fb-icon-button"}
           onClick={() => {
             dispatch({ type: Actions.SET_PLANT_TYPE_CHANGE_ID, payload: info.id });
             dispatch({ type: Actions.SET_SLUG_BULK, payload: undefined });
@@ -195,25 +189,50 @@ export function PlantPanel(props: PlantPanelProps) {
           </Col>
           <Col xs={5}>
             <ListItem name={t("Age")}>
-              {`${daysOld} ${t("days old")}`}
+              {daysOldText({ age: daysOld, stage: plantStatus })}
             </ListItem>
           </Col>
         </Row>}
-      <ListItem name={t("Location")}>
+      <ListItem>
         <EditPlantLocation {...commonProps}
           plantLocation={{ x, y, z }}
           soilHeightPoints={props.soilHeightPoints}
           farmwareEnvs={props.farmwareEnvs} />
       </ListItem>
-      <MoveToPlant x={x} y={y} z={z} dispatch={dispatch} />
-      <ListItem name={t("Size")}>
+      <GoToThisLocationButton
+        dispatch={props.dispatch}
+        locationCoordinate={{ x, y, z }}
+        botOnline={props.botOnline}
+        arduinoBusy={props.arduinoBusy}
+        currentBotLocation={props.currentBotLocation}
+        movementState={props.movementState}
+        defaultAxes={props.defaultAxes} />
+      <ListItem>
         <EditPlantRadius {...commonProps} radius={info.radius} />
       </ListItem>
+      {!isUndefined(info.depth) && <ListItem>
+        <EditPlantDepth {...commonProps} depth={info.depth} />
+      </ListItem>}
       <ListItem name={t("Status")}>
         {(!inSavedGarden)
           ? <EditPlantStatus {...commonProps} plantStatus={plantStatus} />
           : t(startCase(plantStatus))}
       </ListItem>
+      {info.uuid.startsWith("Point") &&
+        <AllCurveInfo
+          dispatch={props.dispatch}
+          sourceFbosConfig={props.sourceFbosConfig}
+          botSize={props.botSize}
+          farmwareEnvs={props.farmwareEnvs}
+          soilHeightPoints={props.soilHeightPoints}
+          curves={props.curves}
+          plants={props.plants}
+          plant={info}
+          findCurve={curveType => props.curves.filter(curve => curve.body.id &&
+            curve.body.id == info[CURVE_KEY_LOOKUP[curveType
+            ] as keyof FormattedPlantInfo])[0]}
+          onChange={(id, curveType) =>
+            updatePlant(info.uuid, { [CURVE_KEY_LOOKUP[curveType]]: id })} />}
       {Object.entries(info.meta || {}).map(([key, value]) => {
         switch (key) {
           case "gridId":
@@ -223,6 +242,5 @@ export function PlantPanel(props: PlantPanelProps) {
         }
       })}
     </ul>
-    <DeleteButtons destroy={destroy} />
   </DesignerPanelContent>;
 }

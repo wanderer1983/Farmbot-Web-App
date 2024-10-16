@@ -2,6 +2,7 @@ require_relative "../../lib/mutations/hstore_filter.rb"
 
 module Points
   class Create < Mutations::Command
+    include Points::Helpers
     # WHY 1000?:
     #  * This limit is placed for _technical_
     #    reasons, not business reasons. If it were
@@ -45,6 +46,7 @@ module Points
     optional do
       hstore :meta
       float :radius, default: 25
+      integer :depth, default: 0
       integer :pullout_direction,
               min: ToolSlot::PULLOUT_DIRECTIONS.min,
               max: ToolSlot::PULLOUT_DIRECTIONS.max
@@ -53,15 +55,20 @@ module Points
       string :openfarm_slug, default: "not-set"
       string :plant_stage,
              in: CeleryScriptSettingsBag::PLANT_STAGES
-      time :created_at # TODO: Are we still using this?
-      time :planted_at, default: 0
+      time :planted_at
       boolean :gantry_mounted
+      integer :water_curve_id
+      integer :spread_curve_id
+      integer :height_curve_id
     end
 
     def validate
       return unless safe_pointer_kind? # Security critical always goes first.
       validate_resource_count
       validate_tool if klass_ == ToolSlot
+      validate_water_curve_id
+      validate_spread_curve_id
+      validate_height_curve_id
       name ||= default_name
     end
 

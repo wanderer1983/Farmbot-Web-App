@@ -81,12 +81,16 @@ describe("Actions.FOLDER_SEARCH", () => {
 
   it("searches folders", () => {
     const state = initialState();
+    state.index.sequenceFolders.stashedOpenState = { 1: true };
     const action = { type: Actions.FOLDER_SEARCH, payload: "" };
     const { index } = resourceReducer(state, action);
     expect(index.sequenceFolders.filteredFolders).toBeUndefined();
     expect(index.sequenceFolders.searchTerm).toBe("");
+    expect(index.sequenceFolders.localMetaAttributes[1].open).toBeTruthy();
+    expect(index.sequenceFolders.stashedOpenState).toBeUndefined();
 
     const action2 = { type: Actions.FOLDER_SEARCH, payload: "" };
+    state.index.sequenceFolders.stashedOpenState = undefined;
     const index2 = resourceReducer(state, action2).index;
     expect(index2.sequenceFolders.searchTerm).toBe("");
     expect(index2.sequenceFolders.filteredFolders).toBeUndefined();
@@ -102,11 +106,33 @@ describe("Actions.FOLDER_SEARCH", () => {
       const one = filteredFolders.folders[0];
       const two = one.children[0];
       const three = two.children[0];
-      const four = three.content[0];
       expect(one.name).toBe("@");
+      expect(one.content.length).toEqual(0);
       expect(two.name).toBe("#");
+      expect(two.content.length).toEqual(0);
       expect(three.name).toBe("$");
-      expect(four).toBe(s3.uuid);
+      expect(three.content.length).toEqual(1);
+      expect(three.content).toEqual([s3.uuid]);
+    }
+
+    const action4 = { type: Actions.FOLDER_SEARCH, payload: "@" };
+    const index4 = resourceReducer(state, action4).index;
+    expect(index4.sequenceFolders.searchTerm).toBe("@");
+    expect(index4.sequenceFolders.filteredFolders).not.toBeUndefined();
+    const filteredFolders4 = index4.sequenceFolders.filteredFolders;
+    if (filteredFolders4) {
+      expect(filteredFolders4.noFolder.length).toEqual(0);
+      expect(filteredFolders4.folders.length).toEqual(1);
+      const one = filteredFolders4.folders[0];
+      const two = one.children[0];
+      const three = two.children[0];
+      expect(one.name).toBe("@");
+      expect(one.content.length).toEqual(1);
+      expect(two.name).toBe("#");
+      expect(two.content.length).toEqual(1);
+      expect(three.name).toBe("$");
+      expect(three.content.length).toEqual(1);
+      expect(three.content).toEqual([s3.uuid]);
     }
   });
 });

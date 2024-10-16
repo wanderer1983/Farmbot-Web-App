@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from "react";
 import { VirtualFarmBotProps } from "../../interfaces";
 import { BooleanSetting } from "../../../../session_keys";
 import { BotFigure } from "./bot_figure";
@@ -8,13 +8,16 @@ import { NegativePositionLabel } from "./negative_position_labels";
 
 export function VirtualFarmBot(props: VirtualFarmBotProps) {
   const {
-    mapTransformProps, plantAreaOffset, peripherals, eStopStatus, getConfigValue
+    mapTransformProps, plantAreaOffset, peripheralValues, eStopStatus,
+    getConfigValue,
   } = props;
   const displayTrail = !!getConfigValue(BooleanSetting.display_trail);
   const displayMissedSteps =
     !!getConfigValue(BooleanSetting.display_map_missed_steps);
   const encoderFigure = !!getConfigValue(BooleanSetting.encoder_figure);
   const cameraViewArea = !!getConfigValue(BooleanSetting.show_camera_view_area);
+  const showUncroppedArea = !!getConfigValue(
+    BooleanSetting.show_uncropped_camera_view_area);
   const cropPhotos = !!getConfigValue(BooleanSetting.crop_images);
 
   return <g id="virtual-farmbot">
@@ -26,7 +29,7 @@ export function VirtualFarmBot(props: VirtualFarmBotProps) {
       position={props.botLocationData.position}
       mapTransformProps={mapTransformProps}
       plantAreaOffset={plantAreaOffset}
-      peripherals={peripherals}
+      peripheralValues={peripheralValues}
       getConfigValue={getConfigValue} />
     <BotFigure figureName={"motor-position"}
       position={props.botLocationData.position}
@@ -36,6 +39,7 @@ export function VirtualFarmBot(props: VirtualFarmBotProps) {
       cameraCalibrationData={props.cameraCalibrationData}
       cameraViewArea={cameraViewArea}
       cropPhotos={cropPhotos}
+      showUncroppedArea={showUncroppedArea}
       eStopStatus={eStopStatus} />
     {encoderFigure &&
       <BotFigure figureName={"encoder-position"}
@@ -48,6 +52,6 @@ export function VirtualFarmBot(props: VirtualFarmBotProps) {
         missedSteps={props.botLocationData.load}
         displayMissedSteps={displayMissedSteps}
         mapTransformProps={mapTransformProps}
-        peripherals={peripherals} />}
+        peripheralValues={peripheralValues} />}
   </g>;
 }

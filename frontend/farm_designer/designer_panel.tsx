@@ -48,6 +48,7 @@ interface DesignerPanelHeaderProps {
   onSave?: () => void;
   style?: React.CSSProperties;
   children?: React.ReactNode;
+  colorClass?: string;
 }
 
 const backToText = (to: string | undefined): string => {
@@ -57,9 +58,10 @@ const backToText = (to: string | undefined): string => {
 };
 
 export const DesignerPanelHeader = (props: DesignerPanelHeaderProps) => {
-  const color = props.panel ? TAB_COLOR[props.panel] : props.panelColor;
+  const panelColor = props.panel ? TAB_COLOR[props.panel] : props.panelColor;
+  const colorClass = props.colorClass || `${panelColor || PanelColor.gray}-panel`;
   const textColor = props.blackText ? "black" : "white";
-  return <div className={`panel-header ${color || PanelColor.gray}-panel`}
+  return <div className={`panel-header ${colorClass}`}
     style={props.style || {}}>
     <div className="panel-title">
       <i className={`fa fa-arrow-left back-arrow ${textColor}-text`}

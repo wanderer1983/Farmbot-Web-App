@@ -7,6 +7,7 @@ import { BotOriginQuadrant } from "../farm_designer/interfaces";
 import { BotState, BotPosition, UserEnv } from "../devices/interfaces";
 import { ToolPulloutDirection } from "farmbot/dist/resources/api_resources";
 import { SaveFarmwareEnv } from "../farmware/interfaces";
+import { MovementState } from "../interfaces";
 
 export interface AddToolSlotState {
   uuid: UUID | undefined;
@@ -24,6 +25,7 @@ export interface AddToolState {
   toolName: string;
   toAdd: string[];
   uuid: UUID | undefined;
+  flowRate: number;
 }
 
 export interface EditToolProps {
@@ -38,6 +40,7 @@ export interface EditToolProps {
 
 export interface EditToolState {
   toolName: string;
+  flowRate: number;
 }
 
 export interface ToolTransformProps {
@@ -74,6 +77,7 @@ export interface ToolSlotInventoryItemProps {
   isActive(id: number | undefined): boolean;
   hideDropdown?: boolean;
   toolTransformProps: ToolTransformProps;
+  noUTM: boolean;
 }
 
 export interface ToolInventoryItemProps {
@@ -92,6 +96,9 @@ export interface AddEditToolSlotPropsBase {
   toolTransformProps: ToolTransformProps;
   isActive(id: number | undefined): boolean;
   botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  movementState: MovementState;
 }
 
 export interface AddToolSlotProps extends AddEditToolSlotPropsBase {
@@ -126,6 +133,7 @@ interface ToolInputPropsBase {
   selectedTool: TaggedTool | undefined;
   onChange(update: { tool_id: number }): void;
   isActive(id: number | undefined): boolean;
+  noUTM: boolean;
 }
 
 export interface ToolSelectionProps extends ToolInputPropsBase {
@@ -143,6 +151,10 @@ export interface SlotLocationInputRowProps {
   onChange(update: Partial<Record<Xyz, number>>): void;
   botPosition: BotPosition;
   botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  dispatch: Function;
+  movementState: MovementState;
 }
 
 export interface SlotEditRowsProps {
@@ -155,6 +167,10 @@ export interface SlotEditRowsProps {
   toolTransformProps: ToolTransformProps;
   isActive(id: number | undefined): boolean;
   botOnline: boolean;
+  defaultAxes: string;
+  arduinoBusy: boolean;
+  dispatch: Function;
+  movementState: MovementState;
 }
 
 export interface ToolVerificationProps {

@@ -1,14 +1,14 @@
 import {
   ResourceName, SpecialStatus, TaggedResource, TaggedSequence,
 } from "farmbot";
-import { combineReducers, ReducersMapObject } from "redux";
+import { combineReducers, ReducersMapObject, UnknownAction } from "redux";
 import { helpReducer as help } from "../help/reducer";
 import { designer as farm_designer } from "../farm_designer/reducer";
 import { photosReducer as photos } from "../photos/reducer";
 import { farmwareReducer as farmware } from "../farmware/reducer";
 import { regimensReducer as regimens } from "../regimens/reducer";
 import { sequenceReducer as sequences } from "../sequences/reducer";
-import { RestResources, ResourceIndex } from "./interfaces";
+import { RestResources, ResourceIndex, TaggedPointGroup } from "./interfaces";
 import { isTaggedResource } from "./tagged_resources";
 import { arrayWrap, arrayUnwrap } from "./util";
 import {
@@ -21,9 +21,13 @@ import {
   selectAllRegimens,
   selectAllFolders,
   selectAllSequences,
+  selectAllActivePoints,
+  selectAllPointGroups,
 } from "./selectors_by_kind";
-import { findUuid } from "./selectors";
-import { ExecutableType } from "farmbot/dist/resources/api_resources";
+import { findUuid, selectAllPlantPointers } from "./selectors";
+import {
+  ExecutableType, PinBindingType,
+} from "farmbot/dist/resources/api_resources";
 import { betterCompact, unpackUUID } from "../util";
 import { createSequenceMeta } from "./sequence_meta";
 import { alertsReducer as alerts } from "../messages/reducer";
@@ -34,10 +38,9 @@ import { get } from "lodash";
 import { Actions } from "../constants";
 import { getFbosConfig } from "./getters";
 import { ingest, PARENTLESS as NO_PARENT } from "../folders/data_transfer";
-import {
-  FolderNode, FolderMeta, FolderNodeTerminal, FolderNodeMedial,
-} from "../folders/interfaces";
-import { climb } from "../folders/climb";
+import { FolderNode, FolderMeta } from "../folders/interfaces";
+import { pointsSelectedByGroup } from "../point_groups/criteria/apply";
+import { Everything } from "../interfaces";
 
 export function findByUuid(index: ResourceIndex, uuid: string): TaggedResource {
   const x = index.references[uuid];
@@ -94,37 +97,28 @@ export const reindexFolders = (i: ResourceIndex) => {
 
   const { searchTerm } = i.sequenceFolders;
 
-  /** Perform tree search for search term O(n)
-   * complexity plz send help. */
-  if (searchTerm) {
-    const sequenceHits = new Set<string>();
-    const folderHits = new Set<number>();
-
-    climb(i.sequenceFolders.folders, (node) => {
-      node.content.map(x => {
-        const s = i.references[x];
-        if (s &&
-          s.kind == "Sequence" &&
-          s.body.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-          sequenceHits.add(s.uuid);
-          folderHits.add(node.id);
-        }
-      });
-      const nodes: (FolderNodeMedial | FolderNodeTerminal)[] =
-        node.children || [];
-      nodes.map(_x => { });
-    });
-  }
-
   i.sequenceFolders = {
     folders: ingest({ folders, localMetaAttributes }),
     localMetaAttributes,
     searchTerm: searchTerm,
     filteredFolders: searchTerm
       ? i.sequenceFolders.filteredFolders
-      : undefined
+      : undefined,
+    stashedOpenState: i.sequenceFolders.stashedOpenState,
   };
 
+  if (i.sequenceFolders.filteredFolders) {
+    const existingFolders = i.sequenceFolders.folders.folders.map(f => f.id);
+    i.sequenceFolders.filteredFolders.folders =
+      i.sequenceFolders.filteredFolders.folders.filter(f =>
+        existingFolders.includes(f.id));
+    const folderResults = i.sequenceFolders.filteredFolders.folders.map(f => f.id);
+    i.sequenceFolders.folders.folders.map(f =>
+      !folderResults.includes(f.id) && searchTerm &&
+      i.sequenceFolders.filteredFolders &&
+      f.name.toLowerCase().includes(searchTerm.toLowerCase())
+      && i.sequenceFolders.filteredFolders.folders.push({ ...f, editing: false }));
+  }
 };
 
 export const folderIndexer: IndexerCallback = (r, i) => {
@@ -166,7 +160,7 @@ const BY_KIND_AND_ID: Indexer = {
   },
 };
 
-export function updateSequenceUsageIndex(
+function updateSequenceUsageIndex(
   myUuid: string, ids: number[], i: ResourceIndex) {
   ids.map(id => {
     const uuid = i.byKindAndId[joinKindAndId("Sequence", id)];
@@ -177,7 +171,7 @@ export function updateSequenceUsageIndex(
   });
 }
 
-export const updateOtherSequenceIndexes =
+const updateOtherSequenceIndexes =
   (tr: TaggedSequence, i: ResourceIndex) => {
     i.references[tr.uuid] = tr;
     i.sequenceMetas[tr.uuid] = createSequenceMeta(i, tr);
@@ -204,7 +198,7 @@ const reindexAllSequences = (i: ResourceIndex) => {
   })).map(mapper);
 };
 
-export function reindexAllFarmEventUsage(i: ResourceIndex) {
+function reindexAllFarmEventUsage(i: ResourceIndex) {
   i.inUse["Regimen.FarmEvent"] = {};
   i.inUse["Sequence.FarmEvent"] = {};
   const whichOne: Record<ExecutableType, typeof i.inUse["Regimen.FarmEvent"]> = {
@@ -226,7 +220,36 @@ export function reindexAllFarmEventUsage(i: ResourceIndex) {
     });
 }
 
-export const INDEXERS: Indexer[] = [
+const reindexAllPointGroups = (i: ResourceIndex) => {
+  selectAllPointGroups(i).map((pg: TaggedPointGroup) => pg.body.member_count =
+    pointsSelectedByGroup(pg, selectAllActivePoints(i)).length);
+};
+
+const reindexAllPoints = (i: ResourceIndex) => {
+  reindexAllPointGroups(i);
+  i.inUse["Curve.Point"] = {};
+  const tracker = i.inUse["Curve.Point"];
+  selectAllPlantPointers(i)
+    .map(p => {
+      if (p.body.water_curve_id) {
+        const curveUuid = findUuid(i, "Curve", p.body.water_curve_id);
+        tracker[curveUuid] = tracker[curveUuid] || {};
+        tracker[curveUuid][p.uuid] = true;
+      }
+      if (p.body.spread_curve_id) {
+        const curveUuid = findUuid(i, "Curve", p.body.spread_curve_id);
+        tracker[curveUuid] = tracker[curveUuid] || {};
+        tracker[curveUuid][p.uuid] = true;
+      }
+      if (p.body.height_curve_id) {
+        const curveUuid = findUuid(i, "Curve", p.body.height_curve_id);
+        tracker[curveUuid] = tracker[curveUuid] || {};
+        tracker[curveUuid][p.uuid] = true;
+      }
+    });
+};
+
+const INDEXERS: Indexer[] = [
   REFERENCES,
   ALL,
   BY_KIND,
@@ -253,8 +276,8 @@ const consumerReducer = combineReducers<RestResources["consumers"]>({
   farmware,
   help,
   alerts
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as ReducersMapObject<RestResources["consumers"], any>);
+} as ReducersMapObject<RestResources["consumers"], UnknownAction, Everything>,
+) as Function;
 
 /** The resource reducer must have the first say when a resource-related action
  * fires off. Afterwards, sub-reducers are allowed to make sense of data
@@ -315,7 +338,7 @@ const AFTER_HOOKS: IndexerHook = {
     const tracker = i.inUse["Sequence.PinBinding"];
     selectAllPinBindings(i)
       .map(pinBinding => {
-        if (pinBinding.body.binding_type === "standard") {
+        if (pinBinding.body.binding_type === PinBindingType.standard) {
           const { sequence_id } = pinBinding.body;
           const uuid = i.byKindAndId[joinKindAndId("Sequence", sequence_id)];
           if (uuid) {
@@ -325,6 +348,8 @@ const AFTER_HOOKS: IndexerHook = {
         }
       });
   },
+  PointGroup: reindexAllPointGroups,
+  Point: reindexAllPoints,
   FarmEvent: reindexAllFarmEventUsage,
   Sequence: reindexAllSequences,
   Regimen: (i) => {

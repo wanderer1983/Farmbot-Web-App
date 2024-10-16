@@ -24,16 +24,18 @@ import {
   TaggedFarmwareEnv,
   TaggedFarmwareInstallation,
   TaggedAlert,
-  TaggedPointGroup,
   TaggedFolder,
   TaggedWeedPointer,
   TaggedWizardStepResult,
+  TaggedTelemetry,
+  TaggedCurve,
 } from "farmbot";
 import { fakeResource } from "../fake_resource";
 import {
   ExecutableType, PinBindingType, Folder,
 } from "farmbot/dist/resources/api_resources";
 import { MessageType } from "../../sequences/interfaces";
+import { TaggedPointGroup } from "../../resources/interfaces";
 
 export const resources: Everything["resources"] = buildResourceIndex();
 let idCounter = 1;
@@ -120,7 +122,10 @@ export function fakeImage(): TaggedImage {
 }
 
 export function fakeTool(): TaggedTool {
-  return fakeResource("Tool", { name: "Foo" });
+  return fakeResource("Tool", {
+    name: "Foo",
+    flow_rate_ml_per_s: 0,
+  });
 }
 
 export function fakeUser(): TaggedUser {
@@ -128,6 +133,7 @@ export function fakeUser(): TaggedUser {
     id: idCounter++,
     name: "Fake User 123",
     email: "fake@fake.com",
+    language: "English",
     created_at: "---",
     updated_at: "---"
   });
@@ -157,6 +163,7 @@ export function fakePlant(): TaggedPlantPointer {
     y: 200,
     z: 0,
     radius: 25,
+    depth: 0,
     meta: {},
     openfarm_slug: "strawberry"
   });
@@ -229,6 +236,25 @@ export function fakeWizardStepResult(): TaggedWizardStepResult {
     slug: "step",
     answer: false,
     outcome: "error",
+  });
+}
+
+export function fakeTelemetry(): TaggedTelemetry {
+  const id = idCounter++;
+  return fakeResource("Telemetry", {
+    id,
+    created_at: 1501703421,
+    updated_at: "2018-01-11T20:20:38.362Z",
+    target: "rpi",
+    soc_temp: 0,
+    throttled: "0x0",
+    wifi_level_percent: 0,
+    uptime: 0,
+    memory_usage: 0,
+    disk_usage: 0,
+    cpu_usage: 0,
+    fbos_version: "0.0.0",
+    firmware_hardware: "arduino",
   });
 }
 
@@ -307,9 +333,12 @@ export function fakeWebAppConfig(): TaggedWebAppConfig {
     display_map_missed_steps: false,
     display_trail: false,
     dynamic_map: false,
+    enable_3d_electronics_box_top: true,
     encoder_figure: false,
+    go_button_axes: "XY",
     hide_webcam_widget: false,
     highlight_modified_settings: false,
+    landing_page: "controls",
     legend_menu_open: false,
     raw_encoders: true,
     scaled_encoders: true,
@@ -348,12 +377,15 @@ export function fakeWebAppConfig(): TaggedWebAppConfig {
     xy_swap: false,
     home_button_homing: false,
     show_motor_plot: false,
+    show_missed_step_plot: false,
     show_historic_points: false,
     time_format_24_hour: false,
     time_format_seconds: false,
     show_pins: false,
     show_zones: false,
     show_camera_view_area: false,
+    show_uncropped_camera_view_area: false,
+    default_plant_depth: 5,
     disable_emergency_unlock_confirmation: false,
     map_size_x: 2900,
     map_size_y: 1400,
@@ -368,8 +400,8 @@ export function fakeFirmwareConfig(): TaggedFirmwareConfig {
     device_id: idCounter++,
     created_at: "",
     updated_at: "",
-    encoder_enabled_x: 0,
-    encoder_enabled_y: 0,
+    encoder_enabled_x: 1,
+    encoder_enabled_y: 1,
     encoder_enabled_z: 0,
     encoder_invert_x: 0,
     encoder_invert_y: 0,
@@ -512,6 +544,7 @@ export function fakeAlert(): TaggedAlert {
     priority: 100,
   });
 }
+
 export function fakePointGroup(): TaggedPointGroup {
   return fakeResource("PointGroup", {
     name: "Fake",
@@ -523,6 +556,15 @@ export function fakePointGroup(): TaggedPointGroup {
       number_gt: {},
       number_lt: {},
       string_eq: {}
-    }
+    },
+    member_count: 0,
+  });
+}
+
+export function fakeCurve(): TaggedCurve {
+  return fakeResource("Curve", {
+    name: "Fake",
+    type: "water",
+    data: { 1: 0, 2: 1 },
   });
 }

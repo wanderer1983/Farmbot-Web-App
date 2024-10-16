@@ -5,7 +5,7 @@ module.exports = {
     },
     parser: "@typescript-eslint/parser",
     parserOptions: {
-        project: "tsconfig.json",
+        project: ["tsconfig.json", "tsconfig.dev.json"],
         sourceType: "module",
     },
     plugins: [
@@ -16,6 +16,7 @@ module.exports = {
         "no-null",
         "import",
         "promise",
+        "@react-three",
     ],
     extends: [
         "eslint:recommended",
@@ -29,6 +30,7 @@ module.exports = {
         "plugin:import/errors",
         "plugin:import/warnings",
         "plugin:import/typescript",
+        "plugin:@react-three/recommended",
     ],
     settings: {
         react: {
@@ -166,5 +168,9 @@ module.exports = {
             }
         ],
         "use-isnan": "error",
+        "@typescript-eslint/no-unsafe-enum-comparison": "off",
+        "@typescript-eslint/no-duplicate-enum-values": "off",
+        "@typescript-eslint/no-base-to-string": "off",
+        "@typescript-eslint/no-redundant-type-constituents": "off",
     }
 };

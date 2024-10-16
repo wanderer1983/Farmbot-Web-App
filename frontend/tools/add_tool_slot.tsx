@@ -66,7 +66,11 @@ export class RawAddToolSlot
         panelName={panelName}
         title={t("Add new slot")}
         backTo={Path.tools()}
-        panel={Panel.Tools} />
+        panel={Panel.Tools}>
+        <div className={"tool-action-btn-group"}>
+          <SaveBtn onClick={this.save} status={SpecialStatus.DIRTY} />
+        </div>
+      </DesignerPanelHeader>
       <DesignerPanelContent panelName={panelName}>
         {this.toolSlot
           ? <SlotEditRows
@@ -76,11 +80,14 @@ export class RawAddToolSlot
             tool={this.tool}
             botOnline={this.props.botOnline}
             botPosition={this.props.botPosition}
+            movementState={this.props.movementState}
+            defaultAxes={this.props.defaultAxes}
+            arduinoBusy={this.props.arduinoBusy}
+            dispatch={this.props.dispatch}
             toolTransformProps={this.props.toolTransformProps}
             isActive={this.props.isActive}
             updateToolSlot={this.updateSlot(this.toolSlot)} />
           : "initializing"}
-        <SaveBtn onClick={this.save} status={SpecialStatus.DIRTY} />
       </DesignerPanelContent>
     </DesignerPanel>;
   }

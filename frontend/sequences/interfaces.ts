@@ -8,13 +8,14 @@ import {
   ALLOWED_MESSAGE_TYPES,
   Vector3,
   TaggedSequence,
+  Color,
 } from "farmbot";
-import { StepMoveDataXfer, StepSpliceDataXfer } from "../draggable/interfaces";
-import { ResourceIndex, VariableNameSet, UUID } from "../resources/interfaces";
+import { ResourceIndex, UUID } from "../resources/interfaces";
 import { GetWebAppConfigValue } from "../config_storage/actions";
 import { Folders } from "../folders/component";
 import { DeviceSetting } from "../constants";
 import { BooleanConfigKey } from "farmbot/dist/resources/configs/web_app";
+import { SequencesPanelState } from "../interfaces";
 
 export interface HardwareFlags {
   findHomeEnabled: Record<Xyz, boolean>;
@@ -39,7 +40,7 @@ interface SequencePropsBase {
   dispatch: Function;
   syncStatus: SyncStatus;
   resources: ResourceIndex;
-  menuOpen: UUID | undefined;
+  sequencesState: SequenceReducerState;
   getWebAppConfigValue: GetWebAppConfigValue;
   visualized?: boolean;
 }
@@ -49,13 +50,14 @@ export interface SequencesProps extends SequencePropsBase {
   sequence: TaggedSequence | undefined;
   hardwareFlags: HardwareFlags;
   farmwareData: FarmwareData;
-  stepIndex: number | undefined;
   folderData: Folders["props"];
   hoveredStep?: string | undefined;
+  sequencesPanelState: SequencesPanelState;
 }
 
 export interface SequenceEditorMiddleProps extends SequencePropsBase {
   sequence: TaggedSequence | undefined;
+  sequences: TaggedSequence[];
   hardwareFlags: HardwareFlags;
   farmwareData: FarmwareData;
   hoveredStep?: string | undefined;
@@ -63,6 +65,7 @@ export interface SequenceEditorMiddleProps extends SequencePropsBase {
 
 export interface ActiveMiddleProps extends SequenceEditorMiddleProps {
   sequence: TaggedSequence;
+  sequences: TaggedSequence[];
   showName: boolean;
 }
 
@@ -71,12 +74,11 @@ export interface ActiveMiddleState {
   descriptionCollapsed: boolean;
   stepsCollapsed: boolean;
   licenseCollapsed: boolean;
-  editingDescription: boolean;
-  description: string;
   viewSequenceCeleryScript: boolean;
   sequencePreview: TaggedSequence | undefined;
   error: boolean;
   view: "local" | "public";
+  addVariableMenuOpen: boolean;
 }
 
 export interface SequenceHeaderProps extends SequencePropsBase {
@@ -113,7 +115,7 @@ export interface SequenceSettingProps {
 
 export type ChannelName = ALLOWED_CHANNEL_NAMES;
 
-export const INT_NUMERIC_FIELDS = ["milliseconds", "pin_mode", "pin_number",
+const INT_NUMERIC_FIELDS = ["milliseconds", "pin_mode", "pin_number",
   "pin_value", "rhs", "sequence_id", "speed"];
 
 export const FLOAT_NUMERIC_FIELDS = ["x", "y", "z"];
@@ -137,22 +139,15 @@ export const MESSAGE_TYPES = Object.keys(MessageType);
 export const isMessageType = (x: any): x is ALLOWED_MESSAGE_TYPES =>
   MESSAGE_TYPES.includes(x as string);
 
+export interface RunButtonMenuOpen {
+  component: "list" | "editor" | "pinned" | undefined;
+  uuid: UUID | undefined;
+}
+
 export interface SequenceReducerState {
   current: string | undefined;
-  menuOpen: UUID | undefined;
+  menuOpen: RunButtonMenuOpen;
   stepIndex: number | undefined;
-}
-
-export interface SequencesListProps {
-  sequences: TaggedSequence[];
-  resourceUsage: Record<UUID, boolean | undefined>;
-  sequence: TaggedSequence | undefined;
-  dispatch: Function;
-  sequenceMetas: Record<UUID, VariableNameSet | undefined>;
-}
-
-export interface SequencesListState {
-  searchTerm: string;
 }
 
 export interface MoveAbsState {
@@ -164,16 +159,8 @@ export interface StepButtonParams {
   current: TaggedSequence | undefined;
   step: SequenceBodyItem;
   dispatch: Function;
-  children?: React.ReactNode;
-  color: "blue"
-  | "green"
-  | "orange"
-  | "yellow"
-  | "brown"
-  | "red"
-  | "purple"
-  | "pink"
-  | "gray";
+  label: string;
+  color: Color | "brown";
   index?: number | undefined;
 }
 
@@ -223,10 +210,6 @@ export interface SelectSequence {
   payload: string;
 }
 
-export type DataXferObj = StepMoveDataXfer | StepSpliceDataXfer;
-
-export type dispatcher = (a: Function | { type: string }) => DataXferObj;
-
 export type FarmwareConfigs = { [x: string]: FarmwareConfig[] };
 
 export interface FarmwareData {
@@ -249,8 +232,10 @@ export interface StepParams<T = SequenceBodyItem> {
   farmwareData?: FarmwareData;
   showPins?: boolean;
   expandStepOptions?: boolean;
+  sequencesState: SequenceReducerState;
 }
 
 export interface StepState {
   viewRaw?: boolean;
+  updateKey?: string;
 }

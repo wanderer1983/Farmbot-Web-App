@@ -11,6 +11,8 @@ import {
   isTaggedSavedGarden,
   isTaggedFolder,
   isTaggedWeedPointer,
+  isTaggedPeripheral,
+  isTaggedSensor,
 } from "./tagged_resources";
 import {
   TaggedResource,
@@ -22,15 +24,7 @@ import { isNumber, find } from "lodash";
 import { joinKindAndId } from "./reducer_support";
 import { findAll } from "./find_all";
 
-/** FINDS: all tagged resources with particular ID */
-export const findAllById =
-  <T extends TaggedResource>(i: ResourceIndex, _ids: number[], k: T["kind"]) => {
-    const output: TaggedResource[] = [];
-    findAll<T>(i, k).map(x => x.kind === k && output.push(x));
-    return output;
-  };
-
-export const byId =
+const byId =
   <T extends TaggedResource>(kind: T["kind"]) =>
     (index: ResourceIndex, id: number): T | undefined => {
       const resources = findAll(index, kind);
@@ -87,7 +81,15 @@ export const findSequenceById = (ri: ResourceIndex, sequence_id: number) => {
   }
 };
 
-export const findSlotById = byId<TaggedToolSlotPointer>("Point");
+export const maybeFindSequenceById = (ri: ResourceIndex, sequence_id: number) => {
+  const sequence = byId("Sequence")(ri, sequence_id);
+  if (sequence && isTaggedSequence(sequence) && sanityCheck(sequence)) {
+    return sequence;
+  } else {
+    return undefined;
+  }
+};
+
 /** Find a Tool's corresponding Slot. */
 export const findSlotByToolId = (index: ResourceIndex, tool_id: number) => {
   const tool = findToolById(index, tool_id);
@@ -136,6 +138,20 @@ export function maybeFindSavedGardenById(index: ResourceIndex, id: number) {
   const uuid = index.byKindAndId[joinKindAndId("SavedGarden", id)];
   const resource = index.references[uuid || "nope"];
   if (resource && isTaggedSavedGarden(resource)) { return resource; }
+}
+
+/** Unlike other findById methods, this one allows undefined (missed) values */
+export function maybeFindPeripheralById(index: ResourceIndex, id: number) {
+  const uuid = index.byKindAndId[joinKindAndId("Peripheral", id)];
+  const resource = index.references[uuid || "nope"];
+  if (resource && isTaggedPeripheral(resource)) { return resource; }
+}
+
+/** Unlike other findById methods, this one allows undefined (missed) values */
+export function maybeFindSensorById(index: ResourceIndex, id: number) {
+  const uuid = index.byKindAndId[joinKindAndId("Sensor", id)];
+  const resource = index.references[uuid || "nope"];
+  if (resource && isTaggedSensor(resource)) { return resource; }
 }
 
 export const findRegimenById = (ri: ResourceIndex, regimen_id: number) => {

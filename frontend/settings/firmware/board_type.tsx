@@ -1,7 +1,6 @@
 import React from "react";
 import { Row, Col, DropDownItem, FBSelect } from "../../ui";
-import { info } from "../../toast/toast";
-import { ColWidth } from "../fbos_settings/farmbot_os_settings";
+import { info, warning } from "../../toast/toast";
 import { updateConfig } from "../../devices/actions";
 import { BoardTypeProps } from "./interfaces";
 import { t } from "../../i18next_wrapper";
@@ -9,12 +8,11 @@ import {
   FirmwareHardwareStatus, FlashFirmwareBtn,
 } from "./firmware_hardware_status";
 import {
-  isFwHardwareValue, getFirmwareChoices, FIRMWARE_CHOICES_DDI,
+  isFwHardwareValue, getFirmwareChoices, FIRMWARE_CHOICES_DDI, isUpgrade,
 } from "./firmware_hardware_support";
 import { Highlight } from "../maybe_highlight";
-import { DeviceSetting } from "../../constants";
+import { Content, DeviceSetting } from "../../constants";
 import { getModifiedClassName } from "../fbos_settings/default_values";
-import { shouldDisplayFeature } from "../../devices/should_display";
 
 export class BoardType extends React.Component<BoardTypeProps, {}> {
   get sending() {
@@ -31,31 +29,37 @@ export class BoardType extends React.Component<BoardTypeProps, {}> {
     const firmware_hardware = selectedItem.value;
     if (selectedItem && isFwHardwareValue(firmware_hardware)) {
       info(t("Sending firmware configuration..."), { title: t("Sending") });
+      isUpgrade(this.props.firmwareHardware, firmware_hardware) &&
+        warning(t(Content.FIRMWARE_UPGRADED),
+          { title: t("Action may be required") });
       this.props.dispatch(updateConfig({ firmware_hardware }));
       this.forceUpdate();
     }
   };
 
-  FirmwareSelection = () =>
-    <FBSelect
-      key={this.props.firmwareHardware + "" + this.sending}
+  FirmwareSelection = () => {
+    const { firmwareHardware } = this.props;
+    return <FBSelect
+      key={firmwareHardware + "" + this.sending}
       extraClass={[
         this.sending ? "dim" : "",
-        getModifiedClassName("firmware_hardware", this.props.firmwareHardware),
+        getModifiedClassName("firmware_hardware",
+          firmwareHardware, firmwareHardware),
       ].join(" ")}
-      list={getFirmwareChoices(shouldDisplayFeature)}
+      list={getFirmwareChoices()}
       selectedItem={this.selectedBoard}
       onChange={this.sendOffConfig} />;
+  };
 
   render() {
     return <Highlight settingName={DeviceSetting.firmware}>
       <Row>
-        <Col xs={ColWidth.label}>
+        <Col xs={2}>
           <label>
             {t("FIRMWARE")}
           </label>
         </Col>
-        <Col xs={ColWidth.button}>
+        <Col xs={1}>
           <FirmwareHardwareStatus
             botOnline={this.props.botOnline}
             apiFirmwareValue={this.props.firmwareHardware}
@@ -64,14 +68,13 @@ export class BoardType extends React.Component<BoardTypeProps, {}> {
             dispatch={this.props.dispatch}
             timeSettings={this.props.timeSettings} />
         </Col>
-        <Col xs={ColWidth.description}>
+        <Col xs={2}>
           <FlashFirmwareBtn
+            short={true}
             apiFirmwareValue={this.props.firmwareHardware}
             botOnline={this.props.botOnline} />
         </Col>
-      </Row>
-      <Row>
-        <Col xs={12} className="no-pad">
+        <Col xs={7} className="no-pad">
           <this.FirmwareSelection />
         </Col>
       </Row>

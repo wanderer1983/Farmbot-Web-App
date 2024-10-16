@@ -2,6 +2,11 @@ jest.mock("../../devices/actions", () => ({ updateConfig: jest.fn() }));
 
 jest.mock("../../api/crud", () => ({ destroy: jest.fn() }));
 
+let mockFeatureBoolean = false;
+jest.mock("../../devices/should_display", () => ({
+  shouldDisplayFeature: () => mockFeatureBoolean,
+}));
+
 const fakeBulletin: Bulletin = {
   content: "Alert content.",
   href: "https://farm.bot",
@@ -26,14 +31,11 @@ jest.mock("../../redux/store", () => ({
   store: { getState: () => mockState, dispatch: jest.fn() },
 }));
 
-let mockShouldDisplay = false;
-jest.mock("../../devices/should_display", () => ({
-  shouldDisplayFeature: () => mockShouldDisplay,
-}));
-
 import React from "react";
 import { mount, shallow } from "enzyme";
-import { AlertCard, changeFirmwareHardware, ReSeedAccount } from "../cards";
+import {
+  AlertCard, changeFirmwareHardware, ReSeedAccount, SEED_DATA_OPTIONS,
+} from "../cards";
 import { AlertCardProps, Bulletin } from "../interfaces";
 import { fakeTimeSettings } from "../../__test_support__/fake_time_settings";
 import { FBSelect } from "../../ui";
@@ -44,6 +46,10 @@ import { push } from "../../history";
 import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import { fakeWizardStepResult } from "../../__test_support__/fake_state/resources";
 import { Path } from "../../internal_urls";
+import { API } from "../../api";
+import moment from "moment";
+
+API.setBaseUrl("");
 
 describe("<AlertCard />", () => {
   const fakeProps = (): AlertCardProps => ({
@@ -78,6 +84,7 @@ describe("<AlertCard />", () => {
     expect(wrapper.text()).toContain("Your device has no firmware");
     expect(wrapper.find(".fa-times").length).toEqual(0);
     expect(wrapper.text()).toContain("Apr");
+    expect(wrapper.text()).toContain("2019");
     expect(wrapper.text()).toContain("Select one");
   });
 
@@ -95,11 +102,10 @@ describe("<AlertCard />", () => {
     expect(wrapper.text()).not.toContain("Select one");
     expect(wrapper.text()).toContain("Arduino/RAMPS (Genesis v1.2)");
     expect(JSON.stringify(wrapper.find(FBSelect).props().list))
-      .not.toContain("v1.6");
+      .toContain("v1.1");
   });
 
   it("renders firmware card with new boards", () => {
-    mockShouldDisplay = true;
     const p = fakeProps();
     p.alert.problem_tag = "farmbot_os.firmware.missing";
     p.alert.created_at = 1555555555;
@@ -109,30 +115,26 @@ describe("<AlertCard />", () => {
     const wrapper = mount(<AlertCard {...p} />);
     expect(wrapper.text()).toContain("Your device has no firmware");
     expect(JSON.stringify(wrapper.find(FBSelect).props().list))
-      .toContain("v1.6");
-    mockShouldDisplay = false;
+      .toContain("v1.1");
   });
 
   it("renders seed data card", () => {
-    mockShouldDisplay = false;
     const p = fakeProps();
     p.alert.problem_tag = "api.seed_data.missing";
     const wrapper = mount(<AlertCard {...p} />);
     expect(wrapper.text()).toContain("FarmBot");
     expect(JSON.stringify(wrapper.find(FBSelect).props().list))
-      .not.toContain("v1.6");
+      .toContain("v1.1");
     wrapper.find(FBSelect).simulate("change");
   });
 
   it("renders seed data card with new models", () => {
-    mockShouldDisplay = true;
     const p = fakeProps();
     p.alert.problem_tag = "api.seed_data.missing";
     const wrapper = mount(<AlertCard {...p} />);
     expect(wrapper.text()).toContain("FarmBot");
     expect(JSON.stringify(wrapper.find(FBSelect).props().list))
-      .toContain("v1.6");
-    mockShouldDisplay = false;
+      .toContain("v1.1");
   });
 
   it("renders setup card", () => {
@@ -237,6 +239,17 @@ describe("<AlertCard />", () => {
     const wrapper = mount(<AlertCard {...p} />);
     expect(wrapper.text()).not.toContain("Jan 1, 12:00am");
   });
+
+  it("doesn't show current year", () => {
+    const p = fakeProps();
+    p.alert.problem_tag = "farmbot_os.firmware.missing";
+    p.alert.created_at = Date.now().valueOf() / 1000;
+    p.timeSettings.hour24 = false;
+    p.timeSettings.utcOffset = 0;
+    const wrapper = mount(<AlertCard {...p} />);
+    const currentYear = moment().format("YYYY");
+    expect(wrapper.text()).not.toContain(currentYear);
+  });
 });
 
 describe("changeFirmwareHardware()", () => {
@@ -253,6 +266,18 @@ describe("changeFirmwareHardware()", () => {
   it("doesn't change firmware hardware value: no dispatch", () => {
     changeFirmwareHardware(undefined)({ label: "Arduino", value: "arduino" });
     expect(updateConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe("SEED_DATA_OPTIONS()", () => {
+  it("returns options", () => {
+    mockFeatureBoolean = false;
+    expect(SEED_DATA_OPTIONS().length).toEqual(15);
+  });
+
+  it("returns more options", () => {
+    mockFeatureBoolean = true;
+    expect(SEED_DATA_OPTIONS().length).toEqual(17);
   });
 });
 

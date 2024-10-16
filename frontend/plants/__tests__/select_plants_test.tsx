@@ -19,6 +19,7 @@ import {
   RawSelectPlants as SelectPlants, SelectPlantsProps, mapStateToProps,
   getFilteredPoints, GetFilteredPointsProps, validPointTypes, SelectModeLink,
   pointGroupSubset,
+  uncategorizedGroupSubset,
 } from "../select_plants";
 import {
   fakePlant, fakePoint, fakeWeed, fakeToolSlot, fakeTool,
@@ -62,7 +63,7 @@ describe("<SelectPlants />", () => {
       getConfigValue: () => true,
       plants: [plant1, plant2],
       dispatch: jest.fn(x => x),
-      gardenOpen: undefined,
+      gardenOpenId: undefined,
       allPoints: [],
       toolTransformProps: fakeToolTransformProps(),
       isActive: () => false,
@@ -70,6 +71,8 @@ describe("<SelectPlants />", () => {
       groups: [],
       timeSettings: fakeTimeSettings(),
       bulkPlantSlug: undefined,
+      noUTM: false,
+      curves: [],
     };
   }
 
@@ -227,6 +230,7 @@ describe("<SelectPlants />", () => {
     expect(wrapper.state().moreSelections).toEqual(false);
     expect(wrapper.find(".more-content").first().props().hidden).toBeTruthy();
     wrapper.find(".more-button").first().simulate("click");
+    expect(wrapper.text().toLowerCase()).toContain("curve");
     expect(wrapper.state().moreSelections).toEqual(true);
     expect(wrapper.find(".more-content").first().props().hidden).toBeFalsy();
   });
@@ -274,8 +278,10 @@ describe("<SelectPlants />", () => {
     const p = fakeProps();
     const group0 = fakePointGroup();
     group0.body.id = 0;
+    group0.body.member_count = undefined;
     const group1 = fakePointGroup();
     group1.body.id = 1;
+    group1.body.member_count = 1;
     group1.body.criteria.string_eq = { pointer_type: ["Plant"] };
     p.groups = [group0, group1];
     const dispatch = jest.fn();
@@ -371,7 +377,7 @@ describe("<SelectPlants />", () => {
 
   it("doesn't create group", () => {
     const p = fakeProps();
-    p.gardenOpen = "uuid";
+    p.gardenOpenId = 1;
     const wrapper = mount(<SelectPlants {...p} />);
     wrapper.find(".dark-blue").simulate("click");
     expect(createGroup).not.toHaveBeenCalled();
@@ -475,6 +481,18 @@ describe("pointGroupSubset()", () => {
     const group2 = fakePointGroup();
     group2.body.criteria.string_eq = { pointer_type: ["Weed"] };
     expect(pointGroupSubset([group0, group1, group2], "Plant")).toEqual([group1]);
+  });
+});
+
+describe("uncategorizedGroupSubset()", () => {
+  it("returns filtered groups", () => {
+    const group0 = fakePointGroup();
+    group0.body.criteria.string_eq = {};
+    const group1 = fakePointGroup();
+    group1.body.criteria.string_eq = { pointer_type: ["Plant"] };
+    const group2 = fakePointGroup();
+    group2.body.criteria.string_eq = { pointer_type: ["Weed"] };
+    expect(uncategorizedGroupSubset([group0, group1, group2])).toEqual([group0]);
   });
 });
 

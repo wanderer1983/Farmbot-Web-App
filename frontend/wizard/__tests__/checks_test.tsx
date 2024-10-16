@@ -15,10 +15,16 @@ jest.mock("../../photos/camera_calibration/actions", () => ({
   calibrate: jest.fn(),
 }));
 
+jest.mock("../../settings/fbos_settings/boot_sequence_selector", () => ({
+  BootSequenceSelector: () => <div>boot</div>,
+}));
+
 const mockDevice = {
   execScript: jest.fn(() => Promise.resolve({})),
   findHome: jest.fn(() => Promise.resolve({})),
   setZero: jest.fn(() => Promise.resolve({})),
+  emergencyUnlock: jest.fn(() => Promise.resolve({})),
+  calibrate: jest.fn(() => Promise.resolve({})),
 };
 jest.mock("../../device", () => ({ getDevice: () => mockDevice }));
 
@@ -34,32 +40,37 @@ import {
 } from "../../__test_support__/resource_index_builder";
 import {
   AssemblyDocs,
+  AutoUpdate,
+  AxisActions,
+  BootSequence,
   CameraCalibrationCard,
   CameraCalibrationCheck,
   CameraCheck,
   CameraImageOrigin,
   CameraOffset,
   CameraReplacement,
-  ConfiguratorDocs,
   Connectivity,
   ControlsCheck,
-  CurrentPosition,
+  ControlsCheckProps,
   DisableStallDetection,
-  EthernetPortImage,
+  DownloadImager,
+  DownloadOS,
+  DynamicMapToggle,
+  FindAxisLength,
   FindHome,
   FirmwareHardwareSelection,
   FlashFirmware,
+  FlowRateInput,
   InvertJogButton,
-  InvertMotor,
+  Language,
   lowVoltageProblemStatus,
   MapOrientation,
-  MotorAcceleration,
-  MotorCurrent,
-  MotorMaxSpeed,
-  MotorMinSpeed,
-  MotorSettings,
+  MotorCurrentContent,
+  NetworkRequirementsLink,
   PeripheralsCheck,
+  PinBinding,
   RotateMapToggle,
+  RpiSelection,
   SelectMapOrigin,
   SensorsCheck,
   SetHome,
@@ -73,9 +84,11 @@ import { WizardStepComponentProps } from "../interfaces";
 import {
   fakeAlert,
   fakeFarmwareEnv, fakeFarmwareInstallation, fakeFbosConfig,
-  fakeFirmwareConfig, fakeImage, fakeLog, fakeWebAppConfig,
+  fakeFirmwareConfig, fakeImage, fakeLog, fakePinBinding, fakeTool,
+  fakeUser,
+  fakeWebAppConfig,
 } from "../../__test_support__/fake_state/resources";
-import { destroy, edit, initSave } from "../../api/crud";
+import { destroy, edit, initSave, save } from "../../api/crud";
 import { mockDispatch } from "../../__test_support__/fake_dispatch";
 import { calibrate } from "../../photos/camera_calibration/actions";
 import { FarmwareName } from "../../sequences/step_tiles/tile_execute_script";
@@ -85,14 +98,25 @@ import { PLACEHOLDER_FARMBOT } from "../../photos/images/image_flipper";
 import { changeBlurableInput, clickButton } from "../../__test_support__/helpers";
 import { Actions } from "../../constants";
 import { tourPath } from "../../help/tours";
-import { Path } from "../../internal_urls";
+import { FBSelect } from "../../ui";
 
 const fakeProps = (): WizardStepComponentProps => ({
   setStepSuccess: jest.fn(() => jest.fn()),
-  resources: buildResourceIndex([]).index,
+  resources: buildResourceIndex([fakeDevice()]).index,
   bot: bot,
   dispatch: mockDispatch(),
   getConfigValue: jest.fn(),
+});
+
+describe("<Language />", () => {
+  it("changes setting", () => {
+    const p = fakeProps();
+    p.resources = buildResourceIndex([fakeUser()]).index;
+    const wrapper = shallow(<Language {...p} />);
+    wrapper.find("BlurableInput").simulate("commit",
+      { currentTarget: { value: "English" } });
+    expect(edit).toHaveBeenCalledWith(expect.any(Object), { language: "English" });
+  });
 });
 
 describe("<CameraCheck />", () => {
@@ -153,7 +177,7 @@ describe("<CameraCheck />", () => {
 
 describe("lowVoltageProblemStatus()", () => {
   it("returns problem", () => {
-    mockState.bot.hardware.informational_settings.throttled = "0x500005";
+    mockState.bot.hardware.informational_settings.throttled = "0x50005";
     expect(lowVoltageProblemStatus()).toEqual(false);
   });
 
@@ -171,28 +195,44 @@ describe("<FlashFirmware />", () => {
 });
 
 describe("<ControlsCheck />", () => {
+  const fakeControlsCheckProps = (): ControlsCheckProps => ({
+    dispatch: jest.fn(),
+    controlsCheckOptions: {},
+  });
+
   it("returns controls", () => {
-    const Component = ControlsCheck();
-    const wrapper = mount(<Component {...fakeProps()} />);
+    const wrapper = mount(<ControlsCheck {...fakeControlsCheckProps()} />);
     expect(wrapper.find("div").first().hasClass("controls-check")).toBeTruthy();
   });
 
   it("returns highlighted controls", () => {
-    const Component = ControlsCheck({ axis: "x" });
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.html()).toContain("solid yellow");
+    const p = fakeControlsCheckProps();
+    p.controlsCheckOptions.axis = "x";
+    const wrapper = mount(<ControlsCheck {...p} />);
+    expect(wrapper.html()).toContain("solid #fd6");
   });
 
   it("returns both controls directions highlighted", () => {
-    const Component = ControlsCheck({ axis: "x", both: true });
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.html()).toContain("solid yellow");
+    const p = fakeControlsCheckProps();
+    p.controlsCheckOptions.axis = "x";
+    p.controlsCheckOptions.both = true;
+    const wrapper = mount(<ControlsCheck {...p} />);
+    expect(wrapper.html()).toContain("solid #fd6");
+  });
+
+  it("returns up controls direction highlighted", () => {
+    const p = fakeControlsCheckProps();
+    p.controlsCheckOptions.axis = "x";
+    p.controlsCheckOptions.up = true;
+    const wrapper = mount(<ControlsCheck {...p} />);
+    expect(wrapper.html()).toContain("solid #fd6");
   });
 
   it("returns controls with home highlighted", () => {
-    const Component = ControlsCheck({ home: true });
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.html()).toContain("solid yellow");
+    const p = fakeControlsCheckProps();
+    p.controlsCheckOptions.home = true;
+    const wrapper = mount(<ControlsCheck {...p} />);
+    expect(wrapper.html()).toContain("solid #fd6");
   });
 });
 
@@ -235,6 +275,8 @@ describe("<SwitchCameraCalibrationMethod />", () => {
 
 describe("<CameraCalibrationCheck />", () => {
   it("calibrates", () => {
+    bot.hardware.informational_settings.sync_status = "synced";
+    bot.connectivity.uptime["bot.mqtt"] = { state: "up", at: 1 };
     const wrapper = mount(<CameraCalibrationCheck {...fakeProps()} />);
     wrapper.find(".camera-check").simulate("click");
     expect(calibrate).toHaveBeenCalledWith(true);
@@ -287,6 +329,48 @@ describe("<AssemblyDocs />", () => {
   });
 });
 
+describe("<DownloadOS />", () => {
+  it.each<[string, string]>([
+    ["01", "1.0.0"],
+    ["02", "3.0.0"],
+    ["3", "3.0.0"],
+    ["4", "4.0.0"],
+  ])("shows correct link: %s", (rpi, expected) => {
+    globalConfig.rpi_release_tag = "1.0.0";
+    globalConfig.rpi3_release_tag = "3.0.0";
+    globalConfig.rpi4_release_tag = "4.0.0";
+    const p = fakeProps();
+    const device = fakeDevice();
+    device.body.rpi = rpi;
+    p.resources = buildResourceIndex([device]).index;
+    const wrapper = mount(<DownloadOS {...p} />);
+    expect(wrapper.text().toLowerCase()).toContain(`download fbos v${expected}`);
+  });
+
+  it("handles missing model", () => {
+    const p = fakeProps();
+    const device = fakeDevice();
+    device.body.rpi = undefined;
+    p.resources = buildResourceIndex([device]).index;
+    const wrapper = mount(<DownloadOS {...p} />);
+    expect(wrapper.text().toLowerCase()).toContain("please select a model");
+  });
+});
+
+describe("<DownloadImager />", () => {
+  it("renders link", () => {
+    const wrapper = mount(<DownloadImager />);
+    expect(wrapper.text().toLowerCase()).toContain("download");
+  });
+});
+
+describe("<NetworkRequirementsLink />", () => {
+  it("renders link", () => {
+    const wrapper = mount(<NetworkRequirementsLink />);
+    expect(wrapper.text().toLowerCase()).toContain("requirements");
+  });
+});
+
 describe("<FirmwareHardwareSelection />", () => {
   const state = fakeState();
   const config = fakeFbosConfig();
@@ -294,7 +378,7 @@ describe("<FirmwareHardwareSelection />", () => {
 
   it("selects model", () => {
     const p = fakeProps();
-    p.resources = buildResourceIndex([fakeFbosConfig()]).index;
+    p.resources = buildResourceIndex([fakeFbosConfig(), fakeDevice()]).index;
     p.dispatch = mockDispatch(jest.fn(), () => state);
     const wrapper = shallow(<FirmwareHardwareSelection {...p} />);
     wrapper.find("FBSelect").simulate("change", {
@@ -310,7 +394,7 @@ describe("<FirmwareHardwareSelection />", () => {
     const alert = fakeAlert();
     alert.body.id = 1;
     alert.body.problem_tag = "api.seed_data.missing";
-    p.resources = buildResourceIndex([alert]).index;
+    p.resources = buildResourceIndex([alert, fakeDevice()]).index;
     mockState.resources = buildResourceIndex([alert]);
     p.dispatch = mockDispatch(jest.fn(), () => state);
     const wrapper = mount<FirmwareHardwareSelection>(
@@ -324,7 +408,7 @@ describe("<FirmwareHardwareSelection />", () => {
     const alert = fakeAlert();
     alert.body.id = 1;
     alert.body.problem_tag = "api.seed_data.missing";
-    p.resources = buildResourceIndex([alert]).index;
+    p.resources = buildResourceIndex([alert, fakeDevice()]).index;
     mockState.resources = buildResourceIndex([alert]);
     p.dispatch = mockDispatch(jest.fn(), () => state);
     const wrapper = mount<FirmwareHardwareSelection>(
@@ -336,7 +420,7 @@ describe("<FirmwareHardwareSelection />", () => {
 
   it("doesn't seed account", () => {
     const p = fakeProps();
-    p.resources = buildResourceIndex([]).index;
+    p.resources = buildResourceIndex([fakeDevice()]).index;
     p.dispatch = mockDispatch(jest.fn(), () => state);
     const wrapper = mount<FirmwareHardwareSelection>(
       <FirmwareHardwareSelection {...p} />);
@@ -347,7 +431,7 @@ describe("<FirmwareHardwareSelection />", () => {
 
   it("renders after account seeding", () => {
     const p = fakeProps();
-    p.resources = buildResourceIndex([]).index;
+    p.resources = buildResourceIndex([fakeDevice()]).index;
     const wrapper = mount<FirmwareHardwareSelection>(
       <FirmwareHardwareSelection {...p} />);
     wrapper.setState({ autoSeed: true });
@@ -359,7 +443,7 @@ describe("<FirmwareHardwareSelection />", () => {
     const alert = fakeAlert();
     alert.body.id = 1;
     alert.body.problem_tag = "api.seed_data.missing";
-    p.resources = buildResourceIndex([alert]).index;
+    p.resources = buildResourceIndex([alert, fakeDevice()]).index;
     const wrapper = shallow<FirmwareHardwareSelection>(
       <FirmwareHardwareSelection {...p} />);
     expect(wrapper.state().autoSeed).toEqual(true);
@@ -368,18 +452,12 @@ describe("<FirmwareHardwareSelection />", () => {
   });
 });
 
-describe("<ConfiguratorDocs />", () => {
-  it("follows link", () => {
-    const wrapper = mount(<ConfiguratorDocs />);
-    wrapper.find("a").simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.help("farmbot-os"));
-  });
-});
-
-describe("<EthernetPortImage />", () => {
-  it("shows image", () => {
-    const wrapper = mount(<EthernetPortImage />);
-    expect(wrapper.find("img").length).toEqual(1);
+describe("<RpiSelection />", () => {
+  it("changes rpi model", () => {
+    const wrapper = shallow(<RpiSelection {...fakeProps()} />);
+    wrapper.find(FBSelect).simulate("change", { label: "", value: "3" });
+    expect(edit).toHaveBeenCalledWith(expect.any(Object), { rpi: "3" });
+    expect(save).toHaveBeenCalledWith(expect.any(String));
   });
 });
 
@@ -401,22 +479,16 @@ describe("<Connectivity />", () => {
   });
 });
 
-describe("<InvertMotor />", () => {
-  const state = fakeState();
-  const config = fakeFirmwareConfig();
-  state.resources = buildResourceIndex([config]);
-
-  it("inverts motor", () => {
+describe("<AutoUpdate />", () => {
+  it("renders OTA time selector", () => {
     const p = fakeProps();
-    const config = fakeFirmwareConfig();
-    config.body.movement_invert_motor_x = 0;
-    p.resources = buildResourceIndex([config]).index;
-    p.dispatch = mockDispatch(jest.fn(), () => state);
-    const wrapper = mount(InvertMotor("x")(p));
-    wrapper.find("button").first().simulate("click");
-    expect(edit).toHaveBeenCalledWith(expect.any(Object), {
-      movement_invert_motor_x: 1
-    });
+    const config = fakeFbosConfig();
+    config.body.os_auto_update = true;
+    const device = fakeDevice();
+    device.body.ota_hour = 1;
+    p.resources = buildResourceIndex([config, device]).index;
+    const wrapper = mount(<AutoUpdate {...p} />);
+    expect(wrapper.text()).toEqual("1:00 AM");
   });
 });
 
@@ -456,6 +528,13 @@ describe("<InvertJogButton />", () => {
   });
 });
 
+describe("<MotorCurrentContent />", () => {
+  it("returns content", () => {
+    const wrapper = mount(<MotorCurrentContent />);
+    expect(wrapper.text().toLowerCase()).toContain("motor current");
+  });
+});
+
 describe("<SwapJogButton />", () => {
   const state = fakeState();
   const config = fakeWebAppConfig();
@@ -483,6 +562,21 @@ describe("<RotateMapToggle />", () => {
     const wrapper = mount(<RotateMapToggle {...p} />);
     wrapper.find("button").first().simulate("click");
     expect(edit).toHaveBeenCalledWith(expect.any(Object), { xy_swap: true });
+  });
+});
+
+describe("<DynamicMapToggle />", () => {
+  const state = fakeState();
+  const config = fakeWebAppConfig();
+  config.body.xy_swap = false;
+  state.resources = buildResourceIndex([config]);
+
+  it("toggles dynamic map size", () => {
+    const p = fakeProps();
+    p.dispatch = mockDispatch(jest.fn(), () => state);
+    const wrapper = mount(<DynamicMapToggle {...p} />);
+    wrapper.find("button").first().simulate("click");
+    expect(edit).toHaveBeenCalledWith(expect.any(Object), { dynamic_map: true });
   });
 });
 
@@ -516,6 +610,27 @@ describe("<PeripheralsCheck />", () => {
   });
 });
 
+describe("<PinBinding />", () => {
+  it("renders pin binding inputs", () => {
+    const p = fakeProps();
+    const pinBinding = fakePinBinding();
+    p.resources = buildResourceIndex([pinBinding]).index;
+    p.getConfigValue = () => false;
+    const wrapper = mount(<PinBinding {...p}
+      pinBindingOptions={{ editing: false }} />);
+    expect(wrapper.text().toLowerCase()).toContain("button 5");
+  });
+
+  it("unlocks the device", () => {
+    window.confirm = () => true;
+    const wrapper = mount(<PinBinding {...fakeProps()}
+      pinBindingOptions={{ editing: false, unlockOnly: true }} />);
+    expect(wrapper.text().toLowerCase()).toEqual("unlock");
+    wrapper.find("button").simulate("click");
+    expect(mockDevice.emergencyUnlock).toHaveBeenCalled();
+  });
+});
+
 describe("<FindHome />", () => {
   it("calls finds home", () => {
     const Component = FindHome("x");
@@ -545,87 +660,44 @@ describe("<SetHome />", () => {
   });
 });
 
-describe("<CurrentPosition />", () => {
+describe("<AxisActions />", () => {
   it("renders current position", () => {
-    const Component = CurrentPosition("x");
     const p = fakeProps();
     const config = fakeFirmwareConfig();
     p.resources = buildResourceIndex([config]).index;
-    const wrapper = mount(<Component {...p} />);
+    const wrapper = mount(<AxisActions {...p} />);
     expect(wrapper.text().toLowerCase()).toContain("current position");
   });
 
   it("handles missing settings", () => {
-    const Component = CurrentPosition("x");
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.text().toLowerCase()).toContain("current position");
+    const wrapper = mount(<AxisActions {...fakeProps()} />);
+    expect(wrapper.text().toLowerCase()).not.toContain("current position");
   });
 });
 
-describe("<MotorMinSpeed />", () => {
-  it("renders min speed", () => {
-    const Component = MotorMinSpeed("x");
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.text().toLowerCase()).toContain("x-axis min");
-  });
-});
-
-describe("<MotorMaxSpeed />", () => {
-  it("renders min speed", () => {
-    const Component = MotorMaxSpeed("x");
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.text().toLowerCase()).toContain("x-axis max");
-  });
-});
-
-describe("<MotorAcceleration />", () => {
-  it("renders acceleration", () => {
-    const Component = MotorAcceleration("x");
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.text().toLowerCase()).toContain("x-axis acceleration");
-  });
-});
-
-describe("<MotorCurrent />", () => {
-  const state = fakeState();
-  const config = fakeFirmwareConfig();
-  state.resources = buildResourceIndex([config]);
-
-  it("changes motor current", () => {
+describe("<FindAxisLength />", () => {
+  it("has config", () => {
     const p = fakeProps();
-    const fwConfig = fakeFirmwareConfig();
-    fwConfig.body.movement_motor_current_x = 100;
-    const fbosConfig = fakeFbosConfig();
-    fbosConfig.body.firmware_hardware = "arduino";
-    p.resources = buildResourceIndex([fwConfig, fbosConfig]).index;
-    p.dispatch = mockDispatch(jest.fn(), () => state);
-    const Component = MotorCurrent("x");
+    const config = fakeFirmwareConfig();
+    config.body.encoder_enabled_x = 0;
+    p.resources = buildResourceIndex([config]).index;
+    const Component = FindAxisLength("x");
     const wrapper = mount(<Component {...p} />);
-    changeBlurableInput(wrapper, "200", 0);
-    expect(edit).toHaveBeenCalledWith(expect.any(Object), {
-      movement_motor_current_x: "200"
-    });
+    expect(wrapper.find("button").first().props().disabled).toBeTruthy();
   });
 
-  it("handles missing settings", () => {
-    const Component = MotorCurrent("x");
-    const p = fakeProps();
-    p.dispatch = mockDispatch(jest.fn(), () => state);
-    const wrapper = mount(<Component {...p} />);
-    changeBlurableInput(wrapper, "100", 0);
-    expect(edit).toHaveBeenCalledWith(expect.any(Object), {
-      movement_motor_current_x: "100"
-    });
+  it("finds length", () => {
+    const Component = FindAxisLength("x");
+    const wrapper = mount(<Component {...fakeProps()} />);
+    wrapper.find("button").first().simulate("click");
+    expect(mockDevice.calibrate).toHaveBeenCalledWith({ axis: "x" });
   });
 });
 
-describe("<MotorSettings />", () => {
-  it("renders all motor settings", () => {
-    const Component = MotorSettings("x");
-    const wrapper = mount(<Component {...fakeProps()} />);
-    expect(wrapper.text().toLowerCase()).toContain("x-axis min");
-    expect(wrapper.text().toLowerCase()).toContain("x-axis max");
-    expect(wrapper.text().toLowerCase()).toContain("x-axis motor");
+describe("<BootSequence />", () => {
+  it("renders boot sequence", () => {
+    const wrapper = mount(<BootSequence />);
+    expect(wrapper.text().toLowerCase()).toContain("boot");
   });
 });
 
@@ -657,6 +729,27 @@ describe("<CameraImageOrigin />", () => {
     expect(initSave).toHaveBeenCalledWith("FarmwareEnv", {
       key: "CAMERA_CALIBRATION_image_bot_origin_location", value: "\"TOP_LEFT\""
     });
+  });
+});
+
+describe("<FlowRateInput />", () => {
+  it("adds new tool", () => {
+    const p = fakeProps();
+    p.resources = buildResourceIndex([]).index;
+    const wrapper = shallow(<FlowRateInput {...p} />);
+    wrapper.find("button").simulate("click");
+    expect(initSave).toHaveBeenCalledWith("Tool", { name: "Watering Nozzle" });
+  });
+
+  it("changes flow rate", () => {
+    const p = fakeProps();
+    const tool = fakeTool();
+    tool.body.name = "watering nozzle";
+    p.resources = buildResourceIndex([tool]).index;
+    const wrapper = shallow(<FlowRateInput {...p} />);
+    wrapper.find("WaterFlowRateInput").simulate("change", 100);
+    expect(edit).toHaveBeenCalledWith(tool, { flow_rate_ml_per_s: 100 });
+    expect(save).toHaveBeenCalledWith(tool.uuid);
   });
 });
 

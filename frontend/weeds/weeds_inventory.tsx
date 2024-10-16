@@ -1,7 +1,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { Everything, WeedsPanelState } from "../interfaces";
-import { DesignerNavTabs, Panel } from "../farm_designer/panel_header";
+import { DesignerNavTabs, Panel, TAB_COLOR } from "../farm_designer/panel_header";
 import {
   EmptyStateWrapper, EmptyStateGraphic,
 } from "../ui/empty_state_wrapper";
@@ -26,7 +26,7 @@ import {
 import { BooleanSetting } from "../session_keys";
 import { UUID } from "../resources/interfaces";
 import { BooleanConfigKey } from "farmbot/dist/resources/configs/web_app";
-import { destroy, edit, save } from "../api/crud";
+import { edit, save } from "../api/crud";
 import { Collapse } from "@blueprintjs/core";
 import { PanelSection } from "../plants/plant_inventory";
 import { pointGroupSubset } from "../plants/select_plants";
@@ -35,6 +35,7 @@ import { createGroup } from "../point_groups/actions";
 import { GroupInventoryItem } from "../point_groups/group_inventory_item";
 import { push } from "../history";
 import { Path } from "../internal_urls";
+import { deleteAllIds } from "../api/delete_points_handler";
 
 export interface WeedsProps {
   weeds: TaggedWeedPointer[];
@@ -72,39 +73,56 @@ export interface WeedsSectionProps {
   layerValue?: boolean;
   layerSetting?: BooleanConfigKey;
   layerDisabled?: boolean;
+  children?: JSX.Element;
+  allWeeds?: TaggedWeedPointer[];
 }
 
 export const WeedsSection = (props: WeedsSectionProps) => {
   const { layerSetting } = props;
   const rawMaxSize = Math.max(...props.items.map(item => item.body.radius));
   const maxSize = isFinite(rawMaxSize) ? rawMaxSize : 0;
+  const noWeeds = props.allWeeds?.length == 0;
   return <div className={`${props.category}-weeds`}>
-    <div className={`${props.category}-weeds-header`}>
+    <div className={`${props.category}-weeds-header section-header`}
+      onClick={props.clickOpen}>
       <label>{`${t(props.sectionTitle)} (${props.items.length})`}</label>
-      {props.category == "pending" && props.items.length > 0 &&
+      {props.category == "pending" && props.items.length > 0 && props.open &&
         <div className={"approval-buttons"}>
-          <button className={"fb-button green"} onClick={() =>
+          <button className={"fb-button green"} onClick={e => {
+            e.stopPropagation();
             props.items.map(weed => {
               props.dispatch(edit(weed, { plant_stage: "active" }));
               props.dispatch(save(weed.uuid));
-            })}>
+            });
+          }}>
             <i className={"fa fa-check"} />{t("all")}
           </button>
-          <button className={"fb-button red"} onClick={() =>
-            props.items.map(weed => props.dispatch(destroy(weed.uuid, true)))}>
+          <button className={"fb-button red"}
+            onClick={deleteAllIds("weeds", props.items)}>
             <i className={"fa fa-times"} />{t("all")}
           </button>
         </div>}
-      <i className={`fa fa-caret-${props.open ? "up" : "down"}`}
-        onClick={props.clickOpen} />
-      {layerSetting && <ToggleButton disabled={props.layerDisabled}
-        toggleValue={props.layerValue}
-        customText={{ textFalse: t("off"), textTrue: t("on") }}
-        toggleAction={() => props.dispatch(setWebAppConfigValue(
-          layerSetting, !props.layerValue))} />}
+      <i className={`fa fa-caret-${props.open ? "up" : "down"}`} />
+      {layerSetting && props.open &&
+        <ToggleButton disabled={props.layerDisabled}
+          toggleValue={props.layerValue}
+          customText={{ textFalse: t("off"), textTrue: t("on") }}
+          toggleAction={e => {
+            e.stopPropagation();
+            props.dispatch(setWebAppConfigValue(
+              layerSetting, !props.layerValue));
+          }} />}
+      {props.open && props.children}
     </div>
     <Collapse isOpen={props.open}>
-      {props.items.length == 0 &&
+      {noWeeds && <EmptyStateWrapper
+        notEmpty={false}
+        graphic={EmptyStateGraphic.weeds}
+        title={t("No weeds yet.")}
+        text={Content.NO_WEEDS}
+        colorScheme={"weeds"}>
+      </EmptyStateWrapper>}
+      {props.items.length == 0 && !noWeeds &&
         <p className={"no-weeds"}>{t(props.emptyStateText)}</p>}
       {props.items.map(p => <WeedInventoryItem
         key={p.uuid}
@@ -142,31 +160,68 @@ export class RawWeeds extends React.Component<WeedsProps, WeedsState> {
     clickOpen={this.toggleOpen("pending")}
     dispatch={this.props.dispatch} />;
 
-  ActiveWeeds = () => <WeedsSection
-    category={"active"}
-    sectionTitle={t("Active")}
-    emptyStateText={t("No active weeds.")}
-    items={this.weeds.filter(p =>
-      !["removed", "pending"].includes(p.body.plant_stage))}
-    open={this.props.weedsPanelState.active}
-    hoveredPoint={this.props.hoveredPoint}
-    clickOpen={this.toggleOpen("active")}
-    layerSetting={BooleanSetting.show_weeds}
-    layerValue={!!this.props.getConfigValue(BooleanSetting.show_weeds)}
-    dispatch={this.props.dispatch} />;
+  ActiveWeeds = () => {
+    const items = this.weeds.filter(p =>
+      !["removed", "pending"].includes(p.body.plant_stage));
+    return <WeedsSection
+      category={"active"}
+      sectionTitle={t("Active")}
+      emptyStateText={t("No active weeds.")}
+      items={items}
+      open={this.props.weedsPanelState.active}
+      hoveredPoint={this.props.hoveredPoint}
+      clickOpen={this.toggleOpen("active")}
+      layerSetting={BooleanSetting.show_weeds}
+      layerValue={!!this.props.getConfigValue(BooleanSetting.show_weeds)}
+      allWeeds={this.props.weeds}
+      dispatch={this.props.dispatch}>
+      <div className={"section-action-btn-group"}>
+        {items.length > 0 &&
+          <button className={"fb-button red delete"}
+            title={t("delete all")}
+            onClick={deleteAllIds("weeds", items)}>
+            {t("delete all")}
+          </button>}
+        <div
+          className={[
+            "fb-button",
+            `panel-${TAB_COLOR[Panel.Weeds]}`,
+            "plus-weed",
+          ].join(" ")}
+          onClick={e => {
+            e.stopPropagation();
+            push(Path.weeds("add"));
+          }}>
+          <i className={"fa fa-plus"} title={t("add weed")} />
+        </div>
+      </div>
+    </WeedsSection>;
+  };
 
-  RemovedWeeds = () => <WeedsSection
-    category={"removed"}
-    sectionTitle={t("Removed")}
-    emptyStateText={t("No removed weeds.")}
-    items={this.weeds.filter(p => p.body.plant_stage === "removed")}
-    open={this.props.weedsPanelState.removed}
-    hoveredPoint={this.props.hoveredPoint}
-    clickOpen={this.toggleOpen("removed")}
-    layerSetting={BooleanSetting.show_historic_points}
-    layerValue={!!this.props.getConfigValue(BooleanSetting.show_historic_points)}
-    layerDisabled={!this.props.getConfigValue(BooleanSetting.show_weeds)}
-    dispatch={this.props.dispatch} />;
+  RemovedWeeds = () => {
+    const items = this.weeds.filter(p => p.body.plant_stage === "removed");
+    return <WeedsSection
+      category={"removed"}
+      sectionTitle={t("Removed")}
+      emptyStateText={t("No removed weeds.")}
+      items={items}
+      open={this.props.weedsPanelState.removed}
+      hoveredPoint={this.props.hoveredPoint}
+      clickOpen={this.toggleOpen("removed")}
+      layerSetting={BooleanSetting.show_historic_points}
+      layerValue={!!this.props.getConfigValue(BooleanSetting.show_historic_points)}
+      layerDisabled={!this.props.getConfigValue(BooleanSetting.show_weeds)}
+      dispatch={this.props.dispatch}>
+      <div className={"section-action-btn-group"}>
+        {items.length > 0 &&
+          <button className={"fb-button red delete"}
+            title={t("delete all")}
+            onClick={deleteAllIds("weeds", items)}>
+            {t("delete all")}
+          </button>}
+      </div>
+    </WeedsSection>;
+  };
 
   navigate = (id: number | undefined) => () => push(Path.groups(id));
 
@@ -178,7 +233,8 @@ export class RawWeeds extends React.Component<WeedsProps, WeedsState> {
     return <DesignerPanel panelName={"weeds-inventory"} panel={Panel.Weeds}>
       <DesignerNavTabs />
       <DesignerPanelTop panel={Panel.Weeds}>
-        <SearchField searchTerm={this.state.searchTerm}
+        <SearchField nameKey={"weeds"}
+          searchTerm={this.state.searchTerm}
           placeholder={t("Search your weeds...")}
           customLeftIcon={<PointSortMenu
             sortOptions={this.state} onChange={u => this.setState(u)} />}
@@ -208,25 +264,9 @@ export class RawWeeds extends React.Component<WeedsProps, WeedsState> {
               onClick={this.navigate(group.body.id)}
             />)}
         </PanelSection>
-        <PanelSection isOpen={this.props.weedsPanelState.weeds}
-          panel={Panel.Weeds}
-          toggleOpen={this.toggleOpen("weeds")}
-          itemCount={this.props.weeds.length}
-          addNew={() => push(Path.weeds("add"))}
-          addTitle={t("add weed")}
-          addClassName={"plus-weed"}
-          title={t("Weeds")}>
-          <EmptyStateWrapper
-            notEmpty={this.props.weeds.length > 0}
-            graphic={EmptyStateGraphic.weeds}
-            title={t("No weeds yet.")}
-            text={Content.NO_WEEDS}
-            colorScheme={"weeds"}>
-            <this.PendingWeeds />
-            <this.ActiveWeeds />
-            <this.RemovedWeeds />
-          </EmptyStateWrapper>
-        </PanelSection>
+        <this.PendingWeeds />
+        <this.ActiveWeeds />
+        <this.RemovedWeeds />
       </DesignerPanelContent>
     </DesignerPanel>;
   }

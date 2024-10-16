@@ -25,6 +25,7 @@ import {
 } from "../../__test_support__/fake_state/resources";
 import { edit, save } from "../../api/crud";
 import { toggleSoilHeight } from "../soil_height";
+import { fakeMovementState } from "../../__test_support__/fake_bot_data";
 
 describe("updatePoint()", () => {
   it("updates a point", () => {
@@ -62,6 +63,11 @@ describe("<EditPointLocation />", () => {
     updatePoint: jest.fn(),
     pointLocation: { x: 1, y: 2, z: 0 },
     botOnline: true,
+    dispatch: jest.fn(),
+    defaultAxes: "XY",
+    arduinoBusy: false,
+    currentBotLocation: { x: 10, y: 20, z: 30 },
+    movementState: fakeMovementState(),
   });
 
   it("edits location", () => {
@@ -105,6 +111,14 @@ describe("<EditPointColor />", () => {
 
   it("edits color", () => {
     const p = fakeProps();
+    const wrapper = shallow(<EditPointColor {...p} />);
+    wrapper.find("ColorPicker").first().simulate("change", "blue");
+    expect(p.updatePoint).toHaveBeenCalledWith({ meta: { color: "blue" } });
+  });
+
+  it("edits color from default", () => {
+    const p = fakeProps();
+    p.color = "";
     const wrapper = shallow(<EditPointColor {...p} />);
     wrapper.find("ColorPicker").first().simulate("change", "blue");
     expect(p.updatePoint).toHaveBeenCalledWith({ meta: { color: "blue" } });

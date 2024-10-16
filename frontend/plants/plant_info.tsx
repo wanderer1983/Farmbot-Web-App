@@ -9,15 +9,18 @@ import {
 } from "../farm_designer/designer_panel";
 import { t } from "../i18next_wrapper";
 import { EditPlantInfoProps, PlantOptions } from "../farm_designer/interfaces";
-import { isString } from "lodash";
+import { isFinite } from "lodash";
 import { push } from "../history";
 import { destroy, edit, save } from "../api/crud";
 import { BooleanSetting } from "../session_keys";
 import { Panel } from "../farm_designer/panel_header";
 import { Path } from "../internal_urls";
+import { validGoButtonAxes } from "../farm_designer/move_to";
+
+export type UpdatePlant = (uuid: string, update: PlantOptions) => void;
 
 export class RawPlantInfo extends React.Component<EditPlantInfoProps, {}> {
-  get templates() { return isString(this.props.openedSavedGarden); }
+  get templates() { return isFinite(this.props.openedSavedGarden); }
   get stringyID() {
     return Path.getSlug((this.templates
       ? Path.plantTemplates
@@ -30,7 +33,7 @@ export class RawPlantInfo extends React.Component<EditPlantInfoProps, {}> {
     return confirmSetting ?? true;
   }
 
-  destroy = (plantUUID: string) => {
+  destroy = (plantUUID: string) => () => {
     this.props.dispatch(destroy(plantUUID, !this.confirmDelete));
   };
 
@@ -70,16 +73,30 @@ export class RawPlantInfo extends React.Component<EditPlantInfoProps, {}> {
         onSave={() => plant.uuid &&
           this.props.dispatch(save(plant.uuid))}
         backTo={Path.plants()}
-        onBack={unselectPlant(this.props.dispatch)} />
+        onBack={unselectPlant(this.props.dispatch)}>
+        <div className={"panel-header-icon-group"}>
+          <i title={t("delete")}
+            className={"fa fa-trash fb-icon-button"}
+            onClick={this.destroy(info.uuid)} />
+        </div>
+      </DesignerPanelHeader>
       <PlantPanel
         info={info}
-        onDestroy={this.destroy}
         updatePlant={this.updatePlant}
         dispatch={this.props.dispatch}
         timeSettings={this.props.timeSettings}
+        botOnline={this.props.botOnline}
+        arduinoBusy={this.props.arduinoBusy}
+        currentBotLocation={this.props.currentBotLocation}
+        movementState={this.props.movementState}
+        defaultAxes={validGoButtonAxes(this.props.getConfigValue)}
         soilHeightPoints={this.props.soilHeightPoints}
         farmwareEnvs={this.props.farmwareEnvs}
-        inSavedGarden={!!this.props.openedSavedGarden} />
+        inSavedGarden={!!this.props.openedSavedGarden}
+        sourceFbosConfig={this.props.sourceFbosConfig}
+        botSize={this.props.botSize}
+        curves={this.props.curves}
+        plants={this.props.plants} />
     </DesignerPanel>;
   };
 

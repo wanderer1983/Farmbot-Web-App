@@ -60,8 +60,8 @@ const DEFAULT_FIRMWARE_CONFIG_VALUES: Record<NumberFirmwareConfigKey, number> = 
   movement_invert_motor_x: 0,
   movement_invert_motor_y: 0,
   movement_invert_motor_z: 0,
-  movement_keep_active_x: 1,
-  movement_keep_active_y: 1,
+  movement_keep_active_x: 0,
+  movement_keep_active_y: 0,
   movement_keep_active_z: 1,
   movement_max_spd_x: 400,
   movement_max_spd_y: 400,
@@ -86,9 +86,9 @@ const DEFAULT_FIRMWARE_CONFIG_VALUES: Record<NumberFirmwareConfigKey, number> = 
   movement_stop_at_max_x: 1,
   movement_stop_at_max_y: 1,
   movement_stop_at_max_z: 1,
-  movement_timeout_x: 120,
-  movement_timeout_y: 120,
-  movement_timeout_z: 120,
+  movement_timeout_x: 180,
+  movement_timeout_y: 180,
+  movement_timeout_z: 180,
   param_config_ok: 0,
   param_e_stop_on_mov_err: 0,
   param_mov_nr_retry: 3,
@@ -118,9 +118,9 @@ const DEFAULT_FIRMWARE_CONFIG_VALUES: Record<NumberFirmwareConfigKey, number> = 
   movement_microsteps_x: 1,
   movement_microsteps_y: 1,
   movement_microsteps_z: 1,
-  movement_motor_current_x: 1000,
-  movement_motor_current_y: 1000,
-  movement_motor_current_z: 1000,
+  movement_motor_current_x: 1823,
+  movement_motor_current_y: 1823,
+  movement_motor_current_z: 1823,
   movement_stall_sensitivity_x: 63,
   movement_stall_sensitivity_y: 63,
   movement_stall_sensitivity_z: 63,
@@ -128,32 +128,23 @@ const DEFAULT_FIRMWARE_CONFIG_VALUES: Record<NumberFirmwareConfigKey, number> = 
 
 const DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES =
   cloneDeep(DEFAULT_FIRMWARE_CONFIG_VALUES);
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_max_spd_x = 800;
+DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_enabled_z = 0;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_max_spd_y = 900;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_max_spd_z = 1000;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_max_spd_z2 = 500;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_min_spd_x = 300;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_min_spd_y = 300;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_min_spd_z = 375;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_min_spd_z2 = 375;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_home_spd_x = 800;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_home_spd_y = 900;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_home_spd_z = 500;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_x = 60;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_y = 60;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_z = 75;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_z2 = 75;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_motor_current_x = 800;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_motor_current_y = 800;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_motor_current_z = 600;
-DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_max_x = 60;
+DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_home_spd_y = 500;
+DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_x = 250;
+DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.movement_steps_acc_dec_y = 250;
+DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_max_x = 70;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_max_y = 60;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_max_z = 70;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_decay_x = 100;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_decay_y = 100;
 DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES.encoder_missed_steps_decay_z = 100;
 
-const DEFAULT_GENESIS_FIRMWARE_CONFIG_VALUES = DEFAULT_FIRMWARE_CONFIG_VALUES;
+const DEFAULT_GENESIS_FIRMWARE_CONFIG_VALUES =
+  cloneDeep(DEFAULT_FIRMWARE_CONFIG_VALUES);
+DEFAULT_GENESIS_FIRMWARE_CONFIG_VALUES.movement_motor_current_x = 1646;
 
 export const getDefaultFwConfigValue =
   (firmwareHardware: FirmwareHardware | undefined) =>
@@ -164,9 +155,11 @@ export const getDefaultFwConfigValue =
         case "farmduino_k14":
         case "farmduino_k15":
         case "farmduino_k16":
+        case "farmduino_k17":
           return DEFAULT_GENESIS_FIRMWARE_CONFIG_VALUES[key];
         case "express_k10":
         case "express_k11":
+        case "express_k12":
           return DEFAULT_EXPRESS_FIRMWARE_CONFIG_VALUES[key];
         default:
           return DEFAULT_FIRMWARE_CONFIG_VALUES[key];
@@ -175,9 +168,12 @@ export const getDefaultFwConfigValue =
 
 export const getModifiedClassName = (
   key: McuParamName,
-  value: number | undefined,
+  valueRaw: number | undefined,
   firmwareHardware: FirmwareHardware | undefined,
+  func?: (n: number | undefined) => number,
 ) => {
-  const defaultValue = getDefaultFwConfigValue(firmwareHardware)(key);
+  const defaultValueRaw = getDefaultFwConfigValue(firmwareHardware)(key);
+  const defaultValue = func ? func(defaultValueRaw) : defaultValueRaw;
+  const value = func ? func(valueRaw) : valueRaw;
   return getModifiedClassNameSpecifyDefault(value, defaultValue);
 };

@@ -12,6 +12,7 @@ import {
   connectivityReducer, PingResultPayload, recentPingOk,
 } from "../connectivity/reducer";
 import { versionOK } from "../util";
+import { updateMotorHistoryArray } from "../controls/move/motor_position_plot";
 
 const afterEach = (state: BotState, a: ReduxAction<{}>) => {
   state.connectivity = connectivityReducer(state.connectivity, a);
@@ -70,7 +71,9 @@ export const initialState = (): BotState => ({
       "user.api": undefined
     },
     pings: {}
-  }
+  },
+  needVersionCheck: true,
+  alreadyToldUserAboutMalformedMsg: false,
 });
 
 export const botReducer = generateReducer<BotState>(initialState())
@@ -116,6 +119,14 @@ export const botReducer = generateReducer<BotState>(initialState())
     stash(s);
     return s;
   })
+  .add<boolean>(Actions.SET_NEEDS_VERSION_CHECK, (s, { payload }) => {
+    s.needVersionCheck = payload;
+    return s;
+  })
+  .add<boolean>(Actions.SET_MALFORMED_NOTIFICATION_SENT, (s, { payload }) => {
+    s.alreadyToldUserAboutMalformedMsg = payload;
+    return s;
+  })
   .add<void>(Actions._RESOURCE_NO, (s) => {
     unstash(s);
     return s;
@@ -149,6 +160,9 @@ function statusHandler(state: BotState,
   action: ReduxAction<HardwareState>): BotState {
   const { payload } = action;
   state.hardware = payload;
+
+  updateMotorHistoryArray(payload.location_data);
+
   const { informational_settings } = state.hardware;
   const syncStatus = informational_settings.sync_status;
   /** USE CASE: You reboot the bot. The old state values are still hanging

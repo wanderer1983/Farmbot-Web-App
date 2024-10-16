@@ -9,10 +9,14 @@ class DeviceSerializer < ApplicationSerializer
              :name,
              :ota_hour_utc,
              :ota_hour,
+             :rpi,
              :serial_number,
              :setup_completed_at,
              :throttled_at,
              :throttled_until,
              :timezone,
+             :max_log_age_in_days,
+             :max_sequence_count,
+             :max_sequence_length,
              :tz_offset_hrs
 end

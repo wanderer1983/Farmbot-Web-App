@@ -9,17 +9,16 @@ class GlobalConfig < ApplicationRecord
 
   # Bootstrap these values, but NEVER clobber pre-existing ones:
   {
-    "FBOS_END_OF_LIFE_VERSION" => "6.4.11",
-    "MINIMUM_FBOS_VERSION" => "6.3.0",
+    "FBOS_END_OF_LIFE_VERSION" => "14.6.0",
+    "MINIMUM_FBOS_VERSION" => "14.6.0",
     "TOS_URL" => ENV.fetch("TOS_URL", ""),
     "PRIV_URL" => ENV.fetch("PRIV_URL", ""),
-    "APPSIGNAL_TOKEN" => ENV.fetch("APPSIGNAL_TOKEN", ""),
   }.map do |(key, value)|
     x = self.find_by(key: key)
     self.create!(key: key, value: value) unless x
   end
 
-  LONG_REVISION = ENV["BUILT_AT"] || ENV["HEROKU_SLUG_COMMIT"] || "NONE"
+  LONG_REVISION = ENV["BUILT_AT"] || ENV["HEROKU_BUILD_COMMIT"] || "NONE"
   # Bootstrap these values, and ALWAYS clobber pre-existing ones:
   {
     "NODE_ENV" => Rails.env || "development",

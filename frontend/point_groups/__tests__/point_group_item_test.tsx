@@ -8,6 +8,8 @@ jest.mock("../../farm_designer/map/actions", () => ({
 }));
 jest.mock("../actions", () => ({ overwriteGroup: jest.fn() }));
 
+jest.mock("../../history", () => ({ push: jest.fn() }));
+
 import React from "react";
 import {
   PointGroupItem, PointGroupItemProps, genericPointIcon,
@@ -16,6 +18,7 @@ import {
 import { shallow, mount } from "enzyme";
 import {
   fakePlant, fakePointGroup, fakePoint, fakeToolSlot, fakeWeed, fakeTool,
+  fakePlantTemplate,
 } from "../../__test_support__/fake_state/resources";
 import {
   maybeGetCachedPlantIcon, setImgSrc,
@@ -28,7 +31,8 @@ import { svgToUrl } from "../../open_farm/icons";
 import { overwriteGroup } from "../actions";
 import { mockDispatch } from "../../__test_support__/fake_dispatch";
 import { fakeToolTransformProps } from "../../__test_support__/fake_tool_info";
-import { FilePath } from "../../internal_urls";
+import { FilePath, Path } from "../../internal_urls";
+import { push } from "../../history";
 
 describe("<PointGroupItem/>", () => {
   const fakeProps = (): PointGroupItemProps => ({
@@ -55,7 +59,8 @@ describe("<PointGroupItem/>", () => {
     const i = new PointGroupItem(p);
     const fakeImgEvent = imgEvent();
     await i.maybeGetCachedIcon(fakeImgEvent);
-    const slug = i.props.point.body.pointer_type === "Plant"
+    const slug = i.props.point.kind == "Point" &&
+      i.props.point.body.pointer_type === "Plant"
       ? i.props.point.body.openfarm_slug
       : "slug";
     expect(maybeGetCachedPlantIcon)
@@ -83,6 +88,13 @@ describe("<PointGroupItem/>", () => {
   it("displays default plant icon", () => {
     const p = fakeProps();
     p.point = fakePlant();
+    const wrapper = mount<PointGroupItem>(<PointGroupItem {...p} />);
+    expect(wrapper.find("img").props().src).toEqual(FilePath.DEFAULT_ICON);
+  });
+
+  it("displays default plant template icon", () => {
+    const p = fakeProps();
+    p.point = fakePlantTemplate();
     const wrapper = mount<PointGroupItem>(<PointGroupItem {...p} />);
     expect(wrapper.find("img").props().src).toEqual(FilePath.DEFAULT_ICON);
   });
@@ -139,6 +151,15 @@ describe("<PointGroupItem/>", () => {
     expect(setHoveredPlant).toHaveBeenCalledWith(i.props.point.uuid, "X");
   });
 
+  it("handles mouse enter: no action", () => {
+    const p = fakeProps();
+    p.dispatch = undefined;
+    const i = new PointGroupItem(p);
+    i.state.icon = "X";
+    i.enter();
+    expect(setHoveredPlant).not.toHaveBeenCalled();
+  });
+
   it("handles mouse exit", () => {
     const i = new PointGroupItem(fakeProps());
     i.state.icon = "X";
@@ -147,14 +168,23 @@ describe("<PointGroupItem/>", () => {
     expect(setHoveredPlant).toHaveBeenCalledWith(undefined);
   });
 
+  it("handles mouse exit: no action", () => {
+    const p = fakeProps();
+    p.dispatch = undefined;
+    const i = new PointGroupItem(p);
+    i.state.icon = "X";
+    i.leave();
+    expect(setHoveredPlant).not.toHaveBeenCalled();
+  });
+
   it("handles clicks", () => {
     const p = fakeProps();
     p.point.body.id = 1;
-    p.group.body.point_ids = [1];
+    p.group && (p.group.body.point_ids = [1]);
     const i = new PointGroupItem(p);
     i.click();
     expect(i.props.dispatch).toHaveBeenCalledTimes(2);
-    const expectedGroupBody = cloneDeep(p.group.body);
+    const expectedGroupBody = cloneDeep(p.group?.body || { point_ids: [] });
     expectedGroupBody.point_ids = [];
     expect(overwriteGroup).toHaveBeenCalledWith(p.group, expectedGroupBody);
     expect(setHoveredPlant).toHaveBeenCalledWith(undefined);
@@ -163,11 +193,11 @@ describe("<PointGroupItem/>", () => {
   it("handles clicks with no id", () => {
     const p = fakeProps();
     p.point.body.id = 0;
-    p.group.body.point_ids = [0];
+    p.group && (p.group.body.point_ids = [0]);
     const i = new PointGroupItem(p);
     i.click();
     expect(i.props.dispatch).toHaveBeenCalledTimes(2);
-    const expectedGroupBody = cloneDeep(p.group.body);
+    const expectedGroupBody = cloneDeep(p.group?.body || { point_ids: [] });
     expectedGroupBody.point_ids = [];
     expect(overwriteGroup).toHaveBeenCalledWith(p.group, expectedGroupBody);
     expect(setHoveredPlant).toHaveBeenCalledWith(undefined);
@@ -176,7 +206,7 @@ describe("<PointGroupItem/>", () => {
   it("errors on click", () => {
     const p = fakeProps();
     p.point.body.id = 1;
-    p.group.body.point_ids = [];
+    p.group && (p.group.body.point_ids = []);
     const i = new PointGroupItem(p);
     i.click();
     expect(i.props.dispatch).not.toHaveBeenCalled();
@@ -184,5 +214,29 @@ describe("<PointGroupItem/>", () => {
     expect(setHoveredPlant).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(
       "Cannot remove points selected by filters.");
+  });
+
+  it("handles clicks: no action", () => {
+    const p = fakeProps();
+    p.point.body.id = 1;
+    p.group = undefined;
+    p.dispatch = undefined;
+    const i = new PointGroupItem(p);
+    i.click();
+    expect(overwriteGroup).not.toHaveBeenCalled();
+    expect(setHoveredPlant).not.toHaveBeenCalled();
+  });
+
+  it("handles clicks: navigates", () => {
+    const p = fakeProps();
+    p.point.body.id = 1;
+    p.group = undefined;
+    p.dispatch = undefined;
+    p.navigate = true;
+    const i = new PointGroupItem(p);
+    i.click();
+    expect(overwriteGroup).not.toHaveBeenCalled();
+    expect(setHoveredPlant).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith(Path.plants(1));
   });
 });

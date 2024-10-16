@@ -29,7 +29,7 @@ const getBindingTarget = (bindingBody: PinBinding): {
 };
 
 /** Return API pin binding data. */
-const apiPinBindings = (resources: ResourceIndex): PinBindingListItems[] => {
+export const apiPinBindings = (resources: ResourceIndex): PinBindingListItems[] => {
   const userBindings: PinBindingListItems[] = selectAllPinBindings(resources)
     .map(binding => {
       const { uuid, body } = binding;
@@ -75,6 +75,7 @@ export const PinBindingsContent = (props: PinBindingsContentProps) => {
       </Highlight>
       <Highlight settingName={DeviceSetting.addNewPinBinding}>
         <PinBindingInputGroup
+          firmwareHardware={firmwareHardware}
           pinBindings={pinBindings}
           dispatch={dispatch}
           resources={resources} />

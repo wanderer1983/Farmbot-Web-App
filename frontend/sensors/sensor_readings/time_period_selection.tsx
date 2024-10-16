@@ -27,7 +27,7 @@ const today = moment().startOf("day").unix();
 export const getEndDate = (sensorReadings: TaggedSensorReading[]) =>
   sensorReadings.length > 0
     ? moment(cloneDeep(sensorReadings).reverse()[0]
-      .body.created_at).startOf("day").unix()
+      .body.read_at).startOf("day").unix()
     : today;
 
 enum ColWidth {
@@ -47,7 +47,7 @@ export const TimePeriodSelection = (props: TimePeriodSelectionProps) => {
       </Col>
       <Col xs={ColWidth.endDate}>
         <label style={{ display: "inline" }}>{t("Period End Date")}</label>
-        <i className="fa fa-clock-o"
+        <i className={"fa fa-clock-o fb-icon-button"}
           style={{ marginLeft: "1rem" }}
           onClick={() => setEndDate(today)} />
       </Col>

@@ -9,10 +9,6 @@ import { DeviceSetting } from "../../constants";
 import { GetWebAppConfigValue } from "../../config_storage/actions";
 import { SettingsPanelState } from "../../interfaces";
 
-export interface ZeroRowProps {
-  botDisconnected: boolean;
-}
-
 export interface AxisSettingsProps {
   dispatch: Function;
   bot: BotState;
@@ -64,10 +60,13 @@ export interface McuInputBoxProps {
   intSize?: IntegerSize;
   float?: boolean;
   scale?: number;
+  toInput?: (input: number) => number;
+  fromInput?: (input: number) => number;
   filter?: number;
   gray?: boolean;
   min?: number;
   max?: number;
+  inputMax?: number;
   disabled?: boolean;
   title?: string;
   firmwareHardware: FirmwareHardware | undefined;
@@ -87,15 +86,19 @@ export interface NumericMCUInputGroupProps {
   yScale?: number;
   z: McuParamName;
   zScale?: number;
+  toInput?: (input: number) => number;
+  fromInput?: (input: number) => number;
   float?: boolean;
   intSize?: IntegerSize;
   gray?: Record<Xyz, boolean>;
   min?: number;
   max?: number;
+  inputMax?: number;
   disabled?: boolean;
   disabledBy?: string;
   advanced?: boolean;
   showAdvanced?: boolean;
+  forceHidden?: boolean;
   warnMin?: Record<Xyz, number>;
   warning?: Record<Xyz, string | undefined>;
 }
@@ -186,6 +189,7 @@ export interface ParameterManagementProps {
   getConfigValue: GetWebAppConfigValue;
   botOnline: boolean;
   arduinoBusy: boolean;
+  showAdvanced: boolean;
 }
 
 export interface ShowAdvancedToggleProps {

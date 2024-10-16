@@ -10,11 +10,11 @@ import {
   SequenceResource as Sequence,
 } from "farmbot/dist/resources/api_resources";
 import { maybeTagStep } from "../../resources/sequence_tagging";
-import { NOTHING_SELECTED } from "./handle_select";
+import { newVariableDataValue, varTypeFromLabel } from "./new_variable";
 
 // ======= TYPE DECLARATIONS =======
 /** Less strict version of CeleryScript args. It's traversable, or unknown. */
-type Args = Dictionary<Traversable | unknown>;
+type Args = Dictionary<unknown>;
 type Body = Traversable[] | undefined;
 /** Less strict CeleryScript node used for the sake of recursion. */
 export interface Traversable { kind: string; args: Args; body?: Body; }
@@ -49,10 +49,10 @@ const isExecute = (x: Traversable): x is Execute => {
 
 const newVar = (label: string): VariableDeclaration => ({
   kind: "variable_declaration",
-  args: { label, data_value: NOTHING_SELECTED }
+  args: { label, data_value: newVariableDataValue(varTypeFromLabel(label)) }
 });
 
-function climb(t: Traversable | unknown, cb: TreeClimberCB) {
+function climb(t: unknown, cb: TreeClimberCB) {
   const climbArgs = /** RECURSION ALERT! */
     (a: Args) => Object.keys(a).map(arg => climb(a[arg], cb));
   const climbBody = /** WEE OOO WEE OO */

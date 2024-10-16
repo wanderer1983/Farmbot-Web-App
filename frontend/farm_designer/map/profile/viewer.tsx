@@ -10,26 +10,29 @@ import { ProfileOptions } from "./options";
 /** View a profile of the points in the selected map region. */
 export const ProfileViewer = (props: ProfileViewerProps) => {
   const { dispatch } = props;
-  const {
-    profileOpen, profilePosition, profileWidth, profileFollowBot,
-  } = props.designer;
+  const { profileOpen, profileFollowBot } = props.designer;
   const axis = props.designer.profileAxis;
   const panelStatus = getPanelStatus();
+  const { x, y } = profileFollowBot
+    ? props.botLocationData.position
+    : props.designer.profilePosition;
+  const noProfile = isUndefined(x) || isUndefined(y)
+    || (!profileOpen && profileFollowBot);
   const className = [
     "profile-viewer",
     profileOpen ? "open" : "",
     `panel-${panelStatus}`,
+    noProfile ? "none-chosen" : "",
   ].join(" ");
-  const { x, y } = profileFollowBot ? props.botPosition : profilePosition;
   const axisLabel = `${t("{{ axis }}-axis profile", {
     axis: axis == "x" ? "y" : "x"
   })}`;
   const coordinateLabel = `${axis} = ${round((axis == "x" ? x : y) || 0)}`;
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(true);
   return <div className={className}>
     <Handle isOpen={profileOpen} dispatch={dispatch} setExpanded={setExpanded} />
     <div className={"profile-content"}>
-      {(isUndefined(x) || isUndefined(y))
+      {noProfile
         ? <p className={"no-profile"}>
           {profileFollowBot
             ? t("FarmBot position unknown.")
@@ -39,13 +42,13 @@ export const ProfileViewer = (props: ProfileViewerProps) => {
           <label>
             {`${axisLabel} (${coordinateLabel})`}
           </label>
-          <p className={"left-label"}>Z</p>
+          {expanded && <p className={"left-label"}>Z</p>}
           <ProfileSvg allPoints={props.allPoints}
-            axis={axis}
+            designer={props.designer}
             position={{ x, y }}
-            selectionWidth={profileWidth}
             expanded={expanded}
-            botPosition={props.botPosition}
+            botLocationData={props.botLocationData}
+            peripheralValues={props.peripheralValues}
             negativeZ={props.negativeZ}
             sourceFbosConfig={props.sourceFbosConfig}
             mountedToolInfo={props.mountedToolInfo}
@@ -54,13 +57,11 @@ export const ProfileViewer = (props: ProfileViewerProps) => {
             getConfigValue={props.getConfigValue}
             mapTransformProps={props.mapTransformProps}
             botSize={props.botSize} />
-          <p className={"right-label"}>Z</p>
+          {expanded && <p className={"right-label"}>Z</p>}
         </div>}
       <ProfileOptions
         dispatch={dispatch}
-        axis={axis}
-        selectionWidth={profileWidth}
-        followBot={profileFollowBot}
+        designer={props.designer}
         expanded={expanded}
         setExpanded={setExpanded} />
     </div>
@@ -73,6 +74,7 @@ const Handle = ({ isOpen, dispatch, setExpanded }: HandleProps) =>
     title={isOpen ? t("close profile viewer") : t("open profile viewer")}
     onClick={() => {
       isOpen && setExpanded(false);
+      !isOpen && setExpanded(true);
       dispatch({ type: Actions.SET_PROFILE_OPEN, payload: !isOpen });
     }}>
     <i className={"fa fa-area-chart"} />

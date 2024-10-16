@@ -1,7 +1,14 @@
 // COLORS used throughout the web app
 $transparent: #00000000;
 $translucent: rgba(0, 0, 0, 0.2);
-$translucent2: rgba(0, 0, 0, 0.6);
+$translucent1: rgba(0, 0, 0, 0.1);
+$translucent15: rgba(0, 0, 0, 0.15);
+$translucent2: rgba(0, 0, 0, 0.2);
+$translucent3: rgba(0, 0, 0, 0.3);
+$translucent4: rgba(0, 0, 0, 0.4);
+$translucent5: rgba(0, 0, 0, 0.5);
+$translucent1_white: rgba(255, 255, 255, 0.1);
+$translucent3_white: rgba(255, 255, 255, 0.3);
 $white: #fff;
 $off_white: #f4f4f4;
 $lighter_gray: #eee;
@@ -13,6 +20,7 @@ $placeholder_gray: #999;
 $dark_gray: #434343;
 $darker_gray: #182026;
 $black: #000;
+$off_black: #222;
 $light_blue: #cdf;
 $blue: #a4c2f4;
 $dark_blue: #37d;

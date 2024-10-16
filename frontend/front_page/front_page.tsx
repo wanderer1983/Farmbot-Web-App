@@ -19,7 +19,7 @@ import { t } from "../i18next_wrapper";
 import { ToastContainer } from "../toast/fb_toast";
 import { FilePath, Path } from "../internal_urls";
 
-export const DEFAULT_APP_PAGE = Path.withApp(Path.controls());
+export const DEFAULT_APP_PAGE = Path.app();
 
 const showFor = (size: string[], extraClass?: string): string => {
   const ALL_SIZES = ["xs", "sm", "md", "lg", "xl"];
@@ -90,7 +90,8 @@ export class FrontPage extends React.Component<{}, Partial<FrontPageState>> {
         Session.replaceToken(resp.data);
         window.location.assign(DEFAULT_APP_PAGE);
       }).catch((error: Error) => {
-        switch (get(error, "response.status")) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        switch (get(error, "response.status") as unknown) {
           case 451: // TOS was updated; User must agree to terms.
             window.location.assign("/tos_update");
             break;

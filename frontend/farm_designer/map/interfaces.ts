@@ -16,6 +16,7 @@ import {
 import { GetWebAppConfigValue } from "../../config_storage/actions";
 import { TimeSettings } from "../../interfaces";
 import { UUID } from "../../resources/interfaces";
+import { PeripheralValues } from "./layers/farmbot/bot_trail";
 
 export type TaggedPlant = TaggedPlantPointer | TaggedPlantTemplate;
 
@@ -34,6 +35,7 @@ export interface PlantLayerProps {
   groupSelected: UUID[];
   animate: boolean;
   interactions: boolean;
+  hoveredSpread: number | undefined;
 }
 
 export interface GardenMapLegendProps {
@@ -83,6 +85,7 @@ export interface GardenPlantProps {
   uuid: string;
   animate: boolean;
   hovered: boolean;
+  hoveredSpread: number | undefined;
 }
 
 export interface GardenPlantState {
@@ -96,11 +99,13 @@ export interface GardenPointProps {
   cameraViewGridId: string | undefined;
   cameraCalibrationData: CameraCalibrationData;
   cropPhotos: boolean;
+  showUncroppedArea: boolean;
   current: boolean;
   hovered: boolean;
   dispatch: Function;
   soilHeightLabels: boolean;
   getSoilHeightColor(z: number): string;
+  animate: boolean;
 }
 
 export interface GardenWeedProps {
@@ -152,13 +157,14 @@ export interface GridProps {
   zoomLvl: number;
   onClick(e: React.MouseEvent<SVGElement>): void;
   onMouseDown(e: React.MouseEvent<SVGElement>): void;
+  templateView: boolean;
 }
 
 export interface VirtualFarmBotProps {
   mapTransformProps: MapTransformProps;
   botLocationData: BotLocationData;
   plantAreaOffset: AxisNumberProperty;
-  peripherals: { label: string, value: boolean }[];
+  peripheralValues: PeripheralValues;
   eStopStatus: boolean;
   getConfigValue: GetWebAppConfigValue;
   mountedToolInfo: MountedToolInfo;

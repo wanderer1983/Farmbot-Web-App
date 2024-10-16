@@ -1,4 +1,4 @@
-import { fetchNewDevice, getDevice } from "../device";
+import { fetchNewDevice } from "../device";
 import { dispatchNetworkUp, dispatchNetworkDown } from "./index";
 import { Log } from "farmbot/dist/resources/api_resources";
 import { Farmbot, BotStateTree, TaggedResource } from "farmbot";
@@ -10,7 +10,7 @@ import {
 import { HardwareState } from "../devices/interfaces";
 import { GetState, ReduxAction } from "../redux/interfaces";
 import { Content, Actions } from "../constants";
-import { commandOK, badVersion, commandErr } from "../devices/actions";
+import { badVersion, readStatusReturnPromise } from "../devices/actions";
 import { init } from "../api/crud";
 import { AuthState } from "../auth/interfaces";
 import { autoSync } from "./auto_sync";
@@ -26,12 +26,6 @@ import { t } from "../i18next_wrapper";
 import { now } from "../devices/connectivity/qos";
 
 export const TITLE = () => t("New message from bot");
-/** TODO: This ought to be stored in Redux. It is here because of historical
- * reasons. Feel free to factor out when time allows. -RC, 10 OCT 17 */
-export const HACKY_FLAGS = {
-  needVersionCheck: true,
-  alreadyToldUserAboutMalformedMsg: false
-};
 
 /** Action creator that is called when FarmBot OS emits a status update.
  * Coordinate updates, movement, etc.*/
@@ -86,7 +80,7 @@ export function logBeep(getState: GetState) {
   return (log: Log) => {
     const getConfigValue = getWebAppConfigValue(getState);
     const beepVerbosity = getConfigValue(NumericSetting.beep_verbosity);
-    if (beepVerbosity && (log.verbosity || 1) <= beepVerbosity) {
+    if (beepVerbosity && (log.verbosity || 1) <= +beepVerbosity) {
       beep(log.type);
     }
   };
@@ -102,13 +96,6 @@ export const batchInitResources =
 
 export const bothUp = () => dispatchNetworkUp("user.mqtt", now());
 
-export function readStatus() {
-  const noun = "'Read Status' command";
-  return getDevice()
-    .readStatus()
-    .then(() => { commandOK(noun); }, commandErr(noun));
-}
-
 export const changeLastClientConnected = (bot: Farmbot) => () => {
   bot.setUserEnv({
     "LAST_CLIENT_CONNECTED": JSON.stringify(new Date())
@@ -116,12 +103,13 @@ export const changeLastClientConnected = (bot: Farmbot) => () => {
 };
 const setBothUp = () => bothUp();
 
-const legacyChecks = (getState: GetState) => {
+const legacyChecks = (dispatch: Function, getState: GetState) => {
   const { controller_version } = getState().bot.hardware.informational_settings;
-  if (HACKY_FLAGS.needVersionCheck && controller_version) {
+  const { needVersionCheck } = getState().bot;
+  if (needVersionCheck && controller_version) {
     const IS_OK = versionOK(controller_version);
     if (!IS_OK) { badVersion(); }
-    HACKY_FLAGS.needVersionCheck = false;
+    dispatch({ type: Actions.SET_NEEDS_VERSION_CHECK, payload: false });
   }
 };
 
@@ -130,7 +118,7 @@ export const onStatus =
     slowDown((msg: BotStateTree) => {
       setBothUp();
       dispatch(incomingStatus(msg));
-      legacyChecks(getState);
+      legacyChecks(dispatch, getState);
     });
 
 type Client = { connected?: boolean };
@@ -141,13 +129,14 @@ export const onSent = (client: Client) => () => {
   cb("user.mqtt", now());
 };
 
-export function onMalformed() {
+export const onMalformed = (dispatch: Function, getState: GetState) => () => {
+  const { alreadyToldUserAboutMalformedMsg } = getState().bot;
   bothUp();
-  if (!HACKY_FLAGS.alreadyToldUserAboutMalformedMsg) {
+  if (!alreadyToldUserAboutMalformedMsg) {
     warning(t(Content.MALFORMED_MESSAGE_REC_UPGRADE));
-    HACKY_FLAGS.alreadyToldUserAboutMalformedMsg = true;
+    dispatch({ type: Actions.SET_MALFORMED_NOTIFICATION_SENT, payload: true });
   }
-}
+};
 
 export const onOnline = () => {
   removeToast("offline");
@@ -177,14 +166,14 @@ export const attachEventListeners =
   (bot: Farmbot, dispatch: Function, getState: GetState) => {
     if (bot.client) {
       startPinging(bot);
-      readStatus().then(changeLastClientConnected(bot), noop);
+      readStatusReturnPromise().then(changeLastClientConnected(bot), noop);
       bot.on(FbjsEventName.online, onOnline);
       bot.on(FbjsEventName.online, () => bot.readStatus().then(noop, noop));
       bot.on(FbjsEventName.offline, onOffline);
       bot.on(FbjsEventName.sent, onSent(bot.client));
       bot.on(FbjsEventName.logs, onLogs(dispatch, getState));
       bot.on(FbjsEventName.status, onStatus(dispatch, getState));
-      bot.on(FbjsEventName.malformed, onMalformed);
+      bot.on(FbjsEventName.malformed, onMalformed(dispatch, getState));
       bot.client.subscribe(FbjsEventName.publicBroadcast);
       bot.on(FbjsEventName.publicBroadcast, onPublicBroadcast);
       bot.client.on("message", autoSync(dispatch, getState));

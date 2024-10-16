@@ -3,9 +3,9 @@ jest.mock("../../../api/crud", () => ({
   save: jest.fn(),
 }));
 
-let mockShouldDisplay = false;
+let mockFeatureBoolean = false;
 jest.mock("../../../devices/should_display", () => ({
-  shouldDisplayFeature: () => mockShouldDisplay,
+  shouldDisplayFeature: () => mockFeatureBoolean,
 }));
 
 import React from "react";
@@ -59,6 +59,7 @@ describe("<BoardType/>", () => {
 
   it("calls updateConfig", () => {
     const p = fakeProps();
+    p.firmwareHardware = "arduino";
     const wrapper = mount<BoardType>(<BoardType {...p} />);
     const selection =
       shallow(<div>{wrapper.instance().FirmwareSelection()}</div>);
@@ -81,34 +82,28 @@ describe("<BoardType/>", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it("displays standard boards", () => {
-    mockShouldDisplay = false;
+  it("displays boards", () => {
+    mockFeatureBoolean = false;
     const wrapper = mount(<BoardType {...fakeProps()} />);
     const { list } = wrapper.find("FBSelect").props();
     expect(list).toEqual([
-      { label: "Arduino/RAMPS (Genesis v1.2)", value: "arduino" },
-      { label: "Farmduino (Genesis v1.3)", value: "farmduino" },
-      { label: "Farmduino (Genesis v1.4)", value: "farmduino_k14" },
+      { label: "Farmduino (Genesis v1.7)", value: "farmduino_k17" },
+      { label: "Farmduino (Genesis v1.6)", value: "farmduino_k16" },
       { label: "Farmduino (Genesis v1.5)", value: "farmduino_k15" },
+      { label: "Farmduino (Genesis v1.4)", value: "farmduino_k14" },
+      { label: "Farmduino (Genesis v1.3)", value: "farmduino" },
+      { label: "Arduino/RAMPS (Genesis v1.2)", value: "arduino" },
+      { label: "Farmduino (Express v1.1)", value: "express_k11" },
       { label: "Farmduino (Express v1.0)", value: "express_k10" },
       { label: "None", value: "none" },
     ]);
+    expect(list?.length).toEqual(9);
   });
 
-  it("displays new boards", () => {
-    mockShouldDisplay = true;
+  it("displays more boards", () => {
+    mockFeatureBoolean = true;
     const wrapper = mount(<BoardType {...fakeProps()} />);
     const { list } = wrapper.find("FBSelect").props();
-    expect(list).toEqual([
-      { label: "Arduino/RAMPS (Genesis v1.2)", value: "arduino" },
-      { label: "Farmduino (Genesis v1.3)", value: "farmduino" },
-      { label: "Farmduino (Genesis v1.4)", value: "farmduino_k14" },
-      { label: "Farmduino (Genesis v1.5)", value: "farmduino_k15" },
-      { label: "Farmduino (Genesis v1.6)", value: "farmduino_k16" },
-      { label: "Farmduino (Express v1.0)", value: "express_k10" },
-      { label: "Farmduino (Express v1.1)", value: "express_k11" },
-      { label: "None", value: "none" },
-    ]);
-    mockShouldDisplay = false;
+    expect(list?.length).toEqual(10);
   });
 });

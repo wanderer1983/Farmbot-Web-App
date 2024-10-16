@@ -1,3 +1,8 @@
+let mockIsMobile = false;
+jest.mock("../../../screen_size", () => ({
+  isMobile: () => mockIsMobile,
+}));
+
 let mockPath = "";
 jest.mock("../../../history", () => ({
   getPathArray: jest.fn(() => mockPath.split("/")),
@@ -35,6 +40,7 @@ import {
 } from "../../../__test_support__/map_transform_props";
 import { fakePlant } from "../../../__test_support__/fake_state/resources";
 import { Path } from "../../../internal_urls";
+import { BotOriginQuadrant } from "../../interfaces";
 
 describe("round()", () => {
   it("rounds a number", () => {
@@ -45,10 +51,7 @@ describe("round()", () => {
 
 describe("mapPanelClassName()", () => {
   it("returns correct panel status: short panel", () => {
-    Object.defineProperty(window, "innerWidth", {
-      value: 400,
-      configurable: true
-    });
+    mockIsMobile = true;
     mockPath = Path.mock(Path.location());
     expect(mapPanelClassName()).toEqual("short-panel");
     mockPath = Path.mock(Path.cropSearch("mint/add"));
@@ -56,14 +59,19 @@ describe("mapPanelClassName()", () => {
   });
 
   it("returns correct panel status: panel open", () => {
-    Object.defineProperty(window, "innerWidth", {
-      value: 500,
-      configurable: true
-    });
+    mockIsMobile = false;
     mockPath = Path.mock(Path.location());
     expect(mapPanelClassName()).toEqual("panel-open");
     mockPath = Path.mock(Path.cropSearch("mint/add"));
     expect(mapPanelClassName()).toEqual("panel-open");
+  });
+
+  it("returns correct panel status: panel closed", () => {
+    mockIsMobile = false;
+    mockPath = Path.mock(Path.designer());
+    expect(mapPanelClassName()).toEqual("panel-closed");
+    mockIsMobile = true;
+    expect(mapPanelClassName()).toEqual("panel-closed-mobile");
   });
 });
 
@@ -143,6 +151,18 @@ describe("translateScreenToGarden()", () => {
       zoomLvl: 1,
       gridOffset: { x: 30, y: 40 },
       panelStatus: MapPanelStatus.closed,
+    });
+    expect(result).toEqual({ x: 480, y: 80 });
+  });
+
+  it("translates screen coords to garden coords: panel closed mobile", () => {
+    const result = translateScreenToGarden({
+      mapTransformProps: fakeMapTransformProps(),
+      page: { x: 520, y: 212 },
+      scroll: { left: 10, top: 20 },
+      zoomLvl: 1,
+      gridOffset: { x: 30, y: 40 },
+      panelStatus: MapPanelStatus.mobileClosed,
     });
     expect(result).toEqual({ x: 480, y: 30 });
   });
@@ -270,6 +290,11 @@ describe("getbotSize()", () => {
 });
 
 describe("getMapSize()", () => {
+  it("calculates grid size", () => {
+    const gridSize = getMapSize(fakeMapTransformProps());
+    expect(gridSize).toEqual({ h: 1500, w: 3000 });
+  });
+
   it("calculates map size", () => {
     const mapSize = getMapSize(
       fakeMapTransformProps(),
@@ -332,7 +357,7 @@ describe("transformXY", () => {
   it("calculates transformed coordinate: quadrant 0 (invalid)", () => {
     const original = { qx: 100, qy: 200 };
     const transformed = { qx: 100, qy: 200 };
-    mapTransformProps.quadrant = 0;
+    mapTransformProps.quadrant = 0 as BotOriginQuadrant;
     transformCheck(original, transformed, mapTransformProps);
   });
 });

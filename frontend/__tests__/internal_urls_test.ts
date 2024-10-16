@@ -1,4 +1,6 @@
-import { FilePath, Icon, Path } from "../internal_urls";
+import {
+  FilePath, Icon, landingPagePath, PAGE_SLUGS, Path,
+} from "../internal_urls";
 let mockPath = Path.mock(Path.designer());
 jest.mock("../history", () => ({
   getPathArray: () => mockPath.split("/"),
@@ -6,12 +8,12 @@ jest.mock("../history", () => ({
 
 describe("Path()", () => {
   it("returns path", () => {
-    expect(Path.plants()).toEqual("/designer/plants");
-    expect(Path.plants(1)).toEqual("/designer/plants/1");
+    expect(Path.plants()).toEqual("/app/designer/plants");
+    expect(Path.plants(1)).toEqual("/app/designer/plants/1");
     mockPath = Path.mock(Path.designerSequences("sequence"));
-    expect(Path.sequences("sequence")).toEqual("/designer/sequences/sequence");
+    expect(Path.sequences("sequence")).toEqual("/app/designer/sequences/sequence");
     mockPath = Path.mock(Path.sequencePage("sequence"));
-    expect(Path.sequences("sequence")).toEqual("/sequences/sequence");
+    expect(Path.sequences("sequence")).toEqual("/app/sequences/sequence");
   });
 
   it("returns path start result", () => {
@@ -23,9 +25,7 @@ describe("Path()", () => {
 
   it("modifies path", () => {
     expect(Path.mock(Path.plants())).toEqual("/app/designer/plants");
-    expect(Path.mock("/app" + Path.plants())).toEqual("/app/designer/plants");
     expect(Path.route(Path.plants())).toEqual("/designer/plants");
-
   });
 
   it("returns index", () => {
@@ -44,19 +44,19 @@ describe("Path()", () => {
   });
 
   it("returns path with query", () => {
-    expect(Path.settings("os")).toEqual("/designer/settings?highlight=os");
-    expect(Path.help("os")).toEqual("/designer/help?page=os");
-    expect(Path.developer("os")).toEqual("/designer/developer?page=os");
+    expect(Path.settings("os")).toEqual("/app/designer/settings?highlight=os");
+    expect(Path.help("os")).toEqual("/app/designer/help?page=os");
+    expect(Path.developer("os")).toEqual("/app/designer/developer?page=os");
   });
 
   it("returns location path", () => {
-    expect(Path.location()).toEqual("/designer/location");
-    expect(Path.location({})).toEqual("/designer/location");
-    expect(Path.location({ x: 0 })).toEqual("/designer/location");
+    expect(Path.location()).toEqual("/app/designer/location");
+    expect(Path.location({})).toEqual("/app/designer/location");
+    expect(Path.location({ x: 0 })).toEqual("/app/designer/location");
     expect(Path.location({ x: 0, y: 0 }))
-      .toEqual("/designer/location?x=0?y=0");
+      .toEqual("/app/designer/location?x=0?y=0");
     expect(Path.location({ x: 0, y: 0, z: 0 }))
-      .toEqual("/designer/location?x=0?y=0?z=0");
+      .toEqual("/app/designer/location?x=0?y=0?z=0");
   });
 });
 
@@ -66,5 +66,19 @@ describe("File()", () => {
     expect(FilePath.icon(Icon.map)).toEqual("/app-resources/img/icons/map.svg");
     expect(FilePath.DEFAULT_WEED_ICON)
       .toEqual("/app-resources/img/generic-weed.svg");
+  });
+});
+
+describe("PAGE_SLUGS()", () => {
+  it("returns slug", () => {
+    expect(PAGE_SLUGS().map).toEqual("Map");
+  });
+});
+
+describe("landingPagePath()", () => {
+  it("returns correct path", () => {
+    expect(landingPagePath("map")).toEqual(Path.designer());
+    expect(landingPagePath("logs")).toEqual(Path.logs());
+    expect(landingPagePath("messages")).toEqual(Path.messages());
   });
 });

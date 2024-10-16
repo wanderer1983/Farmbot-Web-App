@@ -2,6 +2,7 @@ require_relative "../../lib/mutations/hstore_filter"
 
 module Points
   class Update < Mutations::Command
+    include Points::Helpers
     required do
       model :device, class: Device
       model :point, class: Point
@@ -13,17 +14,24 @@ module Points
       float :y
       float :z
       float :radius
+      integer :depth
       string :name
       string :openfarm_slug
       integer :pullout_direction, in: ToolSlot::PULLOUT_DIRECTIONS
       string :plant_stage, in: CeleryScriptSettingsBag::PLANT_STAGES
-      time :planted_at
+      time :planted_at, nils: true
       hstore :meta
       boolean :gantry_mounted
+      integer :water_curve_id, nils: true
+      integer :spread_curve_id, nils: true
+      integer :height_curve_id, nils: true
     end
 
     def validate
       prevent_removal_of_in_use_tools
+      validate_water_curve_id
+      validate_spread_curve_id
+      validate_height_curve_id
     end
 
     def execute

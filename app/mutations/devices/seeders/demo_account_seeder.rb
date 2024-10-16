@@ -1,6 +1,6 @@
 module Devices
   module Seeders
-    class DemoAccountSeeder < ExpressOneZero
+    class DemoAccountSeeder < AbstractSeeder
       BASE_URL = "/app-resources/img/demo_accounts/"
       FEEDS = {
         "Express XL" => "Express_XL_Demo_Webcam.JPG",
@@ -10,18 +10,64 @@ module Devices
       }
       UNUSED_ALERTS = ["api.seed_data.missing", "api.user.not_welcomed"]
 
-      def webcam_feeds
-        # device.webcam_feeds.destroy_all!
-        FEEDS.map do |(name, url)|
-          p = { name: name,
-                url: (BASE_URL + url),
-                device: device }
-          WebcamFeeds::Create.run!(p)
-        end
+      def feed(product_line)
+        feed_name = ""
+        feed_name += "Genesis" if product_line.include?("genesis")
+        feed_name += "Express" if product_line.include?("express")
+        feed_name += " XL" if product_line.include?("xl")
+        feed_name
       end
 
-      def plants
-        PLANTS.map { |x| Points::Create.run!(x, device: device) }
+      def create_webcam_feed(product_line)
+        feed_name = feed(product_line)
+        WebcamFeeds::Create.run!({ name: feed_name,
+                                   url: BASE_URL + FEEDS[feed_name],
+                                   device: device })
+      end
+
+      def plants(product_line)
+        spinach_row_count = product_line.include?("xl") ? 28 : 13
+        spinach_col_count = product_line.include?("xl") ? 4 : 2
+        (0..(spinach_row_count - 1)).map do |i|
+          (0..(spinach_col_count - 1)).map do |j|
+            Points::Create.run!(device: device,
+                                pointer_type: "Plant",
+                                name: "Spinach",
+                                openfarm_slug: "spinach",
+                                plant_stage: "planned",
+                                x: 400 + i * 200,
+                                y: 100 + j * 200 + (j > 1 ? 2100 : 0),
+                                z: 0)
+          end
+        end
+        broccoli_row_count = product_line.include?("xl") ? 9 : 4
+        broccoli_col_count = product_line.include?("xl") ? 3 : 1
+        (0..(broccoli_row_count - 1)).map do |i|
+          (0..(broccoli_col_count - 1)).map do |j|
+            Points::Create.run!(device: device,
+                                pointer_type: "Plant",
+                                name: "Broccoli",
+                                openfarm_slug: "broccoli",
+                                plant_stage: "planned",
+                                x: 600 + i * 600,
+                                y: 700 + j * 600 + (j > 0 ? 300 : 0),
+                                z: 0)
+          end
+        end
+        beet_row_count = product_line.include?("xl") ? 57 : 27
+        beet_col_count = product_line.include?("xl") ? 2 : 2
+        (0..(beet_row_count - 1)).map do |i|
+          (0..(beet_col_count - 1)).map do |j|
+            Points::Create.run!(device: device,
+                                pointer_type: "Plant",
+                                name: "Beet",
+                                openfarm_slug: "beet",
+                                plant_stage: "planned",
+                                x: 200 + i * 100,
+                                y: 1100 + j * 100 + (j > 1 ? 200 : 0),
+                                z: 0)
+          end
+        end
       end
 
       def point_groups_spinach
@@ -69,7 +115,13 @@ module Devices
       #    tester FBOS version `1000.0.0`.
       READ_COMMENT_ABOVE = "100.0.0"
 
-      def misc
+      def misc(product_line)
+        create_webcam_feed(product_line)
+        plants(product_line)
+        point_groups_spinach
+        point_groups_broccoli
+        point_groups_beet
+
         device.alerts.where(problem_tag: UNUSED_ALERTS).destroy_all
         DEMO_ALERTS
           .map { |p| p.merge(device: device) }

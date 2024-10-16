@@ -1,7 +1,7 @@
 source "https://rubygems.org"
-ruby "~> 3.0.2"
+ruby "~> 3.3.5"
 
-gem "rails"
+gem "rails", "~> 6"
 gem "active_model_serializers"
 gem "bunny"
 gem "delayed_job_active_record"
@@ -23,12 +23,13 @@ gem "rollbar"
 gem "scenic"
 gem "secure_headers"
 gem "tzinfo" # For validation of user selected timezone names
+gem "tzinfo-data" # For validation of user selected timezone names
 gem "valid_url"
 gem "thwait"
 gem "lograge" # Used to filter repetitive RabbitMQ logs.
+gem "scout_apm"
 
 group :development, :test do
-  gem "codecov", require: false
   gem "climate_control"
   gem "database_cleaner"
   gem "factory_bot_rails"
@@ -40,7 +41,8 @@ group :development, :test do
   gem "rspec"
   gem "rspec_junit_formatter"
   gem "simplecov"
-  gem "smarf_doc", git: "https://github.com/RickCarlino/smarf_doc.git"
+  gem "simplecov-cobertura"
+  gem "webmock"
 end
 
 gem "passenger"

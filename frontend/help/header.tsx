@@ -1,9 +1,11 @@
 import { Collapse } from "@blueprintjs/core";
 import React from "react";
 import { push } from "../history";
-import { openHotkeyHelpOverlay } from "../hotkeys";
+import { toggleHotkeyHelpOverlay } from "../hotkeys";
 import { t } from "../i18next_wrapper";
 import { FilePath, Icon, Path } from "../internal_urls";
+import { store } from "../redux/store";
+import { isMobile } from "../screen_size";
 
 interface Page {
   title: string;
@@ -38,11 +40,11 @@ const PAGES = (): Pages => ({
   },
   education: {
     title: t("Education Documentation"),
-    fa_icon: "graduation-cap",
+    fa_icon: "fa-graduation-cap",
   },
   tours: {
     title: t("Take a Tour"),
-    fa_icon: "share",
+    fa_icon: "fa-share",
   },
   support: {
     title: t("Get Help"),
@@ -51,11 +53,11 @@ const PAGES = (): Pages => ({
 });
 
 const maybeAddHotkeysMenuItem = (): [string, Page][] =>
-  window.innerWidth > 450
+  !isMobile()
     ? [["hotkeys", {
       title: t("Hotkeys"),
-      fa_icon: "keyboard-o",
-      onClick: openHotkeyHelpOverlay,
+      fa_icon: "fa-keyboard-o",
+      onClick: toggleHotkeyHelpOverlay(store.dispatch),
     }]]
     : [];
 
@@ -83,7 +85,7 @@ const PageLink = ([slug, page]: [string, Page]) => {
     title={page.title}
     onClick={() => page.onClick ? page.onClick() : push(Path.designer(slug))}>
     {page.fa_icon
-      ? <i className={`fa fa-${page.fa_icon}`} />
+      ? <i className={`fa ${page.fa_icon}`} />
       : <img width={25} height={25} src={iconSrc} />}
     {page.title}
   </a>;

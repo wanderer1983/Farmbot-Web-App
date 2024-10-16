@@ -5,16 +5,22 @@ import {
   ScopeDeclarationBodyItem,
 } from "farmbot";
 import { DropDownItem } from "../ui";
-import { findPointerByTypeAndId, findPointGroup, findUuid } from "./selectors";
-import { findSlotByToolId, findToolById } from "./selectors_by_id";
+import {
+  findPointerByTypeAndId, findPointGroup, findUuid,
+} from "./selectors";
+import {
+  findSlotByToolId, findToolById, maybeFindPeripheralById, maybeFindSensorById,
+  maybeFindSequenceById,
+} from "./selectors_by_id";
 import {
   formatPoint,
   NO_VALUE_SELECTED_DDI,
   formatTool,
   COORDINATE_DDI,
-} from "../sequences/locals_list/location_form_list";
+} from "../sequences/locals_list/variable_form_list";
 import { VariableNode } from "../sequences/locals_list/locals_list_support";
 import { t } from "../i18next_wrapper";
+import { get } from "lodash";
 
 export interface Vector3Plus extends Vector3 {
   gantry_mounted: boolean;
@@ -61,9 +67,9 @@ export const maybeFindVariable = (
 ): SequenceMeta | undefined =>
   uuid ? findVariableByName(resources, uuid, label) : undefined;
 
-/** Add "Location variable - " prefix to string. */
+/** Add "Location - " prefix to string. */
 export const withPrefix = (label: string, info: string) =>
-  `${label == "parent" ? t("Location variable") : label} - ${info}`;
+  `${label == "parent" ? t("Location") : label} - ${info}`;
 
 interface DetermineVarDDILabelProps {
   label: string;
@@ -73,8 +79,8 @@ interface DetermineVarDDILabelProps {
 }
 
 export const determineVarDDILabel =
-  ({ label, resources, uuid, forceExternal }: DetermineVarDDILabelProps):
-    string => {
+  (props: DetermineVarDDILabelProps): string => {
+    const { label, resources, uuid, forceExternal } = props;
     if (forceExternal) { return t("Externally defined"); }
     const variable = maybeFindVariable(label, resources, uuid);
     if (variable) {
@@ -92,6 +98,7 @@ export const determineVarDDILabel =
 /** Given a CeleryScript parameter application and a resource index
  * Returns a DropDownItem representation of said variable. */
 export const determineDropdown =
+  // eslint-disable-next-line complexity
   (node: VariableNode, resources: ResourceIndex, uuid?: UUID): DropDownItem => {
     if (node.kind === "parameter_declaration") {
       return {
@@ -104,10 +111,69 @@ export const determineDropdown =
     switch (data_value.kind) {
       case "coordinate":
         return COORDINATE_DDI(data_value.args);
+      case "location_placeholder":
+        return {
+          label: t("None"),
+          value: "",
+          headingId: "Location",
+        };
       case "identifier":
         const { label } = data_value.args;
         const varName = determineVarDDILabel({ label, resources, uuid });
         return { label: varName, value: "?" };
+      case "numeric":
+        return {
+          label: `${t("Number")}: ${data_value.args.number}`,
+          value: data_value.args.number,
+          headingId: "Numeric",
+        };
+      case "number_placeholder":
+        return {
+          label: t("None"),
+          value: 0,
+          headingId: "Numeric",
+        };
+      case "text":
+        return {
+          label: `${t("Text")}: ${data_value.args.string}`,
+          value: data_value.args.string,
+          headingId: "Text",
+        };
+      case "text_placeholder":
+        return {
+          label: t("None"),
+          value: "",
+          headingId: "Text",
+        };
+      case "resource":
+        const { resource_type, resource_id } = data_value.args;
+        const fetchResourceName = () => {
+          switch (resource_type) {
+            case "Sequence":
+              return maybeFindSequenceById(resources, resource_id)?.body.name;
+            case "Peripheral":
+              return maybeFindPeripheralById(resources, resource_id)?.body.label;
+            case "Sensor":
+              return maybeFindSensorById(resources, resource_id)?.body.label;
+          }
+        };
+        const resourceName = fetchResourceName();
+        return {
+          label: resourceName || t("Not found"),
+          value: resource_id,
+          headingId: "Resource",
+          warn: !resourceName,
+        };
+      case "resource_placeholder":
+        const resourceType = data_value.args.resource_type;
+        return {
+          label: get({
+            "SavedGarden": t("Garden"),
+            "PointGroup": t("Group"),
+          }, resourceType, resourceType) as string,
+          value: data_value.args.resource_type,
+          headingId: "Resource",
+        };
       case "point":
         const { pointer_id, pointer_type } = data_value.args;
         const pointer =
@@ -121,8 +187,9 @@ export const determineDropdown =
         const value = data_value.args.point_group_id;
         const uuid2 = findUuid(resources, "PointGroup", value);
         const group = findPointGroup(resources, uuid2);
+        const count = group.body.member_count || 0;
         return {
-          label: group.body.name,
+          label: `${group.body.name} (${count})`,
           value
         };
       case "nothing" as unknown:

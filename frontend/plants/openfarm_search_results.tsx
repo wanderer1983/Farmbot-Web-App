@@ -6,7 +6,7 @@ import {
 import { Actions, Content } from "../constants";
 import { t } from "../i18next_wrapper";
 import { ExternalUrl } from "../external_urls";
-import { Path } from "../internal_urls";
+import { FilePath, Path } from "../internal_urls";
 import { edit, save } from "../api/crud";
 import { TaggedPlantPointer } from "farmbot";
 import { setHoveredPlant } from "../farm_designer/map/actions";
@@ -18,8 +18,9 @@ interface Result {
     slug: string;
     name: string;
     svg_icon?: string | undefined;
+    main_image_path: string;
   };
-  image: string;
+  images: string[];
 }
 
 export interface SearchResultProps {
@@ -85,24 +86,29 @@ export class OpenFarmResults extends React.Component<SearchResultProps, {}> {
         : t("No search results")}
       textElement={cropSearchInProgress ? undefined : this.text}
       colorScheme={"plants"}>
-      {cropSearchResults.map(resp => {
-        const { crop, image } = resp;
-        return <Link
-          key={crop.slug}
-          draggable={false}
-          onClick={click(crop)}
-          to={to(crop.slug)}>
-          <div className={"plant-catalog-tile col-xs-6"}>
-            <label>
-              {crop.name}
-            </label>
-            <div
-              className={"plant-catalog-image"}
-              style={{ background: `url(${image}) top center no-repeat` }}
-              draggable={false} />
-          </div>
-        </Link>;
-      })}
+      <div className={"openfarm-search-results-wrapper"}>
+        {cropSearchResults.map(resp => {
+          const { crop } = resp;
+          const image = crop.main_image_path.startsWith("https")
+            ? crop.main_image_path
+            : FilePath.DEFAULT_ICON;
+          return <Link
+            key={crop.slug}
+            draggable={false}
+            onClick={click(crop)}
+            to={to(crop.slug)}>
+            <div className={"plant-catalog-tile"}>
+              <label>
+                {crop.name}
+              </label>
+              <div
+                className={"plant-catalog-image"}
+                style={{ background: `url(${image}) top center no-repeat` }}
+                draggable={false} />
+            </div>
+          </Link>;
+        })}
+      </div>
     </EmptyStateWrapper>;
   }
 }

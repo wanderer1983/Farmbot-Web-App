@@ -36,7 +36,7 @@ const resourceLink =
       onClick={resourceKind == "Regimen"
         ? setActiveRegimenByName
         : setActiveSequenceByName}>
-      <i className="fa fa-external-link" />
+      <i className="fa fa-external-link fb-icon-button" />
     </Link>;
   };
 
@@ -83,7 +83,7 @@ export class RawFarmEvents
           </div>
           <Link className={"edit-link"}
             to={Path.farmEvents(occur.id || "UNSAVED_EVENT")}>
-            <i className="fa fa-pencil-square-o edit-icon" />
+            <i className={"fa fa-pencil-square-o edit-icon fb-icon-button"} />
           </Link>
         </div>;
       });
@@ -132,7 +132,8 @@ export class RawFarmEvents
         panel={Panel.FarmEvents}
         linkTo={Path.farmEvents("add")}
         title={t("Add event")}>
-        <SearchField searchTerm={this.state.searchTerm}
+        <SearchField nameKey={"events"}
+          searchTerm={this.state.searchTerm}
           customLeftIcon={
             <i className="fa fa-calendar" onClick={this.resetCalendar} />}
           placeholder={t("Search your events...")}

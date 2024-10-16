@@ -22,7 +22,7 @@ describe Sequences::Publish do
       kind: "sequence",
       args: {
         version: 20180209,
-        loals: {
+        locals: {
           kind: "scope_declaration",
           args: {},
           body: [
@@ -51,9 +51,9 @@ describe Sequences::Publish do
   it "disallows denied nodes and args" do
     bad = FakeSequence.with_parameters(device: device, body: [
                                          {
-                                           kind: "lua",
+                                           kind: "factory_reset",
                                            args: {
-                                             lua: "os.cmd('cat /etc/password')",
+                                             package: "farmbot_os"
                                            },
                                          },
                                        ])
@@ -61,7 +61,7 @@ describe Sequences::Publish do
                                       device: device,
                                       copyright: "FarmBot, Inc. 2021")
     expected = "For security reasons, we can't publish sequences " \
-               "that contain the following content: lua"
+               "that contain the following content: factory_reset"
     actual = problems.errors["sequence"].message
     expect(actual).to eq(expected)
   end
@@ -138,7 +138,7 @@ describe Sequences::Publish do
 
   it "does not allow guests to publish" do
     run_jobs_now do
-      Users::CreateDemo.run!(secret: SecureRandom.hex)
+      Users::CreateDemo.run!(secret: SecureRandom.hex, product_line: "genesis_1.7")
     end
     guest = User.find_by!("email LIKE '%@farmbot.guest'")
     device = guest.device

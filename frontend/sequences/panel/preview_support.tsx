@@ -29,6 +29,7 @@ import moment from "moment";
 import { edit } from "../../api/crud";
 import { SequenceResource } from "farmbot/dist/resources/api_resources";
 import { Path } from "../../internal_urls";
+import { SequenceReducerState } from "../interfaces";
 
 interface LoadSequenceVersionProps {
   id: string;
@@ -36,7 +37,7 @@ interface LoadSequenceVersionProps {
   onError(): void;
 }
 
-export const loadSequenceVersion = (props: LoadSequenceVersionProps) =>
+export const loadSequenceVersion = (props: LoadSequenceVersionProps) => {
   axios.get<SequenceResource>(API.current.sequenceVersionsPath + props.id)
     .then(response => {
       const sequence: TaggedSequence = {
@@ -49,11 +50,13 @@ export const loadSequenceVersion = (props: LoadSequenceVersionProps) =>
       sequence.body.body?.map(step => maybeTagStep(step));
       props.onSuccess(sequence);
     }, props.onError);
+};
 
 export interface SequencePreviewProps {
   dispatch: Function;
   resources: ResourceIndex;
   getWebAppConfigValue: GetWebAppConfigValue;
+  sequencesState: SequenceReducerState;
 }
 
 export function mapStateToProps(props: Everything): SequencePreviewProps {
@@ -61,6 +64,7 @@ export function mapStateToProps(props: Everything): SequencePreviewProps {
     dispatch: props.dispatch,
     resources: props.resources.index,
     getWebAppConfigValue: getWebAppConfigValue(() => props),
+    sequencesState: props.resources.consumers.sequences,
   };
 }
 
@@ -87,6 +91,7 @@ interface SequencePreviewContentProps {
   licenseCollapsed: boolean;
   toggleSection(key: string): () => void;
   showToolbar?: boolean;
+  sequencesState: SequenceReducerState;
 }
 
 export const SequencePreviewContent = (props: SequencePreviewContentProps) => {
@@ -121,6 +126,7 @@ export const SequencePreviewContent = (props: SequencePreviewContentProps) => {
               sequence={sequence}
               resources={props.resources}
               dispatch={props.dispatch}
+              sequencesState={props.sequencesState}
               toggle={props.toggleSection("stepsCollapsed")} />}
           <License
             collapsed={props.licenseCollapsed}
@@ -140,6 +146,7 @@ interface ImportBannerProps {
 export const ImportBanner = (props: ImportBannerProps) => {
   const [importing, setImporting] = React.useState(false);
   const { sequence } = props;
+  const includesLua = sequence?.body.body?.map(x => x.kind).includes("lua");
   return <div className={"import-banner"}>
     <label>{t("viewing a publicly shared sequence")}</label>
     <Help text={Content.IMPORT_SEQUENCE} />
@@ -153,6 +160,7 @@ export const ImportBanner = (props: ImportBannerProps) => {
         {importing ? t("importing") : t("import")}
         {importing && <i className={"fa fa-spinner fa-pulse"} />}
       </button>}
+    {includesLua && <p>{t(Content.INCLUDES_LUA_WARNING)}</p>}
   </div>;
 };
 
@@ -167,9 +175,10 @@ const PreviewToolbar = (props: PreviewToolbarProps) =>
       <div className={"button-group"}
         style={{ marginBottom: "0", marginTop: "0" }}>
         <i
-          className={`fa fa-code ${props.viewSequenceCeleryScript
-            ? "enabled"
-            : ""} step-control`}
+          className={[
+            "fa fa-code fb-icon-button",
+            props.viewSequenceCeleryScript ? "" : "inactive",
+          ].join(" ")}
           title={t("toggle celery script view")}
           onClick={props.toggleViewCeleryScript} />
       </div>
@@ -222,6 +231,7 @@ const Variables = (props: VariablesProps) => {
 interface StepsProps extends SectionBaseProps {
   resources: ResourceIndex;
   dispatch: Function;
+  sequencesState: SequenceReducerState;
 }
 
 const Steps = (props: StepsProps) =>
@@ -239,6 +249,7 @@ const Steps = (props: StepsProps) =>
               onDrop={noop}
               dispatch={props.dispatch}
               readOnly={true}
+              sequencesState={props.sequencesState}
               resources={props.resources} />
           </ErrorBoundary>
         </div>

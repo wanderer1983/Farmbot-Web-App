@@ -7,6 +7,9 @@ import {
 } from "../../../../__test_support__/fake_state/resources";
 import { TaggedToolSlotPointer } from "farmbot";
 import { fakeMountedToolInfo } from "../../../../__test_support__/fake_tool_info";
+import {
+  fakeDesignerState,
+} from "../../../../__test_support__/fake_designer_state";
 
 describe("<ToolProfilePoint />", () => {
   const fakeProps = (): ProfilePointProps<TaggedToolSlotPointer> => ({
@@ -17,6 +20,7 @@ describe("<ToolProfilePoint />", () => {
     reversed: false,
     soilHeight: 0,
     getConfigValue: () => true,
+    designer: fakeDesignerState(),
   });
 
   it("renders tool profile", () => {
@@ -43,6 +47,7 @@ describe("<UTMProfile />", () => {
     position: { x: 0, y: 0 },
     botPosition: { x: 0, y: 0, z: 0 },
     mountedToolInfo: fakeMountedToolInfo(),
+    gantryHeight: 0,
   });
 
   it("renders front view", () => {

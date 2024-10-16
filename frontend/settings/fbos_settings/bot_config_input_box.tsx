@@ -6,6 +6,7 @@ import { updateConfig } from "../../devices/actions";
 import { parseIntInput } from "../../util";
 import { isNumber, isBoolean, isNaN } from "lodash";
 import { getModifiedClassName } from "./default_values";
+import { validFirmwareHardware } from "../firmware/firmware_hardware_support";
 
 export interface BotConfigInputBoxProps {
   setting: ConfigurationName;
@@ -36,10 +37,13 @@ export class BotConfigInputBox
     const boxValue = (isNumber(current) || isBoolean(current))
       ? current.toString()
       : "";
+    const firmwareHardware = validFirmwareHardware(
+      this.props.sourceFbosConfig("firmware_hardware").value);
     return <BlurableInput
       type="number"
       className={!this.config.consistent ? "dim" : ""}
-      wrapperClassName={getModifiedClassName(this.props.setting, current)}
+      wrapperClassName={getModifiedClassName(this.props.setting, current,
+        firmwareHardware)}
       onCommit={this.change(this.props.setting, this.props.dispatch)}
       value={boxValue}
       disabled={this.props.disabled} />;

@@ -6,10 +6,6 @@ import { DevSettings } from "../settings/dev/dev_support";
 import { getWebAppConfigValue } from "../config_storage/actions";
 import { store } from "../redux/store";
 import { BooleanSetting } from "../session_keys";
-import {
-  getFwHardwareValue, hasSensors,
-} from "../settings/firmware/firmware_hardware_support";
-import { getFbosConfig } from "../resources/getters";
 import { computeEditorUrlFromState } from "../nav/compute_editor_url_from_state";
 import { compact } from "lodash";
 import { selectAllFarmwareInstallations } from "../resources/selectors";
@@ -21,6 +17,7 @@ export enum Panel {
   Weeds = "Weeds",
   Points = "Points",
   Groups = "Groups",
+  Curves = "Curves",
   SavedGardens = "SavedGardens",
   Sequences = "Sequences",
   Regimens = "Regimens",
@@ -60,6 +57,7 @@ export const TAB_COLOR: Record<Panel, PanelColor> = {
   [Panel.Weeds]: PanelColor.red,
   [Panel.Points]: PanelColor.teal,
   [Panel.Groups]: PanelColor.blue,
+  [Panel.Curves]: PanelColor.gray,
   [Panel.Sequences]: PanelColor.gray,
   [Panel.Regimens]: PanelColor.gray,
   [Panel.SavedGardens]: PanelColor.navy,
@@ -83,6 +81,7 @@ export const TAB_ICON: Record<Panel, string> = {
   [Panel.Weeds]: FilePath.icon(Icon.weeds),
   [Panel.Points]: FilePath.icon(Icon.point),
   [Panel.Groups]: FilePath.icon(Icon.groups),
+  [Panel.Curves]: FilePath.icon(Icon.curves),
   [Panel.Sequences]: FilePath.icon(Icon.sequence),
   [Panel.Regimens]: FilePath.icon(Icon.regimens),
   [Panel.SavedGardens]: FilePath.icon(Icon.gardens),
@@ -106,6 +105,7 @@ export const PANEL_SLUG: Record<Panel, string> = {
   [Panel.Weeds]: "weeds",
   [Panel.Points]: "points",
   [Panel.Groups]: "groups",
+  [Panel.Curves]: "curves",
   [Panel.Sequences]: "sequences",
   [Panel.Regimens]: "regimens",
   [Panel.SavedGardens]: "gardens",
@@ -144,6 +144,7 @@ export const PANEL_TITLE = (): Record<Panel, string> => ({
   [Panel.Weeds]: t("Weeds"),
   [Panel.Points]: t("Points"),
   [Panel.Groups]: t("Groups"),
+  [Panel.Curves]: t("Curves"),
   [Panel.Sequences]: t("Sequences"),
   [Panel.Regimens]: t("Regimens"),
   [Panel.SavedGardens]: t("Gardens"),
@@ -165,7 +166,7 @@ export const getCurrentPanel = (): Tabs | undefined => {
   if (getPathArray().join("/") === Path.withApp(Path.designer())) {
     return Panel.Map;
   } else if (Path.getSlug(Path.app()) == "sequences") {
-    return undefined;
+    return Panel.Sequences;
   } else if (Path.getSlug(Path.app()) == "logs") {
     return undefined;
   } else if (Path.getSlug(Path.savedGardens()) == "templates") {
@@ -206,17 +207,14 @@ const NavTab = (props: NavTabProps) =>
 
 const displayScrollIndicator = () => {
   const element = document.getElementsByClassName("panel-tabs")[1];
-  const mobile = element?.clientWidth < 450;
+  const mobile = element?.clientWidth <= 500;
   const end = element?.scrollWidth - element?.scrollLeft == element?.clientWidth;
   return mobile && !end;
 };
 
 export const showSensors = () => {
   const getWebAppConfigVal = getWebAppConfigValue(store.getState);
-  const firmwareHardware = getFwHardwareValue(getFbosConfig(
-    store.getState().resources.index));
-  return !getWebAppConfigVal(BooleanSetting.hide_sensors)
-    && hasSensors(firmwareHardware);
+  return !getWebAppConfigVal(BooleanSetting.hide_sensors);
 };
 
 export const showFarmware = () => {
@@ -256,11 +254,11 @@ export class DesignerNavTabs
         <NavTab panel={Panel.Plants} />
         <NavTab panel={Panel.Weeds} />
         <NavTab panel={Panel.Points} />
+        <NavTab panel={Panel.Curves} />
         <NavTab panel={Panel.Sequences} />
         <NavTab panel={Panel.Regimens} />
         <NavTab panel={Panel.FarmEvents} />
         {DevSettings.futureFeaturesEnabled() && <NavTab panel={Panel.Zones} />}
-        <NavTab panel={Panel.Controls} />
         {showSensors() && <NavTab panel={Panel.Sensors} />}
         <NavTab panel={Panel.Photos} />
         {showFarmware() && <NavTab panel={Panel.Farmware} />}

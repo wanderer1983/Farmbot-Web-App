@@ -7,15 +7,14 @@ import { t } from "../i18next_wrapper";
 import { DesignerNavTabs, Panel } from "../farm_designer/panel_header";
 import { MCUFactoryReset } from "../devices/actions";
 import { FarmBotSettings } from "./fbos_settings/farmbot_os_settings";
-import { Firmware } from "./firmware/firmware";
 import { PowerAndReset } from "./fbos_settings/power_and_reset";
 import { PinBindings } from "./pin_bindings/pin_bindings";
 import { validFirmwareHardware } from "./firmware/firmware_hardware_support";
 import {
   AxisSettings, Motors, EncodersOrStallDetection, LimitSwitches,
-  ErrorHandling, PinGuard, ParameterManagement, PinReporting,
+  ErrorHandling, PinGuard, ParameterManagement, PinReporting, ShowAdvancedToggle,
 } from "./hardware_settings";
-import { maybeOpenPanel } from "./maybe_highlight";
+import { getHighlightName, maybeOpenPanel } from "./maybe_highlight";
 import { isBotOnlineFromState } from "../devices/must_be_online";
 import { DesignerSettingsProps } from "./interfaces";
 import { Designer } from "./farm_designer_settings";
@@ -24,10 +23,10 @@ import { mapStateToProps } from "./state_to_props";
 import { Actions } from "../constants";
 import { ExtraSettings } from "../farm_designer/map/easter_eggs/bugs";
 import { OtherSettings } from "./other_settings";
+import { CustomSettings } from "./custom_settings";
 import { AccountSettings } from "./account/account_settings";
 import { DevSettingsRows } from "./dev/dev_settings";
 import { bulkToggleControlPanel, ToggleSettingsOpen } from "./toggle_section";
-import { EnvEditor } from "../photos/data_management/env_editor";
 import { BooleanSetting } from "../session_keys";
 import { ChangeOwnershipForm } from "./transfer_ownership/change_ownership_form";
 import { SetupWizardSettings } from "../wizard/settings";
@@ -35,10 +34,10 @@ import { ReSeedAccount } from "../messages/cards";
 import {
   InterpolationSettings,
 } from "../farm_designer/map/layers/points/interpolation_map";
-import { getUrlQuery } from "../util";
+import { getUrlQuery, urlFriendly } from "../util";
 import { push } from "../history";
-import { shouldDisplayFeature } from "../devices/should_display";
-import { Feature } from "../devices/interfaces";
+import { Popover } from "../ui";
+import { Position } from "@blueprintjs/core";
 
 export class RawDesignerSettings
   extends React.Component<DesignerSettingsProps, {}> {
@@ -70,7 +69,7 @@ export class RawDesignerSettings
     return <DesignerPanel panelName={"settings"} panel={Panel.Settings}>
       <DesignerNavTabs />
       <DesignerPanelTop panel={Panel.Settings} withButton={true}>
-        <SearchField
+        <SearchField nameKey={"settings"}
           placeholder={t("Search settings...")}
           searchTerm={this.props.searchTerm}
           onChange={searchTerm => {
@@ -81,6 +80,13 @@ export class RawDesignerSettings
               payload: searchTerm,
             });
           }} />
+        <Popover
+          position={Position.BOTTOM}
+          popoverClassName={"settings-panel-settings-menu"}
+          target={<i className={"fa fa-gear fb-icon-button"} />}
+          content={<ShowAdvancedToggle
+            dispatch={dispatch}
+            getConfigValue={getConfigValue} />} />
         <ToggleSettingsOpen dispatch={dispatch} panels={settingsPanelState} />
       </DesignerPanelTop>
       <DesignerPanelContent panelName={"settings"}>
@@ -100,13 +106,8 @@ export class RawDesignerSettings
           sourceFbosConfig={sourceFbosConfig}
           botOnline={botOnline}
           timeSettings={this.props.timeSettings}
+          showAdvanced={showAdvanced}
           device={this.props.deviceAccount} />
-        <Firmware {...commonProps}
-          bot={this.props.bot}
-          alerts={this.props.alerts}
-          sourceFbosConfig={sourceFbosConfig}
-          botOnline={botOnline}
-          timeSettings={this.props.timeSettings} />
         <PowerAndReset {...commonProps}
           botOnline={botOnline} />
         {botOnline && showAdvanced && <ChangeOwnershipForm />}
@@ -141,7 +142,7 @@ export class RawDesignerSettings
           resources={resources}
           firmwareHardware={firmwareHardware}
           sourceFwConfig={sourceFwConfig} />
-        {shouldDisplayFeature(Feature.pin_reporting) &&
+        {showByEveryTerm("pin reporting", this.props.searchTerm) &&
           <PinReporting {...commonProps}
             arduinoBusy={busy}
             resources={resources}
@@ -155,6 +156,9 @@ export class RawDesignerSettings
           getConfigValue={getConfigValue}
           onReset={MCUFactoryReset}
           botOnline={botOnline} />
+        <CustomSettings {...commonProps}
+          dispatch={this.props.dispatch}
+          farmwareEnvs={this.props.farmwareEnvs} />
         <Designer {...commonProps}
           getConfigValue={getConfigValue} />
         <AccountSettings {...commonProps}
@@ -164,10 +168,6 @@ export class RawDesignerSettings
           searchTerm={this.props.searchTerm}
           getConfigValue={getConfigValue}
           sourceFbosConfig={sourceFbosConfig} />
-        {showByTerm("env", this.props.searchTerm) &&
-          <EnvEditor
-            dispatch={this.props.dispatch}
-            farmwareEnvs={this.props.farmwareEnvs} />}
         {showByTerm("setup", this.props.searchTerm) &&
           <SetupWizardSettings
             dispatch={this.props.dispatch}
@@ -190,5 +190,8 @@ export class RawDesignerSettings
 
 const showByTerm = (term: string, searchTerm: string) =>
   getUrlQuery("only") == term || searchTerm.toLowerCase() == term.toLowerCase();
+
+export const showByEveryTerm = (term: string, searchTerm: string) =>
+  searchTerm == term && getHighlightName() == urlFriendly(term).toLowerCase();
 
 export const DesignerSettings = connect(mapStateToProps)(RawDesignerSettings);

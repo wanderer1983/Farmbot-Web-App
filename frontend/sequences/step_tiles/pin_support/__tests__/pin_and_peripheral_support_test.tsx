@@ -8,6 +8,7 @@ import {
 } from "../../../../__test_support__/resource_index_builder";
 import * as PinSupport from "../index";
 import {
+  fakeFbosConfig,
   fakePeripheral, fakeSensor,
 } from "../../../../__test_support__/fake_state/resources";
 import { DropDownItem } from "../../../../ui";
@@ -101,6 +102,20 @@ describe("pinsAsDropdowns()", () => {
     expect(JSON.stringify(result)).toContain("Pin 13");
   });
 
+  it("write_pin: displays box LEDs", () => {
+    const ri = buildResourceIndex([]);
+    const result = PinSupport.pinsAsDropdowns("write_pin")(ri.index, true);
+    expect(JSON.stringify(result)).toContain("Box LED");
+  });
+
+  it("write_pin: doesn't display box LEDs", () => {
+    const config = fakeFbosConfig();
+    config.body.firmware_hardware = "express_k10";
+    const ri = buildResourceIndex([config]);
+    const result = PinSupport.pinsAsDropdowns("write_pin")(ri.index, true);
+    expect(JSON.stringify(result)).not.toContain("Box LED");
+  });
+
   it("read_pin: displays peripherals and sensors", () => {
     const s = fakeSensor();
     const p = fakePeripheral();
@@ -117,6 +132,20 @@ describe("pinsAsDropdowns()", () => {
     const result = PinSupport.pinsAsDropdowns("read_pin")(ri.index, true);
     expect(JSON.stringify(result)).toContain("Pin 13");
   });
+
+  it("toggle_pin: displays peripherals and sensors", () => {
+    const p = fakePeripheral();
+    p.body.label = "displayed peripheral";
+    const ri = buildResourceIndex([p]);
+    const result = PinSupport.pinsAsDropdowns("toggle_pin")(ri.index, true);
+    expect(JSON.stringify(result)).toContain("displayed peripheral");
+  });
+
+  it("toggle_pin: displays pins", () => {
+    const ri = buildResourceIndex([]);
+    const result = PinSupport.pinsAsDropdowns("toggle_pin")(ri.index, true);
+    expect(JSON.stringify(result)).toContain("Pin 13");
+  });
 });
 
 describe("findByPinNumber()", () => {
@@ -129,7 +158,7 @@ describe("findByPinNumber()", () => {
       args: { pin_id, pin_type }
     };
     const boom = () => PinSupport.findByPinNumber(ri, namedPin);
-    expect(boom).toThrowError("UUID or ID not found");
+    expect(boom).toThrow("UUID or ID not found");
   });
 
   it("bails when it is not a `Peripheral` or `Sensor`", () => {
@@ -145,7 +174,7 @@ describe("findByPinNumber()", () => {
         ri.references[key] = { kind: "Intentionally wrong" } as any;
       });
     const boom = () => PinSupport.findByPinNumber(ri, np);
-    expect(boom).toThrowError("Not a Peripheral or Sensor");
+    expect(boom).toThrow("Not a Peripheral or Sensor");
   });
 
   it("finds peripherals kind and ID", () => {
@@ -205,7 +234,7 @@ describe("namedPin2DropDown()", () => {
     const pin_id = 0;
     const np: NamedPin = { kind: "named_pin", args: { pin_id, pin_type } };
     const boom = () => PinSupport.namedPin2DropDown(ri, np);
-    expect(boom).toThrowError("Bad pin_type: \"no\"");
+    expect(boom).toThrow("Bad pin_type: \"no\"");
   });
 });
 
@@ -231,7 +260,7 @@ describe("dropDown2CeleryArg()", () => {
     const ri = buildResourceIndex([]).index;
     const ddi = { label: "sensor", value: "x.y.z" };
     const boom = () => PinSupport.dropDown2CeleryArg(ri, ddi);
-    expect(boom).toThrowError("Bad uuid in celery arg: x.y.z");
+    expect(boom).toThrow("Bad uuid in celery arg: x.y.z");
   });
 
   it("converts box LED selection to named pin", () => {

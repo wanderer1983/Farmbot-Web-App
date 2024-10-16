@@ -1,5 +1,14 @@
 import {
-  SettingsPanelState, PlantsPanelState, WeedsPanelState, PointsPanelState,
+  SettingsPanelState,
+  PlantsPanelState,
+  WeedsPanelState,
+  PointsPanelState,
+  SequencesPanelState,
+  MetricPanelState,
+  CurvesPanelState,
+  JobsAndLogsState,
+  ControlsState,
+  PopupsState,
 } from "../interfaces";
 
 export const settingsPanelState = (): SettingsPanelState => {
@@ -16,6 +25,7 @@ export const settingsPanelState = (): SettingsPanelState => {
     pin_guard: false,
     pin_reporting: false,
     parameter_management: false,
+    custom_settings: false,
     farm_designer: false,
     account: false,
     other_settings: false,
@@ -30,7 +40,6 @@ export const plantsPanelState = (): PlantsPanelState => ({
 
 export const weedsPanelState = (): WeedsPanelState => ({
   groups: false,
-  weeds: true,
   pending: true,
   active: true,
   removed: true,
@@ -40,4 +49,38 @@ export const pointsPanelState = (): PointsPanelState => ({
   groups: false,
   points: true,
   soilHeight: false,
+});
+
+export const curvesPanelState = (): CurvesPanelState => ({
+  water: false,
+  spread: false,
+  height: false,
+});
+
+export const sequencesPanelState = (): SequencesPanelState => ({
+  sequences: true,
+  featured: false,
+});
+
+export const metricPanelState = (): MetricPanelState => ({
+  realtime: true,
+  network: false,
+  history: false,
+});
+
+export const controlsState = (): ControlsState => ({
+  move: true,
+  peripherals: false,
+  webcams: false,
+});
+
+export const jobsState = (): JobsAndLogsState => ({
+  jobs: true,
+  logs: false,
+});
+
+export const popUpsState = (): PopupsState => ({
+  controls: false,
+  jobs: false,
+  connectivity: false,
 });

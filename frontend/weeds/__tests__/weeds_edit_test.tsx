@@ -7,6 +7,13 @@ jest.mock("../../history", () => ({
 
 jest.mock("../../api/crud", () => ({
   save: jest.fn(),
+  edit: jest.fn(),
+  destroy: jest.fn(),
+}));
+
+import { PopoverProps } from "../../ui/popover";
+jest.mock("../../ui/popover", () => ({
+  Popover: ({ target, content }: PopoverProps) => <div>{target}{content}</div>,
 }));
 
 import React from "react";
@@ -14,7 +21,9 @@ import { mount, shallow } from "enzyme";
 import {
   RawEditWeed as EditWeed, EditWeedProps, mapStateToProps,
 } from "../weeds_edit";
-import { fakeWeed } from "../../__test_support__/fake_state/resources";
+import {
+  fakeWebAppConfig, fakeWeed,
+} from "../../__test_support__/fake_state/resources";
 import { fakeState } from "../../__test_support__/fake_state";
 import {
   buildResourceIndex,
@@ -22,13 +31,18 @@ import {
 import { Actions } from "../../constants";
 import { DesignerPanelHeader } from "../../farm_designer/designer_panel";
 import { push } from "../../history";
-import { save } from "../../api/crud";
+import { destroy, edit, save } from "../../api/crud";
+import { fakeMovementState } from "../../__test_support__/fake_bot_data";
 
 describe("<EditWeed />", () => {
   const fakeProps = (): EditWeedProps => ({
     dispatch: jest.fn(),
     findPoint: () => undefined,
     botOnline: true,
+    defaultAxes: "XY",
+    arduinoBusy: false,
+    currentBotLocation: { x: 10, y: 20, z: 30 },
+    movementState: fakeMovementState(),
   });
 
   it("redirects", () => {
@@ -49,10 +63,11 @@ describe("<EditWeed />", () => {
     mockPath = Path.mock(Path.weeds(1));
     const p = fakeProps();
     const weed = fakeWeed();
+    weed.body.name = "weed 1";
     weed.body.id = 1;
     p.findPoint = () => weed;
     const wrapper = mount(<EditWeed {...p} />);
-    expect(wrapper.text().toLowerCase()).toContain("edit");
+    expect(wrapper.text().toLowerCase()).toContain("weed 1");
   });
 
   it("goes back", () => {
@@ -66,6 +81,26 @@ describe("<EditWeed />", () => {
     expect(p.dispatch).toHaveBeenCalledWith({
       type: Actions.TOGGLE_HOVERED_POINT, payload: undefined
     });
+  });
+
+  it("changes color", () => {
+    mockPath = Path.mock(Path.weeds(1));
+    const p = fakeProps();
+    p.findPoint = fakeWeed;
+    const wrapper = mount(<EditWeed {...p} />);
+    wrapper.find(".color-picker-item-wrapper").first().simulate("click");
+    expect(edit).toHaveBeenCalledWith(expect.any(Object),
+      { meta: { color: "blue" } });
+  });
+
+  it("deletes weed", () => {
+    mockPath = Path.mock(Path.weeds(1));
+    const p = fakeProps();
+    const weed = fakeWeed();
+    p.findPoint = () => weed;
+    const wrapper = mount(<EditWeed {...p} />);
+    wrapper.find(".fa-trash").first().simulate("click");
+    expect(destroy).toHaveBeenCalledWith(weed.uuid);
   });
 
   it("saves", () => {
@@ -95,9 +130,12 @@ describe("mapStateToProps()", () => {
   it("returns props", () => {
     const state = fakeState();
     const weed = fakeWeed();
+    const config = fakeWebAppConfig();
+    config.body.go_button_axes = "X";
     weed.body.id = 1;
-    state.resources = buildResourceIndex([weed]);
+    state.resources = buildResourceIndex([weed, config]);
     const props = mapStateToProps(state);
     expect(props.findPoint(1)).toEqual(weed);
+    expect(props.defaultAxes).toEqual("X");
   });
 });

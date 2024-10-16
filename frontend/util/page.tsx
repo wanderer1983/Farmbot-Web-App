@@ -3,12 +3,12 @@ import {
   ComponentClass,
   Attributes,
 } from "react";
-import { render } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { capitalize } from "lodash";
 import { t } from "../i18next_wrapper";
 import { stopIE } from "./stop_ie";
 import { detectLanguage } from "../i18n";
-import I from "i18next";
+import { init } from "i18next";
 
 /** Dynamically change the meta title of the page. */
 export function updatePageInfo(pageName: string, panel?: string | undefined) {
@@ -24,7 +24,7 @@ export function updatePageInfo(pageName: string, panel?: string | undefined) {
   // Possibly add meta "content" here dynamically as well
 }
 
-export function attachToRoot<P>(
+export function attachToRoot<P extends {}>(
   type: ComponentClass<P> | React.FunctionComponent<P>,
   props?: Attributes & P,
 ) {
@@ -32,13 +32,13 @@ export function attachToRoot<P>(
   node.id = "root";
   document.body.appendChild(node);
 
-  const reactElem = createElement(type, props);
+  const reactElem = createElement<P>(type, props);
   const domElem = document.getElementById("root");
 
-  domElem && render(reactElem, domElem);
+  domElem && createRoot(domElem).render(reactElem);
 }
 
 export function entryPoint(page: ComponentClass | React.FunctionComponent) {
   stopIE();
-  detectLanguage().then(conf => I.init(conf, () => attachToRoot(page)));
+  detectLanguage().then(conf => init(conf, () => attachToRoot(page)));
 }

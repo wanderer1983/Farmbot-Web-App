@@ -5,6 +5,9 @@ import {
   FbosDetails, colorFromTemp, colorFromThrottle, ThrottleType,
   OSReleaseChannelSelectionProps, OSReleaseChannelSelection, reformatFwVersion,
   reformatFbosVersion, MacAddress, MacAddressProps, colorFromMemoryUsage,
+  convertUptime,
+  PiDisplay,
+  PiDisplayProps,
 } from "../fbos_details";
 import { shallow, mount } from "enzyme";
 import { bot } from "../../../__test_support__/fake_state/bot";
@@ -16,6 +19,7 @@ import {
 } from "../../../__test_support__/resource_index_builder";
 import { fakeTimeSettings } from "../../../__test_support__/fake_time_settings";
 import { updateConfig } from "../../../devices/actions";
+import { FirmwareHardware } from "farmbot";
 
 describe("<FbosDetails />", () => {
   const fakeConfig = fakeFbosConfig();
@@ -156,7 +160,7 @@ describe("<FbosDetails />", () => {
     const p = fakeProps();
     p.bot.hardware.informational_settings.soc_temp = undefined;
     const wrapper = mount(<FbosDetails {...p} />);
-    expect(wrapper.text()).toContain("CPU temperature: unknown");
+    expect(wrapper.text()).toContain("CPU temperature: Unknown");
     expect(wrapper.text()).not.toContain("&deg;C");
   });
 
@@ -191,18 +195,11 @@ describe("<FbosDetails />", () => {
     expect(wrapper.text()).toContain("2 days");
   });
 
-  it("doesn't display when throttled value is undefined", () => {
-    const p = fakeProps();
-    p.bot.hardware.informational_settings.throttled = undefined;
-    const wrapper = mount(<FbosDetails {...p} />);
-    expect(wrapper.text().toLowerCase()).not.toContain("voltage");
-  });
-
   it("displays voltage indicator", () => {
     const p = fakeProps();
     p.bot.hardware.informational_settings.throttled = "0x0";
     const wrapper = mount(<FbosDetails {...p} />);
-    expect(wrapper.text().toLowerCase()).toContain("voltage");
+    expect(wrapper.html()).toContain("voltage-saucer");
   });
 
   it("displays cpu usage", () => {
@@ -225,6 +222,13 @@ describe("<FbosDetails />", () => {
     (p.deviceAccount.body as any).last_ota = "2018-02-11T20:20:38.362Z";
     const wrapper = mount(<FbosDetails {...p} />);
     expect(wrapper.text().toLowerCase()).toContain("last updated: february");
+  });
+
+  it("displays video devices", () => {
+    const p = fakeProps();
+    p.bot.hardware.informational_settings.video_devices = "1,0";
+    const wrapper = mount(<FbosDetails {...p} />);
+    expect(wrapper.text().toLowerCase()).toContain("1,0");
   });
 });
 
@@ -282,6 +286,28 @@ describe("colorFromTemp()", () => {
   });
 });
 
+describe("<PiDisplay />", () => {
+  const fakeProps = (): PiDisplayProps => ({
+    chip: "rpi",
+    firmware: "arduino",
+  });
+
+  it.each<[string, string, FirmwareHardware | undefined]>([
+    ["Zero W", "rpi", "arduino"],
+    ["3", "rpi3", "arduino"],
+    ["Zero 2 W", "rpi3", "express_k11"],
+    ["Zero 2 W", "rpi3", "express_k12"],
+    ["4", "rpi4", "arduino"],
+    ["Unknown", "", undefined],
+  ])("returns correct pi model: %s", (expected, chip, firmware) => {
+    const p = fakeProps();
+    p.chip = chip;
+    p.firmware = firmware;
+    const wrapper = mount(<PiDisplay {...p} />);
+    expect(wrapper.text()).toContain(expected);
+  });
+});
+
 describe("colorFromMemoryUsage()", () => {
   it("memory usage is missing", () => {
     expect(colorFromMemoryUsage(undefined)).toEqual("gray");
@@ -308,8 +334,8 @@ describe("<MacAddress />", () => {
   });
 
   it.each<[string, string | undefined, string | undefined, boolean]>([
-    ["", undefined, undefined, false],
-    ["", "---", "rpi", false],
+    ["MAC address: ---", undefined, undefined, false],
+    ["MAC address: ---", "---", "rpi", false],
     ["MAC address: b8:27:eb:34:56:78", "farmbot-12345678.local", undefined, false],
     ["MAC address: dc:a6:32:cd:ef:gh", "farmbot-00000000abcdefgh", "rpi4", false],
     ["MAC address: dc:a6:32:55:98:ba", "farmbot-00000000abcdefgh", "rpi4", true],
@@ -335,6 +361,14 @@ describe("colorFromThrottle()", () => {
   });
 });
 
+describe("convertUptime()", () => {
+  it("returns abbreviated time units", () => {
+    expect(convertUptime(12, true)).toEqual("12 sec");
+    expect(convertUptime(120, true)).toEqual("2 min");
+    expect(convertUptime(7200, true)).toEqual("2 hours");
+  });
+});
+
 describe("reformatFwVersion()", () => {
   it("returns version string", () => {
     expect(reformatFwVersion("1.0.0.R"))
@@ -355,6 +389,6 @@ describe("reformatFbosVersion()", () => {
   });
 
   it("returns null version string", () => {
-    expect(reformatFbosVersion(undefined)).toEqual("unknown");
+    expect(reformatFbosVersion(undefined)).toEqual("Unknown");
   });
 });

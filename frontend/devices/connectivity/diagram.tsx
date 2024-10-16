@@ -1,8 +1,8 @@
 import React from "react";
 import { StatusRowProps } from "./connectivity_row";
-import { CowardlyDictionary } from "../../util";
 import { Color } from "../../ui";
 import { t } from "../../i18next_wrapper";
+import { isMobile } from "../../screen_size";
 
 export interface ConnectivityDiagramProps {
   rowData: StatusRowProps[];
@@ -40,7 +40,7 @@ export enum DiagramNodes {
   arduino = "subRight"
 }
 
-const diagramPositions: CowardlyDictionary<Record<"x" | "y", number>> = {
+const diagramPositions: Record<string, Record<"x" | "y", number>> = {
   top: { x: 0, y: -75 },
   left: { x: -50, y: 0 },
   right: { x: 50, y: 0 },
@@ -138,7 +138,7 @@ export function ConnectivityDiagram(props: ConnectivityDiagramProps) {
   const botAPI = rowData[3];
   const botFirmware = rowData[4];
   const board = botFirmware.to;
-  const browser = window.innerWidth <= 450 ? t("This phone") : t("This computer");
+  const browser = isMobile() ? t("This phone") : t("This computer");
   return <div className="connectivity-diagram">
     <svg
       id="connectivity-diagram"

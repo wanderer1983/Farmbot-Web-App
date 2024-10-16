@@ -57,15 +57,15 @@ export function mapStateToProps(props: Everything): SequencesProps {
     hardwareFlags: hardwareFlags(),
     farmwareData: getFarmwareData(props),
     getWebAppConfigValue: getConfig,
-    menuOpen: props.resources.consumers.sequences.menuOpen,
-    stepIndex: props.resources.consumers.sequences.stepIndex,
+    sequencesState: props.resources.consumers.sequences,
     folderData: mapStateToFolderProps(props),
     visualized: !!props.resources.consumers.farm_designer.visualizedSequence,
     hoveredStep: props.resources.consumers.farm_designer.hoveredSequenceStep,
+    sequencesPanelState: props.app.sequencesPanelState,
   };
 }
 
-export const getFarmwareData = (props: Everything) => {
+const getFarmwareData = (props: Everything) => {
   const getConfig = getWebAppConfigValue(() => props);
   const farmwares =
     generateFarmwareDictionary(props.bot, props.resources.index, true);

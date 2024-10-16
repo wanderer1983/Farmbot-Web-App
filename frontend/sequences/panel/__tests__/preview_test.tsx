@@ -24,6 +24,8 @@ import { API } from "../../../api";
 import { push } from "../../../history";
 import { installSequence } from "../../actions";
 import { Path } from "../../../internal_urls";
+import { emptyState } from "../../../resources/reducer";
+import { Content } from "../../../constants";
 
 describe("<DesignerSequencePreview />", () => {
   API.setBaseUrl("");
@@ -32,6 +34,7 @@ describe("<DesignerSequencePreview />", () => {
     dispatch: jest.fn(),
     resources: buildResourceIndex().index,
     getWebAppConfigValue: jest.fn(),
+    sequencesState: emptyState().consumers.sequences,
   });
 
   it("renders", () => {
@@ -74,6 +77,22 @@ describe("<DesignerSequencePreview />", () => {
     expect(wrapper.text().toLowerCase()).toContain("import");
     expect(wrapper.text().toLowerCase()).not.toContain("loading");
     expect(wrapper.text().toLowerCase()).not.toContain("error");
+  });
+
+  it("shows warning", async () => {
+    const sequence = fakeSequence();
+    sequence.body.body = [{ kind: "lua", args: { lua: "" } }];
+    mockGet = Promise.resolve({ data: sequence.body });
+    const wrapper = await mount(<DesignerSequencePreview {...fakeProps()} />);
+    expect(wrapper.text()).toContain(Content.INCLUDES_LUA_WARNING);
+  });
+
+  it("doesn't show warning", async () => {
+    const sequence = fakeSequence();
+    sequence.body.body = [{ kind: "sync", args: {} }];
+    mockGet = Promise.resolve({ data: sequence.body });
+    const wrapper = await mount(<DesignerSequencePreview {...fakeProps()} />);
+    expect(wrapper.text()).not.toContain(Content.INCLUDES_LUA_WARNING);
   });
 
   it("errors while loading sequence", async () => {

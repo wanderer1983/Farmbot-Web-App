@@ -125,6 +125,17 @@ describe("botReducer", () => {
       .toEqual("synced");
   });
 
+  it("clears pings", () => {
+    const state = initialState();
+    state.connectivity.pings = {
+      "a": { kind: "pending", start: 50 },
+      "b": { kind: "complete", start: 100, end: 200 },
+    };
+    const action = { type: Actions.CLEAR_PINGS, payload: undefined };
+    const nextState = botReducer(state, action);
+    expect(nextState.connectivity.pings).toEqual({});
+  });
+
   it("handles STASH_STATUS / _RESOURCE_NO", () => {
     const step1 = initialState();
     step1.statusStash = "booting";
@@ -134,5 +145,23 @@ describe("botReducer", () => {
     const no = { type: Actions._RESOURCE_NO, payload: undefined };
     const step3 = botReducer(step2, no);
     expect(statusOf(step3)).toBe(step3.statusStash);
+  });
+
+  it("sets needs version check flag", () => {
+    const state = initialState();
+    state.needVersionCheck = true;
+    const action = { type: Actions.SET_NEEDS_VERSION_CHECK, payload: false };
+    const r = botReducer(state, action);
+    expect(r.needVersionCheck).toEqual(false);
+  });
+
+  it("sets sent malformed message notification flag", () => {
+    const state = initialState();
+    state.alreadyToldUserAboutMalformedMsg = true;
+    const action = {
+      type: Actions.SET_MALFORMED_NOTIFICATION_SENT, payload: false,
+    };
+    const r = botReducer(state, action);
+    expect(r.alreadyToldUserAboutMalformedMsg).toEqual(false);
   });
 });

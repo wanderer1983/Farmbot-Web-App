@@ -1,4 +1,4 @@
-import { DeepPartial } from "redux";
+import { DeepPartial } from "../redux/interfaces";
 
 type DomEvent = React.SyntheticEvent<HTMLInputElement>;
 export const inputEvent = (value: string, name?: string): DomEvent => {
@@ -45,6 +45,10 @@ export const focusEvent = (value: string): FocusEvent => {
 
 type KeyboardEvent = React.KeyboardEvent<HTMLInputElement>;
 export const keyboardEvent = (key: string): KeyboardEvent => {
-  const event: DeepPartial<KeyboardEvent> = { key, preventDefault: jest.fn() };
+  const event: DeepPartial<KeyboardEvent> = {
+    key,
+    currentTarget: { value: "" },
+    preventDefault: jest.fn(),
+  };
   return event as KeyboardEvent;
 };

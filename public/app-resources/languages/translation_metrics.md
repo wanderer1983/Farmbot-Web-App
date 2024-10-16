@@ -16,25 +16,26 @@ Translation file format can be checked using:
 npm run translation-check
 ```
 
-_Note: If using Docker, add `sudo docker-compose run web` before the commands.
-For example, `sudo docker-compose run web npm run translation-check`._
+_Note: If using Docker, add `sudo docker compose run web` before the commands.
+For example, `sudo docker compose run web npm run translation-check`._
 
-See the [README](https://github.com/FarmBot/Farmbot-Web-App#translating-the-web-app-into-your-language) for contribution instructions.
+See the [README](https://github.com/FarmBot/Farmbot-Web-App#translating-the-web-app) for contribution instructions.
 
-Total number of phrases identified by the language helper for translation: __1605__
+Total number of phrases identified by the language helper for translation: __2373__
 
 |Language|Percent translated|Translated|Untranslated|Other Translations|
 |:---:|---:|---:|---:|---:|
-|da|6%|92|1513|230|
-|de|21%|335|1270|396|
-|es|96%|1539|66|380|
-|fr|52%|839|766|421|
-|it|11%|178|1427|330|
-|nl|4%|72|1533|302|
-|pt|4%|62|1543|322|
-|ru|30%|484|1121|360|
-|th|0%|0|1605|0|
-|zh|5%|79|1526|302|
+|da|3%|83|2290|29|
+|de|77%|1833|540|614|
+|es|57%|1353|1020|556|
+|fr|39%|919|1454|464|
+|it|96%|2283|90|176|
+|ko|96%|2286|87|64|
+|nl|3%|61|2312|77|
+|pt|2%|55|2318|98|
+|ru|18%|436|1937|361|
+|th|0%|0|2373|0|
+|zh|91%|2159|214|156|
 
 **Percent translated** refers to the percent of phrases identified by the
 language helper that have been translated. Additional phrases not identified

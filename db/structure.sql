@@ -10,6 +10,13 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+--
 -- Name: hstore; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -143,6 +150,39 @@ ALTER SEQUENCE public.active_storage_variant_records_id_seq OWNED BY public.acti
 
 
 --
+-- Name: ai_feedbacks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_feedbacks (
+    id bigint NOT NULL,
+    device_id bigint,
+    prompt character varying(500),
+    reaction character varying(25),
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: ai_feedbacks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.ai_feedbacks_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: ai_feedbacks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.ai_feedbacks_id_seq OWNED BY public.ai_feedbacks.id;
+
+
+--
 -- Name: alerts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -248,6 +288,40 @@ ALTER SEQUENCE public.arg_sets_id_seq OWNED BY public.arg_sets.id;
 
 
 --
+-- Name: curves; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.curves (
+    id bigint NOT NULL,
+    device_id bigint NOT NULL,
+    name character varying(80) NOT NULL,
+    type character varying(10) NOT NULL,
+    data character varying(500) NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: curves_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.curves_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: curves_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.curves_id_seq OWNED BY public.curves.id;
+
+
+--
 -- Name: delayed_jobs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -315,7 +389,11 @@ CREATE TABLE public.devices (
     setup_completed_at timestamp without time zone,
     lat numeric,
     lng numeric,
-    indoor boolean DEFAULT false
+    indoor boolean DEFAULT false,
+    rpi character varying(3),
+    max_log_age_in_days integer DEFAULT 0,
+    max_sequence_count integer DEFAULT 0,
+    max_sequence_length integer DEFAULT 0
 );
 
 
@@ -502,7 +580,8 @@ CREATE TABLE public.fbos_configs (
     update_channel character varying(7) DEFAULT 'stable'::character varying,
     boot_sequence_id integer,
     safe_height integer DEFAULT 0,
-    soil_height integer DEFAULT 0
+    soil_height integer DEFAULT 0,
+    gantry_height integer DEFAULT 0
 );
 
 
@@ -534,9 +613,9 @@ CREATE TABLE public.firmware_configs (
     device_id bigint,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    encoder_enabled_x integer DEFAULT 0,
-    encoder_enabled_y integer DEFAULT 0,
-    encoder_enabled_z integer DEFAULT 0,
+    encoder_enabled_x integer DEFAULT 1,
+    encoder_enabled_y integer DEFAULT 1,
+    encoder_enabled_z integer DEFAULT 1,
     encoder_invert_x integer DEFAULT 0,
     encoder_invert_y integer DEFAULT 0,
     encoder_invert_z integer DEFAULT 0,
@@ -576,8 +655,8 @@ CREATE TABLE public.firmware_configs (
     movement_invert_motor_x integer DEFAULT 0,
     movement_invert_motor_y integer DEFAULT 0,
     movement_invert_motor_z integer DEFAULT 0,
-    movement_keep_active_x integer DEFAULT 1,
-    movement_keep_active_y integer DEFAULT 1,
+    movement_keep_active_x integer DEFAULT 0,
+    movement_keep_active_y integer DEFAULT 0,
     movement_keep_active_z integer DEFAULT 1,
     movement_max_spd_x integer DEFAULT 400,
     movement_max_spd_y integer DEFAULT 400,
@@ -599,9 +678,9 @@ CREATE TABLE public.firmware_configs (
     movement_stop_at_max_x integer DEFAULT 1,
     movement_stop_at_max_y integer DEFAULT 1,
     movement_stop_at_max_z integer DEFAULT 1,
-    movement_timeout_x integer DEFAULT 120,
-    movement_timeout_y integer DEFAULT 120,
-    movement_timeout_z integer DEFAULT 120,
+    movement_timeout_x integer DEFAULT 180,
+    movement_timeout_y integer DEFAULT 180,
+    movement_timeout_z integer DEFAULT 180,
     param_config_ok integer DEFAULT 0,
     param_e_stop_on_mov_err integer DEFAULT 0,
     param_mov_nr_retry integer DEFAULT 3,
@@ -629,9 +708,9 @@ CREATE TABLE public.firmware_configs (
     movement_microsteps_x integer DEFAULT 1,
     movement_microsteps_y integer DEFAULT 1,
     movement_microsteps_z integer DEFAULT 1,
-    movement_motor_current_x integer DEFAULT 1000,
-    movement_motor_current_y integer DEFAULT 1000,
-    movement_motor_current_z integer DEFAULT 1000,
+    movement_motor_current_x integer DEFAULT 1823,
+    movement_motor_current_y integer DEFAULT 1823,
+    movement_motor_current_z integer DEFAULT 1823,
     movement_stall_sensitivity_x integer DEFAULT 63,
     movement_stall_sensitivity_y integer DEFAULT 63,
     movement_stall_sensitivity_z integer DEFAULT 63,
@@ -869,7 +948,11 @@ CREATE TABLE public.points (
     tool_id integer,
     pullout_direction integer DEFAULT 0,
     discarded_at timestamp without time zone,
-    gantry_mounted boolean DEFAULT false
+    gantry_mounted boolean DEFAULT false,
+    depth integer DEFAULT 0,
+    water_curve_id integer,
+    spread_curve_id integer,
+    height_curve_id integer
 );
 
 
@@ -923,7 +1006,8 @@ CREATE TABLE public.tools (
     name character varying(280),
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    device_id integer
+    device_id integer,
+    flow_rate_ml_per_s integer DEFAULT 0
 );
 
 
@@ -1487,7 +1571,8 @@ CREATE TABLE public.saved_gardens (
     name character varying NOT NULL,
     device_id bigint NOT NULL,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    notes character varying(1500)
 );
 
 
@@ -1731,6 +1816,47 @@ ALTER SEQUENCE public.standard_pairs_id_seq OWNED BY public.standard_pairs.id;
 
 
 --
+-- Name: telemetries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.telemetries (
+    id bigint NOT NULL,
+    device_id bigint,
+    soc_temp integer,
+    wifi_level_percent integer,
+    uptime integer,
+    memory_usage integer,
+    disk_usage integer,
+    cpu_usage integer,
+    throttled character varying(10),
+    target character varying(10),
+    fbos_version character varying(20),
+    firmware_hardware character varying(20),
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: telemetries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.telemetries_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: telemetries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.telemetries_id_seq OWNED BY public.telemetries.id;
+
+
+--
 -- Name: token_issuances; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1806,7 +1932,8 @@ CREATE TABLE public.users (
     agreed_to_terms_at timestamp without time zone,
     confirmation_sent_at timestamp without time zone,
     unconfirmed_email character varying,
-    inactivity_warning_sent_at timestamp without time zone
+    inactivity_warning_sent_at timestamp without time zone,
+    language character varying(100) DEFAULT 'English'::character varying
 );
 
 
@@ -1842,7 +1969,7 @@ CREATE TABLE public.web_app_configs (
     confirm_step_deletion boolean DEFAULT false,
     disable_animations boolean DEFAULT false,
     disable_i18n boolean DEFAULT false,
-    display_trail boolean DEFAULT false,
+    display_trail boolean DEFAULT true,
     dynamic_map boolean DEFAULT false,
     encoder_figure boolean DEFAULT false,
     hide_webcam_widget boolean DEFAULT false,
@@ -1881,7 +2008,7 @@ CREATE TABLE public.web_app_configs (
     internal_use text,
     time_format_24_hour boolean DEFAULT false,
     show_pins boolean DEFAULT false,
-    disable_emergency_unlock_confirmation boolean DEFAULT false,
+    disable_emergency_unlock_confirmation boolean DEFAULT true,
     map_size_x integer DEFAULT 2900,
     map_size_y integer DEFAULT 1400,
     expand_step_options boolean DEFAULT false,
@@ -1895,15 +2022,22 @@ CREATE TABLE public.web_app_configs (
     show_weeds boolean DEFAULT true,
     display_map_missed_steps boolean DEFAULT false,
     time_format_seconds boolean DEFAULT false,
-    crop_images boolean DEFAULT false,
-    show_camera_view_area boolean DEFAULT false,
+    crop_images boolean DEFAULT true,
+    show_camera_view_area boolean DEFAULT true,
     view_celery_script boolean DEFAULT false,
     highlight_modified_settings boolean DEFAULT true,
     show_advanced_settings boolean DEFAULT false,
     show_soil_interpolation_map boolean DEFAULT false,
     show_moisture_interpolation_map boolean DEFAULT false,
     clip_image_layer boolean DEFAULT true,
-    beep_verbosity integer DEFAULT 0
+    beep_verbosity integer DEFAULT 0,
+    landing_page character varying(100) DEFAULT 'plants'::character varying,
+    go_button_axes character varying(3) DEFAULT 'XY'::character varying NOT NULL,
+    show_uncropped_camera_view_area boolean DEFAULT false,
+    default_plant_depth integer DEFAULT 5,
+    show_missed_step_plot boolean DEFAULT false,
+    enable_3d_electronics_box_top boolean DEFAULT true,
+    three_d_garden boolean DEFAULT false
 );
 
 
@@ -2015,6 +2149,13 @@ ALTER TABLE ONLY public.active_storage_variant_records ALTER COLUMN id SET DEFAU
 
 
 --
+-- Name: ai_feedbacks id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedbacks ALTER COLUMN id SET DEFAULT nextval('public.ai_feedbacks_id_seq'::regclass);
+
+
+--
 -- Name: alerts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2033,6 +2174,13 @@ ALTER TABLE ONLY public.arg_names ALTER COLUMN id SET DEFAULT nextval('public.ar
 --
 
 ALTER TABLE ONLY public.arg_sets ALTER COLUMN id SET DEFAULT nextval('public.arg_sets_id_seq'::regclass);
+
+
+--
+-- Name: curves id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.curves ALTER COLUMN id SET DEFAULT nextval('public.curves_id_seq'::regclass);
 
 
 --
@@ -2281,6 +2429,13 @@ ALTER TABLE ONLY public.standard_pairs ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: telemetries id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.telemetries ALTER COLUMN id SET DEFAULT nextval('public.telemetries_id_seq'::regclass);
+
+
+--
 -- Name: token_issuances id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2347,6 +2502,14 @@ ALTER TABLE ONLY public.active_storage_variant_records
 
 
 --
+-- Name: ai_feedbacks ai_feedbacks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedbacks
+    ADD CONSTRAINT ai_feedbacks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: alerts alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2376,6 +2539,14 @@ ALTER TABLE ONLY public.arg_names
 
 ALTER TABLE ONLY public.arg_sets
     ADD CONSTRAINT arg_sets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: curves curves_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.curves
+    ADD CONSTRAINT curves_pkey PRIMARY KEY (id);
 
 
 --
@@ -2667,6 +2838,14 @@ ALTER TABLE ONLY public.standard_pairs
 
 
 --
+-- Name: telemetries telemetries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.telemetries
+    ADD CONSTRAINT telemetries_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: token_issuances token_issuances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2750,6 +2929,13 @@ CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON public.ac
 
 
 --
+-- Name: index_ai_feedbacks_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_feedbacks_on_device_id ON public.ai_feedbacks USING btree (device_id);
+
+
+--
 -- Name: index_alerts_on_device_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2768,6 +2954,13 @@ CREATE INDEX index_arg_sets_on_fragment_id ON public.arg_sets USING btree (fragm
 --
 
 CREATE INDEX index_arg_sets_on_node_id ON public.arg_sets USING btree (node_id);
+
+
+--
+-- Name: index_curves_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_curves_on_device_id ON public.curves USING btree (device_id);
 
 
 --
@@ -3240,6 +3433,13 @@ CREATE INDEX index_standard_pairs_on_node_id ON public.standard_pairs USING btre
 
 
 --
+-- Name: index_telemetries_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_telemetries_on_device_id ON public.telemetries USING btree (device_id);
+
+
+--
 -- Name: index_token_issuances_on_device_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3349,6 +3549,14 @@ ALTER TABLE ONLY public.folders
 
 
 --
+-- Name: telemetries fk_rails_6f6c1e8196; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.telemetries
+    ADD CONSTRAINT fk_rails_6f6c1e8196 FOREIGN KEY (device_id) REFERENCES public.devices(id);
+
+
+--
 -- Name: sensors fk_rails_92e56bf2fb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3426,6 +3634,14 @@ ALTER TABLE ONLY public.farmware_installations
 
 ALTER TABLE ONLY public.edge_nodes
     ADD CONSTRAINT fk_rails_c86213fd78 FOREIGN KEY (sequence_id) REFERENCES public.sequences(id);
+
+
+--
+-- Name: ai_feedbacks fk_rails_d25a0df7d7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_feedbacks
+    ADD CONSTRAINT fk_rails_d25a0df7d7 FOREIGN KEY (device_id) REFERENCES public.devices(id);
 
 
 --
@@ -3750,6 +3966,29 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20211007164834'),
 ('20211030193113'),
 ('20211104173453'),
-('20211117212015');
+('20211117212015'),
+('20211206165259'),
+('20220413194334'),
+('20220415191331'),
+('20220620225957'),
+('20220810212545'),
+('20220819170955'),
+('20221027211207'),
+('20221028172528'),
+('20221103172100'),
+('20221109233217'),
+('20221222192831'),
+('20230210010108'),
+('20230413204758'),
+('20230616184850'),
+('20230712201622'),
+('20230714010144'),
+('20230714173031'),
+('20230808192946'),
+('20240118204046'),
+('20240202171922'),
+('20240207234421'),
+('20240405171128'),
+('20240625195838');
 
 

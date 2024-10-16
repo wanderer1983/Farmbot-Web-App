@@ -73,6 +73,8 @@ export const LogsLayer = (props: LogsLayerProps) =>
             log={log}
             visual={LOG_VISUAL_LOOKUP[log.body.message]}
             cropImage={!!props.getConfigValue(BooleanSetting.crop_images)}
+            showUncroppedArea={!!props.getConfigValue(
+              BooleanSetting.show_uncropped_camera_view_area)}
             animate={!props.getConfigValue(BooleanSetting.disable_animations)}
             cameraCalibrationData={props.cameraCalibrationData}
             deviceTarget={props.deviceTarget}
@@ -118,6 +120,7 @@ const ImageVisual = (props: LogVisualProps) => {
     {display && <CameraViewArea logVisual={true}
       position={{ x, y, z }}
       cropPhotos={props.cropImage}
+      showUncroppedArea={props.showUncroppedArea}
       cameraCalibrationData={props.cameraCalibrationData}
       mapTransformProps={props.mapTransformProps} />}
   </g>;
@@ -137,7 +140,7 @@ const MovementVisual = (props: LogVisualProps) => {
     : {};
   return <g id={`movement-log-${props.log.uuid}-visual`}
     className={className} style={style}>
-    {display && positionDifferent(props.botPosition, { x: 0, y: 0, z: 0 }, 5)
+    {display && awayFromHome(props.botPosition, 5)
       && <BotFigure figureName={"finding-home"}
         color={Color.yellow}
         position={{ x: 0, y: 0, z: 0 }}
@@ -161,3 +164,6 @@ export const positionDifferent =
       || yDelta > threshold
       || zDelta > threshold;
   };
+
+export const awayFromHome = (botPosition: BotPosition, threshold = 0) =>
+  positionDifferent(botPosition, { x: 0, y: 0, z: 0 }, threshold);

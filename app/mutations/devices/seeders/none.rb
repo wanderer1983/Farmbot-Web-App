@@ -14,22 +14,31 @@ module Devices
       def sensors_soil_sensor; end
       def sensors_tool_verification; end
       def sequences_mount_tool; end
+      def sequences_dismount_tool; end
       def sequences_pick_up_seed; end
       def sequences_plant_seed; end
       def sequences_take_photo_of_plant; end
-      def sequences_tool_error; end
-      def sequences_unmount_tool; end
       def sequences_water_plant; end
+      def sequences_mow_all_weeds; end
+      def sequences_pick_from_seed_tray; end
       def point_groups_spinach; end
       def point_groups_broccoli; end
       def point_groups_beet; end
       def point_groups_all_plants; end
       def point_groups_all_points; end
       def point_groups_all_weeds; end
+      def sequences_find_home; end
       def sequences_water_all_plants; end
+      def sequences_water_all; end
+      def sequences_photo_grid; end
+      def sequences_weed_detection_grid; end
+      def sequences_soil_height_grid; end
+      def sequences_grid; end
+      def sequences_dispense_water; end
       def settings_default_map_size_x; end
       def settings_default_map_size_y; end
       def settings_soil_height; end
+      def settings_gantry_height; end
       def settings_firmware; end
       def settings_hide_sensors; end
       def tool_slots_slot_1; end

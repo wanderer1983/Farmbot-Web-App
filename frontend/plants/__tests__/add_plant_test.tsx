@@ -21,16 +21,19 @@ import {
   fakeWebAppConfig,
 } from "../../__test_support__/fake_state/resources";
 import { Path } from "../../internal_urls";
+import { fakeDesignerState } from "../../__test_support__/fake_designer_state";
 
 describe("<AddPlant />", () => {
   const fakeProps = (): AddPlantProps => {
+    const designer = fakeDesignerState();
     const cropSearchResult = fakeCropLiveSearchResult();
     cropSearchResult.crop.svg_icon = "fake_mint_svg";
+    designer.cropSearchResults = [cropSearchResult];
     return {
-      cropSearchResults: [cropSearchResult],
+      designer,
       dispatch: jest.fn(),
       xy_swap: false,
-      openfarmSearch: jest.fn(() => jest.fn()),
+      openfarmCropFetch: jest.fn(() => jest.fn()),
       botPosition: { x: undefined, y: undefined, z: undefined },
     };
   };
@@ -45,17 +48,15 @@ describe("<AddPlant />", () => {
     const img = wrapper.find("img");
     expect(img).toBeDefined();
     expect(img.props().src).toEqual(svgToUrl("fake_mint_svg"));
-    expect(p.openfarmSearch).toHaveBeenCalledWith("mint");
+    expect(p.openfarmCropFetch).toHaveBeenCalledWith("mint");
   });
 });
 
 describe("mapStateToProps", () => {
   it("maps state to props", () => {
     const state = fakeState();
-    const crop = fakeCropLiveSearchResult();
-    state.resources.consumers.farm_designer.cropSearchResults = [crop];
     const results = mapStateToProps(state);
-    expect(results.cropSearchResults).toEqual([crop]);
+    expect(results.designer.cropSearchResults).toEqual([]);
     expect(results.xy_swap).toEqual(false);
   });
 

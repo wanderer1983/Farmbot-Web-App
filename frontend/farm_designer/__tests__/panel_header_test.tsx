@@ -20,7 +20,7 @@ import { shallow, mount, ReactWrapper } from "enzyme";
 import { DesignerNavTabs } from "../panel_header";
 import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import {
-  fakeFarmwareInstallation,
+  fakeFarmwareInstallation, fakeWebAppConfig,
 } from "../../__test_support__/fake_state/resources";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,12 +49,6 @@ describe("<DesignerNavTabs />", () => {
     expectActive(wrapper, slug);
   });
 
-  it("shows inactive icons for sequences page", () => {
-    mockPath = Path.mock(Path.sequencePage());
-    const wrapper = mount(<DesignerNavTabs />);
-    expect(wrapper.find(".active").length).toEqual(0);
-  });
-
   it("shows inactive icons for logs page", () => {
     mockPath = Path.mock(Path.logs());
     const wrapper = mount(<DesignerNavTabs />);
@@ -68,6 +62,22 @@ describe("<DesignerNavTabs />", () => {
     expectOnlyOneActiveIcon(wrapper);
     expectColor(wrapper, "brown");
     expectActive(wrapper, "zones");
+  });
+
+  it("shows sensors tab", () => {
+    const config = fakeWebAppConfig();
+    config.body.hide_sensors = false;
+    mockState.resources = buildResourceIndex([config]);
+    const wrapper = mount(<DesignerNavTabs />);
+    expect(wrapper.html()).toContain("sensors");
+  });
+
+  it("doesn't show sensors tab", () => {
+    const config = fakeWebAppConfig();
+    config.body.hide_sensors = true;
+    mockState.resources = buildResourceIndex([config]);
+    const wrapper = mount(<DesignerNavTabs />);
+    expect(wrapper.html()).not.toContain("sensors");
   });
 
   it("renders scroll indicator", () => {

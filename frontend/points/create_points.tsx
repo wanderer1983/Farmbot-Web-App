@@ -5,7 +5,6 @@ import { initSave } from "../api/crud";
 import { Row, Col, BlurableInput, ColorPicker } from "../ui";
 import { DrawnPointPayl } from "../farm_designer/interfaces";
 import { Actions, Content } from "../constants";
-import { deletePoints } from "../api/delete_points";
 import {
   GenericPointer, WeedPointer,
 } from "farmbot/dist/resources/api_resources";
@@ -14,7 +13,8 @@ import {
   DesignerPanelHeader,
   DesignerPanelContent,
 } from "../farm_designer/designer_panel";
-import { parseIntInput, validBotLocationData } from "../util";
+import { parseIntInput } from "../util";
+import { validBotLocationData } from "../util/location";
 import { t } from "../i18next_wrapper";
 import { Panel } from "../farm_designer/panel_header";
 import { push } from "../history";
@@ -24,7 +24,7 @@ import { PlantGrid } from "../plants/grid/plant_grid";
 import { getWebAppConfigValue } from "../config_storage/actions";
 import { BooleanSetting } from "../session_keys";
 import {
-  definedPosition, positionButtonTitle,
+  definedPosition, UseCurrentLocation,
 } from "../tools/tool_slot_edit_components";
 import { BotPosition } from "../devices/interfaces";
 import { round } from "lodash";
@@ -65,7 +65,7 @@ export class RawCreatePoints
     this.state = {};
   }
 
-  attr = <T extends (keyof DrawnPointPayl & keyof CreatePointsState)>(key: T,
+  attr = <T extends (keyof DrawnPointPayl)>(key: T,
     fallback = DEFAULTS[key]): DrawnPointPayl[T] => {
     const p = this.props.drawnPoint;
     const userValue = this.state[key] as DrawnPointPayl[T] | undefined;
@@ -220,7 +220,7 @@ export class RawCreatePoints
             <Col xs={10}>
               <label>{t("Name")}</label>
               <BlurableInput
-                name="name"
+                name="pointName"
                 type="text"
                 onCommit={this.updateValue("name")}
                 value={this.attr("name") || this.defaultName} />
@@ -235,9 +235,9 @@ export class RawCreatePoints
           </div>
         </Row>
       </li>
-      <ListItem name={t("Location")}>
+      <ListItem>
         <Row>
-          <Col xs={4}>
+          <Col xs={3}>
             <label>{t("X (mm)")}</label>
             <BlurableInput
               name="cx"
@@ -245,7 +245,7 @@ export class RawCreatePoints
               onCommit={this.updateValue("cx")}
               value={this.attr("cx", this.props.botPosition.x)} />
           </Col>
-          <Col xs={4}>
+          <Col xs={3}>
             <label>{t("Y (mm)")}</label>
             <BlurableInput
               name="cy"
@@ -253,7 +253,7 @@ export class RawCreatePoints
               onCommit={this.updateValue("cy")}
               value={this.attr("cy", this.props.botPosition.y)} />
           </Col>
-          <Col xs={4}>
+          <Col xs={3}>
             <label>{t("Z (mm)")}</label>
             <BlurableInput
               name="z"
@@ -261,27 +261,23 @@ export class RawCreatePoints
               onCommit={this.updateValue("z")}
               value={this.attr("z", this.props.botPosition.z)} />
           </Col>
+          <UseCurrentLocation botPosition={this.props.botPosition}
+            onChange={() => {
+              const position = definedPosition(this.props.botPosition);
+              if (position) {
+                const { x, y, z } = position;
+                this.setState({ cx: round(x), cy: round(y), z: round(z) }, () =>
+                  this.props.dispatch({
+                    type: this.panel == "weeds"
+                      ? Actions.SET_DRAWN_WEED_DATA
+                      : Actions.SET_DRAWN_POINT_DATA,
+                    payload: this.getPointData(),
+                  }));
+              }
+            }} />
         </Row>
       </ListItem>
-      <button
-        className={"fb-button blue"}
-        title={positionButtonTitle(this.props.botPosition)}
-        onClick={() => {
-          const position = definedPosition(this.props.botPosition);
-          if (position) {
-            const { x, y, z } = position;
-            this.setState({ cx: round(x), cy: round(y), z: round(z) }, () =>
-              this.props.dispatch({
-                type: this.panel == "weeds"
-                  ? Actions.SET_DRAWN_WEED_DATA
-                  : Actions.SET_DRAWN_POINT_DATA,
-                payload: this.getPointData(),
-              }));
-          }
-        }}>
-        {t("use FarmBot's current position")}
-      </button>
-      <ListItem name={t("Size")}>
+      <ListItem>
         <Row>
           <Col xs={6}>
             <label>{t("radius (mm)")}</label>
@@ -312,41 +308,12 @@ export class RawCreatePoints
 
   PointActions = () =>
     <Row>
-      <button className="fb-button green"
+      <button className="fb-button green save"
         title={t("save")}
         onClick={this.createPoint}>
         {t("Save")}
       </button>
     </Row>;
-
-  DeleteAllPoints = (type: "point" | "weed") => {
-    const meta = { created_by: "farm-designer" };
-    return <Row>
-      <div className="delete-row">
-        <label>{t("delete")}</label>
-        <p>{type === "weed"
-          ? t("Delete all of the weeds created through this panel.")
-          : t("Delete all of the points created through this panel.")}</p>
-        <button className="fb-button red delete"
-          title={t("delete all")}
-          onClick={() => {
-            if (confirm(type === "weed"
-              ? t("Delete all the weeds you have created?")
-              : t("Delete all the points you have created?"))) {
-              this.props.dispatch(deletePoints("points", {
-                pointer_type: type === "weed" ? "Weed" : "GenericPointer",
-                meta,
-              }));
-              this.cancel();
-            }
-          }}>
-          {type === "weed"
-            ? t("Delete all created weeds")
-            : t("Delete all created points")}
-        </button>
-      </div>
-    </Row>;
-  };
 
   render() {
     const panelType = this.panel == "weeds" ? Panel.Weeds : Panel.Points;
@@ -366,6 +333,7 @@ export class RawCreatePoints
       <DesignerPanelContent panelName={"point-creation"}>
         <this.PointProperties />
         <this.PointActions />
+        {panelType == Panel.Points && <hr />}
         {panelType == Panel.Points &&
           <PlantGrid
             xy_swap={this.props.xySwap}
@@ -376,8 +344,6 @@ export class RawCreatePoints
             z={this.attr("z", this.props.botPosition.z)}
             meta={meta}
             close={this.closePanel} />}
-        <hr />
-        {this.DeleteAllPoints(this.panel == "weeds" ? "weed" : "point")}
       </DesignerPanelContent>
     </DesignerPanel>;
   }

@@ -10,9 +10,9 @@ import { StepInputBox } from "../inputs/step_input_box";
 import {
   determineDropdown, determineVector, Vector3Plus,
 } from "../../resources/sequence_meta";
-import { LocationForm } from "../locals_list/location_form";
+import { VariableForm } from "../locals_list/variable_form";
 import {
-  VariableNode, AllowedVariableNodes,
+  VariableNode, AllowedVariableNodes, VariableType,
 } from "../locals_list/locals_list_support";
 import { merge } from "lodash";
 import {
@@ -21,6 +21,7 @@ import {
 import { t } from "../../i18next_wrapper";
 import { Collapse } from "@blueprintjs/core";
 import { ExpandableHeader } from "../../ui/expandable_header";
+import { isDesktop } from "../../screen_size";
 
 export class TileMoveAbsolute
   extends React.Component<StepParams<MoveAbsolute>, MoveAbsState> {
@@ -57,12 +58,15 @@ export class TileMoveAbsolute
   /** Handle changes to step.args.location. */
   updateLocation = (variable: ParameterApplication) => {
     const location = variable.args.data_value;
-    if (location.kind !== "point_group") {
+    if (location.kind == "coordinate"
+      || location.kind == "point"
+      || location.kind == "tool"
+      || location.kind == "identifier") {
       return this.updateArgs({ location });
     }
   };
 
-  /** Prepare step.args.location data for LocationForm. */
+  /** Prepare step.args.location data for VariableForm. */
   get celeryNode(): VariableNode {
     const { location } = this.args;
     return {
@@ -85,7 +89,7 @@ export class TileMoveAbsolute
   }
 
   LocationForm = () =>
-    <LocationForm
+    <VariableForm
       variable={{
         celeryNode: this.celeryNode,
         dropdown: determineDropdown(this.celeryNode, this.props.resources,
@@ -97,11 +101,11 @@ export class TileMoveAbsolute
       onChange={(x) => x &&
         x.kind == "parameter_application" &&
         this.updateLocation(x)}
-      hideHeader={true}
+      hideWrapper={true}
       hideGroups={true}
       locationDropdownKey={JSON.stringify(this.props.currentSequence)}
       allowedVariableNodes={AllowedVariableNodes.identifier}
-      width={3} />;
+      variableType={VariableType.Location} />;
 
   SpeedInput = () =>
     <Col xs={3}>
@@ -142,14 +146,14 @@ export class TileMoveAbsolute
         coordinate={getPositionSum(this.vector, this.args.offset.args)}
         hardwareFlags={this.props.hardwareFlags} />}>
       <Row>
-        <div className={"dynamic-column"}>
+        <div className={"move-absolute-form"}>
           <div className="input-line">
             <this.LocationForm />
           </div>
           <div className="more-options">
             <ExpandableHeader
               expanded={this.state.more}
-              title={window.innerWidth < 660 ? "" : t("Options")}
+              title={isDesktop() ? t("Options") : ""}
               onClick={() => this.setState({ more: !this.state.more })} />
           </div>
         </div>

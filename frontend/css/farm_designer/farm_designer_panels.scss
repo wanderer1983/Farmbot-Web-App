@@ -4,21 +4,21 @@
   top: 8.9rem;
   width: 45rem;
   box-shadow: 0 0 10px $translucent;
-  @media screen and (max-width: 450px) {
+  @media screen and (max-width: $mobile_max_width) {
     width: 100%;
   }
 }
 
 .panel-nav {
   display: none;
-  @media screen and (max-width: 450px) {
+  @media screen and (max-width: $mobile_max_width) {
     display: block;
   }
 }
 
 .panel-top {
   margin-top: 0;
-  @media screen and (max-width: 450px) {
+  @media screen and (max-width: $mobile_max_width) {
     margin-top: 5rem;
   }
 }
@@ -31,7 +31,7 @@
   .panel-content {
     padding-top: 1rem;
     max-height: calc(100vh - 3rem);
-    @media screen and (max-width: 450px) {
+    @media screen and (max-width: $mobile_max_width) {
       padding-top: 6rem;
       max-height: calc(100vh - 9rem);
     }
@@ -48,21 +48,26 @@
 .controls-panel {
   .panel-content {
     padding-top: 0;
-    @media screen and (max-width: 450px) {
+    @media screen and (max-width: $mobile_max_width) {
       padding-top: 4rem;
     }
   }
 }
 
 .move {
+  position: relative;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
   .move {
     .unavailable,
     .bot-is-online-wrapper {
       display: inline-block;
     }
   }
-  .move-settings.bp3-popover-wrapper {
-    float: right;
+  .move-settings.bp5-popover-wrapper {
+    position: absolute;
+    top: 6rem;
+    right: 1rem;
     .fa-gear {
       color: $dark_gray;
     }
@@ -98,7 +103,7 @@
 .settings-panel {
   .panel-content {
     max-height: calc(100vh - 14rem);
-    @media screen and (max-width: 450px) {
+    @media screen and (max-width: $mobile_max_width) {
       max-height: calc(100vh - 19rem);
     }
   }
@@ -116,6 +121,7 @@
 .farm-designer-panels {
   bottom: 0;
   z-index: 1;
+  &.panel-closed-mobile,
   &.panel-closed {
     display: none !important;
   }
@@ -123,7 +129,7 @@
     height: 24rem;
     .location-info-panel {
       .panel-content {
-        max-height: calc(100vh - 47rem);
+        max-height: 19rem;
       }
     }
   }
@@ -156,7 +162,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_green, 10%);
+        background: color.adjust($panel_light_green, $lightness: -10%);
       }
     }
   }
@@ -165,7 +171,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($light_cyan, 10%);
+        background: color.adjust($light_cyan, $lightness: -10%);
       }
     }
   }
@@ -174,7 +180,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_brown, 10%);
+        background: color.adjust($panel_light_brown, $lightness: -10%);
       }
     }
   }
@@ -183,7 +189,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($light_magenta, 10%);
+        background: color.adjust($light_magenta, $lightness: -10%);
       }
     }
   }
@@ -193,7 +199,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_gray, 10%);
+        background: color.adjust($panel_light_gray, $lightness: -10%);
       }
     }
   }
@@ -202,7 +208,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_yellow, 10%);
+        background: color.adjust($panel_light_yellow, $lightness: -10%);
       }
     }
   }
@@ -211,7 +217,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_blue, 10%);
+        background: color.adjust($panel_light_blue, $lightness: -10%);
       }
     }
   }
@@ -220,7 +226,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_navy, 10%);
+        background: color.adjust($panel_light_navy, $lightness: -10%);
       }
     }
   }
@@ -229,7 +235,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_teal, 10%);
+        background: color.adjust($panel_light_teal, $lightness: -10%);
       }
     }
   }
@@ -238,7 +244,7 @@
     div[class*="search-item"] {
       &:hover,
       &.hovered {
-        background: darken($panel_light_red, 10%);
+        background: color.adjust($panel_light_red, $lightness: -10%);
       }
     }
   }
@@ -279,6 +285,24 @@
   }
   &.red-panel {
     background-color: $panel_red;
+  }
+  &.blue,
+  &.yellow,
+  &.orange,
+  &.purple,
+  &.pink,
+  &.gray {
+    .right-button,
+    .back-arrow,
+    .title {
+      color: $dark_gray;
+    }
+    .right-button,
+    .back-arrow {
+      &:hover {
+        color: $black !important;
+      }
+    }
   }
 }
 
@@ -332,15 +356,16 @@
 
 .panel-title {
   height: 50px;
+  overflow: hidden;
   .back-arrow {
-    &.black-text{
-      color: $medium_gray;
-    }
     float: left;
     text-align: center;
     font-size: 1.8rem;
     width: 50px;
     line-height: 50px;
+    &.black-text{
+      color: $medium_gray;
+    }
     &:hover {
       &.black-text{
         color: $darker_gray !important;
@@ -406,16 +431,33 @@
     width: 100%;
     background: $panel_medium_light_gray;
     padding: 0.5rem;
+    .selection-type {
+      display: flex;
+      label {
+        line-height: 4rem;
+      }
+      .filter-search {
+        position: absolute;
+        right: 1rem;
+        width: 70%;
+        .bp5-button {
+          margin-left: 0.5rem;
+        }
+        i {
+          margin-right: -0.5rem;
+        }
+      }
+    }
     &.more-select {
-      height: 23rem;
+      height: 20rem;
     }
     &.more-action {
-      height: 32rem;
+      height: 35rem;
     }
     &.more-select.more-action {
-      height: 40rem;
+      height: 38rem;
     }
-    button {
+    .fb-button {
       margin: 0.5rem;
       float: left;
     }
@@ -429,30 +471,40 @@
       float: left;
       width: 100%;
       margin-bottom: 1rem;
+      &.group-select {
+        .filter-search {
+          margin-top: 0.5rem;
+        }
+      }
     }
     .filter-search {
       padding-right: 1rem;
     }
+    .plant-curves-bulk-update,
     .point-size-bulk-update,
+    .plant-depth-bulk-update,
     .plant-date-bulk-update,
     .point-color-bulk-update,
     .plant-slug-bulk-update,
     .plant-status-bulk-update {
       display: inline-block;
       width: 100%;
+      line-height: 3.5rem;
     }
+    .plant-curves-bulk-update,
     .plant-status-bulk-update {
       .filter-search {
         display: inline-block;
-        width: 50%;
+        width: 50% !important;
+        margin-top: 0.5rem;
       }
       p {
         display: inline-block;
         font-size: 1.2rem;
-        line-height: 4.1rem;
         vertical-align: top;
       }
     }
+    .plant-depth-bulk-update,
     .point-size-bulk-update {
       p {
         display: inline-block;
@@ -463,14 +515,11 @@
         margin: 0;
         width: 48%;
         height: 3rem;
-        margin-left: 0.5rem;
       }
     }
     .plant-date-bulk-update {
       .input {
         display: inline-block;
-        margin-left: 1.5rem;
-        margin-bottom: 1rem;
         width: 48%;
         input {
           height: 3rem;
@@ -481,27 +530,21 @@
       }
     }
     .point-color-bulk-update {
-      margin-top: 1rem;
       .color-picker {
         display: inline-block;
-        margin-left: 0.5rem;
         margin-bottom: -0.5rem;
       }
     }
     .plant-slug-bulk-update {
-      a {
-        margin-left: 2rem;
-      }
       .fa-pencil {
-        margin-left: 1rem;
+        margin-left: 0.25rem;
       }
       .fb-button {
         float: none;
         height: 2rem;
-        line-height: 1.75rem;
+        line-height: 0;
         margin-left: 1rem;
-        margin-top: 1rem;
-        vertical-align: bottom;
+        vertical-align: top;
       }
     }
     .more {
@@ -520,8 +563,22 @@
       margin-right: 1rem;
     }
     .more-content {
+      margin-top: 0.5rem;
+      max-height: 20.5rem;
+      overflow: scroll;
+      width: 330px;
       label {
         width: 100%;
+      }
+      .filter-search {
+        display: inline-block;
+        width: 50.75% !important;
+        line-height: 1rem;
+      }
+      p {
+        display: inline-block;
+        width: 150px;
+        line-height: 3.5rem;
       }
     }
   }
@@ -533,27 +590,39 @@
     overflow-y: auto;
     overflow-x: hidden;
     &.more-select {
-      padding-top: 23rem;
+      padding-top: 20rem;
     }
     &.more-action {
-      padding-top: 32rem;
+      padding-top: 35rem;
     }
     &.more-select.more-action {
-      padding-top: 40rem;
+      padding-top: 38rem;
     }
     .tool-slot-search-item-icon {
       padding-left: 5px !important;
     }
-    .tool-slot-search-item {
-      margin-left: -2rem;
-      padding-right: 4.5rem;
+  }
+}
+
+.group-detail-panel,
+.plant-info-panel {
+  .panel-header-icon-group {
+    i {
+      color: $white;
     }
   }
 }
 
+.curve-info-panel,
 .weed-info-panel,
 .point-info-panel,
 .plant-info-panel {
+  .panel-title {
+    input {
+      margin: 1rem;
+      width: 75%;
+    }
+  }
   .panel-content {
     max-height: calc(100vh - 14rem);
     overflow-y: auto;
@@ -566,18 +635,21 @@
     max-height: calc(100vh - 17rem);
     overflow-y: auto;
     overflow-x: hidden;
+    padding-top: 1rem;
     ul {
       margin-bottom: 0;
     }
-    margin-top: 1rem;
     label {
-      margin-top: 0;
+      margin-top: 0 !important;
+    }
+    .plant-info-field-data {
+      margin-top: 1rem;
     }
     p {
       margin-top: 1rem;
     }
     .fb-button {
-      &.green {
+      &.save {
         margin-right: 1.5rem;
       }
       &.delete {
@@ -600,12 +672,13 @@
       border-color: $medium_gray;
     }
     .grid-and-row-planting {
-      hr {
-        border-color: $medium_gray;
-      }
       label {
         color: $dark_gray;
       }
+      input {
+        box-shadow: 0 0 10px #ddd;
+      }
+      .update-button,
       .preview-button,
       .cancel-button,
       .save-button {
@@ -616,18 +689,23 @@
           background: $off_white;
         }
       }
-      .use-current-location {
-        margin-top: 0;
-      }
     }
     .blue {
       float: none;
+    }
+    .use-current-location {
+      button {
+        .fa {
+          font-size: 1.5rem;
+        }
+      }
     }
   }
 }
 
 .weed-info-panel-content,
 .point-info-panel-content {
+  font-size: 1.4rem;
   .point-color-input {
     div[class*=col-] {
       padding-left: 0.5rem;
@@ -640,7 +718,6 @@
     display: block;
     margin-top: 3rem;
   }
-  font-size: 1.4rem;
   p {
     margin-top: 1rem;
     margin-bottom: 0.5rem !important;
@@ -662,8 +739,10 @@
       }
     }
   }
-  .move-to-button {
+  .go-button-axes-wrapper {
+    display: inline-block;
     margin-top: 1rem;
+    margin-bottom: 1rem;
     margin-left: 1.5rem;
   }
 }
@@ -733,11 +812,8 @@
   .location-form {
     width: 100% !important;
   }
-  .note {
-    margin-top: 4rem;
-  }
-  .bp3-popover-wrapper {
-    display: inline;
+  .bp5-popover-wrapper {
+    display: inline-block;
     margin-left: 0.5rem;
     &.input-error-wrapper {
       display: block;
@@ -758,13 +834,26 @@
       }
     }
   }
+  .locals-list {
+    margin-top: 1rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+  .save-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0;
+  }
 }
 
-.add-farm-event-panel button.red,
-.edit-farm-event-panel button.red {
-  margin-top: 1rem;
-  margin-left: 1rem;
-  margin-right: 0.5rem;
+.add-farm-event-panel,
+.edit-farm-event-panel {
+  .fa-trash {
+    position: absolute;
+    top: 1.25rem;
+    right: 8rem;
+    color: $white;
+  }
 }
 
 .panel-nav {
@@ -788,18 +877,60 @@
     padding: 0 1.4rem 1rem;
   }
   .crop-info-description {
-    max-height: 10rem;
+    height: 8rem;
     overflow-y: auto;
     overflow-x: hidden;
+    width: 75%;
+    font-family: "Cabin", sans-serif;
   }
   .saving-indicator {
     position: absolute;
-    right: 1rem;
+    right: 7rem;
     line-height: 6rem;
     color: $white;
     i {
       margin-right: 1rem;
       color: $white;
+    }
+  }
+  .crop-drag-info-tile {
+    position: absolute;
+    right: 0;
+    margin: 1rem;
+    border: 2px solid $white;
+    border-radius: 50%;
+  }
+}
+
+.dark-portal {
+  .bp5-popover-content {
+    background: $dark_gray;
+    color: $off_white;
+  }
+}
+
+.grid-popup-content {
+  width: 25rem;
+}
+
+.grid-input {
+  .row {
+    margin-top: 0.5rem;
+    .grid-axis-label {
+      font-weight: bold;
+    }
+  }
+  .use-current-location {
+    display: inline;
+    float: none;
+    span,
+    button {
+      display: inline;
+      float: none;
+    }
+    button {
+      width: 2.25rem;
+      padding-left: 0;
     }
   }
 }
@@ -810,6 +941,52 @@
     background-size: 144% !important;
     background-repeat: no-repeat !important;
     background-position: top center !important;
+    min-height: 125px;
+    .panel-title {
+      overflow: visible;
+      .title {
+        font-family: "Inknut Antiqua";
+        font-weight: bold;
+      }
+      .bp5-popover-wrapper {
+        position: absolute;
+        right: 0;
+      }
+      .transparent-button {
+        position: absolute;
+        bottom: -9.5rem;
+        right: 1.5rem;
+        margin: 0;
+        color: $white;
+        white-space: nowrap;
+      }
+      .fa-th-large,
+      .fa-plus,
+      .fa-arrows {
+        position: absolute;
+        background: $white;
+        color: $dark_gray;
+        border-radius: 50%;
+        height: 1.5rem;
+        width: 1.5rem;
+        line-height: 1.5rem;
+        text-align: center;
+        font-size: 1rem;
+        padding-left: 0.15rem;
+      }
+      .fa-th-large {
+        top: 6rem;
+        right: 1.25rem;
+      }
+      .fa-plus {
+        top: 3.8rem;
+        right: 0.25rem;
+      }
+      .fa-arrows {
+        top: 1.5rem;
+        right: 1.25rem;
+      }
+    }
   }
   .panel-content {
     max-height: calc(100vh - 19rem);
@@ -835,6 +1012,7 @@
       label {
         color: $dark_gray;
       }
+      .update-button,
       .preview-button,
       .cancel-button,
       .save-button {
@@ -849,9 +1027,66 @@
         margin-top: 1.5rem;
       }
     }
+    .companion {
+      display: inline-block;
+      text-decoration: none !important;
+      background: $light_gray;
+      border-radius: 2rem;
+      margin-right: 1rem;
+      margin-bottom: 0.5rem;
+      padding: 0.15rem;
+      padding-left: 0.5rem;
+      &:hover {
+        background: $gray;
+      }
+      p {
+        display: inline;
+        margin-left: 0.25rem;
+        margin-right: 1rem;
+        font-weight: bold;
+        text-transform: none;
+      }
+    }
   }
   .edit-on-openfarm {
     margin-bottom: 1rem;
+    font-size: 1.3rem;
+  }
+  .object-list {
+    li {
+      position: relative;
+      margin-left: 2rem;
+    }
+    li {
+      p,
+      div {
+        display: inline;
+        font-size: 1.3rem;
+        color: $dark_gray;
+      }
+      p {
+        margin-right: 0.25rem;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      span {
+        position: absolute;
+        left: -2rem;
+      }
+    }
+  }
+  .plant-stage-selection,
+  .planted-at-selection {
+    display: flex;
+    label {
+      margin-right: 0.5rem;
+      line-height: 1rem;
+      white-space: nowrap;
+    }
+    .filter-search,
+    .input {
+      width: 100%;
+    }
   }
 }
 
@@ -867,18 +1102,44 @@
   }
 }
 
+.edit-point-location {
+  margin-top: 1rem;
+}
+
+.point-name-input {
+  label {
+    margin-top: 2rem !important;
+  }
+}
+
+li {
+  label {
+    margin-top: 0 !important;
+  }
+}
+
+.additional-weed-properties {
+  li {
+    margin-top: 1rem;
+  }
+}
+
 .plants-panel-content {
   li {
     margin-top: 1rem;
     p {
-      font-size: 1.25rem;
       margin-bottom: 0.5rem !important;
     }
   }
   .plant-info-field-data {
-    .bp3-popover-wrapper {
+    .bp5-popover-wrapper {
       display: inline-block;
       margin-left: 0.5rem;
+    }
+    .filter-search {
+      .bp5-popover-wrapper {
+        margin-left: 0;
+      }
     }
   }
   input {
@@ -891,15 +1152,20 @@
 
 .panel-section {
   .delete {
-    float: none;
-    margin-left: 1rem;
+    height: 2rem;
+  }
+  .garden-indicator {
+    display: inline;
+    margin-left: 2rem;
+    font-size: 1rem;
   }
 }
 
 .section-header {
   display: inline-block;
+  height: 4rem;
   width: 100%;
-  line-height: 3rem;
+  line-height: 3.75rem;
   cursor: pointer;
   padding-left: 1rem;
   &:hover {
@@ -913,6 +1179,7 @@
     line-height: 1rem;
     margin-top: 0.5rem;
     margin-right: 1rem;
+    padding: 0.25rem 0.75rem;
     i {
       margin: 0 !important;
       font-size: 1.5rem;
@@ -924,7 +1191,7 @@
     line-height: 0;
     font-size: 2rem;
     margin-right: 2rem;
-    margin-top: 1.75rem !important;
+    margin-top: 2rem !important;
     color: $dark_gray;
   }
 }
@@ -941,27 +1208,30 @@
 }
 
 .grid-and-row-planting {
-  hr {
-    opacity: 0.7;
-    border-top: 1.5px solid $white;
+  h3 {
+    width: 100%;
+    text-align: center;
   }
   .row {
+    margin-left: 0;
+    margin-right: 0;
     div[class*=col-] {
-      padding-left: 1.5rem;
-      padding-right: 0;
+      padding-left: 0;
+      padding-right: 1rem;
     }
   }
+  i {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
   label {
-    color: $white;
+    color: $off_white;
+    margin-top: 0.75rem;
   }
   .use-current-location {
     padding: 0;
-    margin-top: 2rem;
+    margin-left: 1rem;
     button {
-      position: absolute;
-      left: 1rem;
-      margin-top: 0.5rem;
-      height: 2.75rem;
       .fa {
         font-size: 1.5rem;
       }
@@ -973,6 +1243,7 @@
       cursor: default !important;
     }
     input {
+      box-shadow: none;
       &.numPlantsH,
       &.numPlantsV {
         -moz-appearance: unset !important;
@@ -980,13 +1251,20 @@
     }
   }
   .grid-planting-toggle {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    margin: 0.5rem;
+    margin-left: 0;
+    label {
+      margin-top: 0.5rem;
+    }
+    button {
+      float: right;
+    }
   }
   .fb-toggle-button {
     float: none;
     margin-left: 1rem;
   }
+  .update-button,
   .preview-button,
   .cancel-button,
   .save-button {
@@ -1004,14 +1282,124 @@
   }
 }
 
+.planted-at-selection,
+.plant-stage-selection {
+  label {
+    margin-top: 1rem !important;
+  }
+  .filter-search {
+    position: relative;
+  }
+}
+
+.plant-stage-selection {
+  margin-bottom: 1rem;
+}
+
 .move-to-form {
-  .bp3-popover-wrapper {
+  .bp5-popover-wrapper {
     display: inline;
     margin-left: 0.5rem;
   }
   .speed {
     margin: 2rem;
     margin-left: -15px;
+  }
+}
+
+.go-button-axes-wrapper {
+  margin-top: 1rem;
+  button {
+    margin: 0;
+    float: none;
+  }
+  .go-button-axes {
+    display: inline;
+  }
+  .go-button-axes-text {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    p {
+      display: inline-block;
+      position: relative;
+      z-index: 1;
+      margin: 0 !important;
+      font-weight: bold;
+      color: $off_white;
+      height: 0;
+      line-height: 0;
+      font-size: 1.1rem;
+    }
+  }
+  .go-button-axes-dropdown {
+    border-left: 1px solid $dark_gray;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    &.pseudo-disabled {
+      border-left: 1px solid $gray;
+    }
+  }
+}
+
+.go-button-axes-popover {
+  .bp5-popover-arrow {
+    &::before {
+      position: relative;
+      background: $dark_gray;
+    }
+  }
+  .bp5-popover-content {
+    color: $off_white;
+    background: $dark_gray;
+    width: 200px;
+    .go-axes {
+      display: grid;
+      gap: 0.75rem;
+      button {
+        margin: 0;
+        padding: 0.5rem 1rem;
+        float: none;
+        &.x,
+        &.y,
+        &.z {
+          grid-row: 1;
+          grid-column: span 4;
+        }
+        &.xy,
+        &.xyz {
+          grid-row: 2;
+          grid-column: span 6;
+        }
+      }
+      a,
+      p {
+        display: inline;
+        color: $off_white;
+        font-size: 1.2rem;
+        text-decoration: none !important;
+        font-weight: normal;
+      }
+      a {
+        grid-column: span 12;
+        i {
+          margin-left: 0.5rem;
+        }
+        &:hover {
+          text-decoration: underline !important;
+        }
+      }
+      input {
+        float: right;
+        width: auto;
+        box-shadow: none;
+        cursor: pointer;
+      }
+      .save-as-default-wrapper {
+        display: inline-block;
+        grid-column: span 12;
+        width: 100%;
+      }
+    }
   }
 }
 
@@ -1079,7 +1467,7 @@
     }
     .photos-footer {
       margin-top: 1rem;
-      .bp3-popover-wrapper {
+      .bp5-popover-wrapper {
         margin-top: 3px;
       }
     }
@@ -1106,7 +1494,7 @@
       width: calc(100% + 25px);
       padding-right: 3.5rem;
       .filter-search {
-        .bp3-button {
+        .bp5-button {
           min-height: 2.5rem;
           max-height: 2.5rem;
           span {
@@ -1114,7 +1502,7 @@
           }
         }
         i {
-          line-height: 2rem;
+          top: 0.75rem;
         }
       }
       p {
@@ -1123,11 +1511,24 @@
         text-overflow: ellipsis;
       }
     }
+    .mounted-tool {
+      .filter-search {
+        width: 50%;
+        float: right;
+      }
+      .utm-and-mounted-tool-graphic {
+        width: 30%;
+        margin-left: 32%;
+      }
+    }
     .mounted-tool-header {
-      display: flex;
+      display: inline;
       margin-top: 1rem;
       label {
         margin: 0;
+      }
+      .bp5-popover-wrapper {
+        display: inline;
       }
       .help-icon {
         margin-left: 1rem;
@@ -1151,7 +1552,7 @@
         font-size: 1.5rem;
       }
     }
-    button:not(.bp3-button) {
+    button:not(.bp5-button) {
       display: block;
       margin-left: auto;
       float: none;
@@ -1168,6 +1569,22 @@
     .panel-section {
       margin-left: -10px;
       margin-right: -10px;
+    }
+  }
+}
+
+.add-tool-slot-panel,
+.edit-tool-slot-panel,
+.add-tool-panel,
+.edit-tool-panel {
+  .tool-action-btn-group {
+    margin: 1.5rem;
+    float: right;
+    .fb-icon-button,
+    .save-btn {
+      float: right;
+      color: $white;
+      margin-left: 1rem;
     }
   }
 }
@@ -1251,6 +1668,17 @@
         margin-right: 0.5rem;
       }
     }
+  }
+}
+
+.flow-rate-input {
+  .bp5-popover-wrapper {
+    display: inline;
+    margin-left: 0.5rem;
+  }
+  .fb-button {
+    float: right;
+    margin-top: 1.5rem;
   }
 }
 
@@ -1343,6 +1771,15 @@
   padding: 0;
 }
 
+.low-pad {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  &.z-param-input {
+    padding-left: 4.25rem;
+  }
+}
+
+.plant-inventory-panel,
 .settings-panel {
   .panel-top {
     .fa-chevron-right,
@@ -1350,6 +1787,30 @@
       font-size: 1.25rem !important;
       padding: 0.1rem;
     }
+    .fa-gear {
+      color: $dark_gray;
+      margin-right: 1rem;
+      margin-top: 1.5rem;
+    }
+  }
+}
+
+.settings-panel-settings-menu {
+  button {
+    margin-left: 1rem;
+  }
+}
+
+.plants-panel-settings-menu {
+  label {
+    line-height: 3rem;
+    vertical-align: bottom;
+    margin-bottom: 0;
+  }
+  .bp5-popover-wrapper {
+    display: inline;
+    margin-left: 0.5rem;
+    line-height: 3rem;
   }
 }
 
@@ -1393,7 +1854,7 @@
   .change-password {
     .old-password,
     .new-password {
-      margin-bottom: 1rem;
+      margin-top: 1.5rem;
       input {
         width: 50%;
         float: right;
@@ -1404,23 +1865,13 @@
     }
   }
   .label-headings {
-    margin-right: 2rem;
     label {
       line-height: 1rem;
     }
   }
   .release-notes-wrapper {
+    margin-top: 0.75rem;
     float: right !important;
-  }
-  .factory-reset-options {
-    a {
-      color: $white;
-      font-weight: bold;
-      text-decoration: none !important;
-    }
-    .fa-external-link {
-      margin-left: 0.5rem;
-    }
   }
   .settings-warning-banner {
     margin-bottom: 1rem !important;
@@ -1434,7 +1885,7 @@
   .limit-switch-warning {
     margin: 1rem -15px -1rem -15px;
     padding: 1rem 1.5rem 1rem 2rem;
-    background: transparentize($orange, 0.6);
+    background: color.adjust($orange, $alpha: -0.6);
     p {
       line-height: 1.75rem;
       font-size: 1.3rem;
@@ -1449,6 +1900,9 @@
       padding-left: 0;
       padding-right: 1rem;
       margin-bottom: 1rem;
+    }
+    button {
+      float: none;
     }
   }
   .pin-bindings {
@@ -1496,31 +1950,23 @@
   .show-advanced-toggle,
   .highlight-modified-toggle {
     margin-right: 4.5rem;
+    margin-top: 1rem;
   }
   .fb-button {
     margin-top: 0.5rem;
   }
   label {
-    margin: 0 !important;
-    line-height: 3rem;
+    margin: auto 0 !important;
+    line-height: 1;
+    font-size: 1.2rem !important;
   }
-  .bp3-popover-wrapper {
-    display: inline;
+  .bp5-popover-wrapper {
+    display: inline-block;
+    margin: auto;
     float: none;
   }
-  .map-size-inputs {
-    .row {
-      margin: 0;
-      padding: 0;
-      margin-top: 1rem;
-      margin-bottom: 1rem;
-    }
-    label {
-      margin-top: 0.5rem;
-    }
-  }
   .help-icon {
-    margin-left: 1rem;
+    margin-left: 0.5rem;
   }
   .designer-setting {
     &.disabled {
@@ -1534,16 +1980,54 @@
   }
 }
 
+.non-layer-config-toggle {
+  margin-top: 0.1rem;
+  &.disabled {
+    input {
+      background: $gray !important;
+    }
+    button {
+      background: $medium_light_gray !important;
+      &:hover {
+        background: $medium_light_gray !important;
+      }
+    }
+  }
+}
+
+.map-size-inputs {
+  .row {
+    margin: 0;
+    padding: 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+  label {
+    margin-top: 0.5rem;
+  }
+}
+
+.factory-reset-options {
+  a {
+    color: $white;
+    font-weight: bold;
+    text-decoration: none !important;
+  }
+  .fa-external-link {
+    margin-left: 0.5rem;
+  }
+}
+
 .saved-garden-panel-content {
   padding: 0;
   padding-bottom: inherit;
   .non-empty-state {
     max-height: calc(100vh - 14rem);
-    @media screen and (max-width: 450px) {
-      max-height: calc(100vh - 19rem);
-    }
     overflow-y: auto;
     overflow-x: hidden;
+    @media screen and (max-width: $mobile_max_width) {
+      max-height: calc(100vh - 19rem);
+    }
   }
   .row {
     margin: 0;
@@ -1580,6 +2064,15 @@
     width: 70%;
     height: 70%;
   }
+  &.more-indicator {
+    height: 20px;
+    width: 20px;
+    cursor: pointer;
+    p {
+      display: inline;
+      text-align: center;
+    }
+  }
 }
 
 .weeds-inventory-panel,
@@ -1589,6 +2082,12 @@
     overflow-y: auto;
     overflow-x: hidden;
   }
+}
+
+.panel-header-icon-group {
+  display: flex;
+  float: right;
+  padding: 1.5rem;
 }
 
 .group-detail-panel {
@@ -1606,7 +2105,7 @@
         float: right;
         font-size: 2rem;
       }
-      .groups-list-wrapper {
+      .point-list-wrapper {
         padding: 0.5em 0em;
       }
     }
@@ -1617,7 +2116,7 @@
       label {
         margin-top: 0;
       }
-      .bp3-popover-wrapper {
+      .bp5-popover-wrapper {
         display: inline;
         margin-left: 1rem;
       }
@@ -1648,7 +2147,7 @@
           font-weight: bold;
         }
       }
-      .bp3-popover-wrapper {
+      .bp5-popover-wrapper {
         float: right;
       }
       .fb-button {
@@ -1781,14 +2280,14 @@
         }
       }
       .advanced {
-        .bp3-popover-wrapper {
-          display: inline;
+        .bp5-popover-wrapper {
+          display: inline-block;
           float: none;
           margin-left: 1rem;
           font-size: 1.4rem;
         }
         .filter-search {
-          .bp3-popover-wrapper {
+          .bp5-popover-wrapper {
             margin-left: 0;
           }
         }
@@ -1816,6 +2315,7 @@
   margin-bottom: 1rem;
   .manual-group-member-count,
   .criteria-group-member-count {
+    margin-bottom: 0.5rem;
     div {
       display: inline;
       padding: 0.25rem;
@@ -1824,6 +2324,9 @@
     p {
       display: inline;
       margin-left: 0.5rem;
+    }
+    .fb-button {
+      margin: 0;
     }
   }
 }
@@ -1837,14 +2340,15 @@
 .lt-gt-criteria,
 .location-criteria {
   display: inline-block;
+  position: relative;
   .row {
     margin-left: 0;
     margin-right: -2.5rem;
+    margin-top: 1rem;
     div[class*=col-] {
       padding: 0;
       text-align: center;
     }
-    margin-top: 1rem;
     p {
       display: block !important;
       text-transform: uppercase;
@@ -1859,7 +2363,9 @@
     margin-top: 2rem !important;
   }
   .edit-in-map {
-    float: right;
+    position: absolute;
+    top: 0;
+    right: 0;
     button {
       margin: 1rem !important;
       width: 5rem !important;
@@ -1888,6 +2394,8 @@
     padding-bottom: inherit;
     .points-section-header {
       cursor: pointer;
+      height: 4rem;
+      line-height: 2.75rem;
       label {
         cursor: pointer;
       }
@@ -1899,13 +2407,32 @@
         margin-right: 0.25rem;
         margin-left: 1rem;
       }
+      &:hover {
+        background: $light_gray;
+      }
+      i {
+        margin-top: 0.5rem;
+      }
+    }
+    .section-header {
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+      line-height: 2.75rem;
+      .fb-button {
+        margin-top: 0.3rem;
+        margin-right: 0.75rem;
+      }
+      .fa-caret-down,
+      .fa-caret-up {
+        margin-top: 1.5rem !important;
+      }
     }
     .points-section-header,
     .pending-weeds-header,
     .active-weeds-header,
     .removed-weeds-header {
-      padding-top: 1rem;
-      padding-bottom: 1rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
       label {
         margin: 0;
         width: 44%;
@@ -1914,8 +2441,17 @@
       }
       .fb-toggle-button {
         margin-right: 2rem;
-        margin-top: 0.25rem;
+        margin-top: 0.6rem;
         float: right;
+        line-height: 0;
+      }
+    }
+    .section-action-btn-group {
+      float: right;
+      margin-top: 0.3rem;
+      line-height: 1.5rem;
+      .delete {
+        line-height: 1.5rem;
       }
     }
     .points-section {
@@ -1938,17 +2474,23 @@
           margin-top: 0.85rem;
           float: right;
         }
-        .bp3-popover-wrapper {
+        .bp5-popover-wrapper {
           display: none;
         }
       }
+    }
+    .points-section,
+    .panel-section {
       .delete {
-        margin: 0 0 2rem 1rem;
+        float: right;
+        line-height: revert;
       }
     }
     .no-points,
     .no-weeds {
       margin-left: 2rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
     }
     .fa-caret-down,
     .fa-caret-up {
@@ -1967,7 +2509,322 @@
     }
     .approval-buttons {
       display: inline;
+      button {
+        height: 2.5rem;
+        line-height: 0 !important;
+      }
+      i {
+        padding-right: 0.5rem;
+      }
     }
+    .active-weeds {
+      .empty-state-graphic {
+        margin-top: 1rem;
+      }
+    }
+  }
+}
+
+.plant-inventory-panel {
+  .section-header {
+    .fb-button {
+      margin-top: 0.75rem;
+    }
+  }
+}
+
+.weeds-inventory-panel {
+  .active-weeds-header {
+    .fb-button {
+      line-height: 1rem;
+      margin-top: 0.5rem;
+      margin-right: 1rem;
+      i {
+        margin: 0 !important;
+        font-size: 1.5rem;
+      }
+    }
+  }
+}
+
+.curve-svg-wrapper {
+  .bp5-popover-target {
+    width: 100%;
+  }
+}
+
+.warning-line-text-popover {
+  border-radius: 5px;
+  .bp5-popover-content {
+    background: $dark_gray;
+    border-radius: 5px;
+  }
+  .bp5-popover-arrow {
+    display: none;
+  }
+  p {
+    color: $white;
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem !important;
+  }
+  .warning-text {
+    max-width: 200px;
+    .top {
+      font-weight: bold;
+    }
+  }
+}
+
+.curve-action-popover {
+  .bp5-popover-content {
+    background: $dark_gray;
+  }
+  .bp5-popover-arrow-fill {
+    fill: $dark_gray;
+  }
+  .curve-action-menu {
+    .transparent-button {
+      position: absolute;
+      right: 0;
+      width: 50%;
+      color: $off_white
+    }
+    label {
+      width: 100%;
+      color: $off_white;
+      margin-top: 0.75rem;
+      margin-right: 1rem;
+    }
+    .filter-search {
+      width: 100%;
+      .bp5-popover-wrapper {
+        width: 120px;
+      }
+      button {
+        box-shadow: none !important;
+      }
+    }
+    input {
+      box-shadow: none;
+      width: 120px;
+    }
+    .curve-menu-row {
+      display: flex;
+      position: relative;
+      height: 3rem;
+      margin-top: 0.5rem;
+      &.last {
+        height: 2rem;
+      }
+    }
+  }
+}
+
+.curve-svg {
+  .data-labels,
+  .y-axis-line,
+  .warning-line {
+    pointer-events: none;
+  }
+}
+
+.curve-info-panel {
+  .panel-title {
+    .white-text {
+      color: $dark_gray;
+      &:hover {
+        color: $dark_gray;
+      }
+    }
+  }
+  .panel-header-icon-group {
+    i {
+      color: $dark_gray;
+    }
+  }
+}
+
+.curve-info-panel-content-wrapper {
+  .bp5-popover-wrapper {
+    float: right;
+    margin-left: 1rem;
+    margin-top: 1rem;
+  }
+  .full-indicator {
+    height: 2rem;
+    text-align: center;
+    color: $darkest_red;
+  }
+  .input-error-wrapper {
+    position: absolute;
+    margin: 0;
+  }
+  table {
+    th {
+      text-transform: uppercase;
+      color: $dark_gray;
+      font-size: 1.3rem;
+    }
+    td,
+    th {
+      background: $lighter_gray;
+      border: 1px solid $light_gray;
+      padding-left: 1rem;
+      p {
+        display: inline;
+        font-size: 1.4rem;
+        color: $dark_gray;
+      }
+      &.active {
+        background: $white;
+      }
+      &.active-input {
+        padding: 0;
+      }
+      .percent-green {
+        color: $green;
+      }
+      .percent-red {
+        color: $red;
+      }
+      input {
+        font-size: 1.4rem;
+        padding-left: 1rem;
+      }
+    }
+    tr {
+      &.hovered {
+        border: 2px solid $gray;
+        border-top-width: 0;
+        border-bottom-width: 0;
+      }
+    }
+  }
+  .row-radio {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-left: 1rem;
+    margin-top: -0.25rem;
+    &.active {
+      &.full {
+        background: revert;
+        border: revert;
+        cursor: pointer;
+      }
+    }
+    &.full {
+      background: $light_gray;
+      border: $gray;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.curves-inventory-panel-content {
+  padding: 0;
+  .curve-search-item {
+    height: 4rem;
+    line-height: 4rem;
+    cursor: pointer;
+    .curve-search-item-info {
+      text-align: right;
+      font-size: 1rem;
+      padding-right: 1rem;
+      line-height: 4rem;
+      float: right;
+    }
+    .curve-search-item-name {
+      width: 40%;
+      margin-left: 1.25rem;
+    }
+  }
+  .section-header {
+    .fb-button {
+      margin-top: 0.75rem;
+    }
+    .fa-caret-up,
+    .fa-caret-down {
+      line-height: 3.75rem;
+      margin-top: 0 !important;
+    }
+  }
+}
+
+.crop-curve-info {
+  .bp5-collapse {
+    padding-top: 0.5rem;
+  }
+  p {
+    line-height: 4rem;
+    font-size: 1.3rem;
+  }
+  label {
+    margin-top: 0 !important;
+  }
+  .fa-external-link {
+    position: absolute;
+    top: 1rem;
+    right: 0;
+  }
+  .active-curve-name {
+    position: relative;
+    height: 4rem;
+    line-height: 3rem;
+    p,
+    .filter-search {
+      display: inline-block;
+      position: absolute;
+      right: 3rem;
+      width: 75%;
+      margin-top: 0.5rem;
+    }
+    p {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    label {
+      line-height: 4rem;
+    }
+  }
+  .curve-svg-wrapper {
+    background: $white;
+    box-shadow: 0 0 10px $light_gray;
+    border-radius: 5px;
+  }
+}
+
+.curve-info-panel-content-wrapper,
+.all-curve-info {
+  svg {
+    text {
+      user-select: none;
+    }
+  }
+}
+
+.curve-icon {
+  margin-left: 1rem;
+  vertical-align: middle;
+}
+
+.curve-usage-display {
+  margin-bottom: 2rem;
+  i[class*=fa-caret-] {
+    float: right;
+    font-size: 2rem;
+  }
+  label {
+    margin-top: 0 !important;
+  }
+  .bp5-popover-wrapper {
+    display: inline;
+    margin-left: 1rem;
+  }
+  img {
+    cursor: pointer;
   }
 }
 
@@ -1989,10 +2846,10 @@
         border: none;
       }
       .widget-footer {
+        background: none;
         * {
           color: $dark_gray;
         }
-        background: none;
       }
     }
     .title-help-icon:hover {
@@ -2006,7 +2863,7 @@
 }
 
 .controls-panel {
-  .move-settings.bp3-popover-wrapper {
+  .move-settings.bp5-popover-wrapper {
     padding-top: 2rem;
   }
   .index-indicator {
@@ -2162,8 +3019,8 @@
       .filter-search {
         margin-right: -1rem;
       }
-      .bp3-popover-wrapper {
-        display: inline;
+      .bp5-popover-wrapper {
+        display: inline-block;
       }
       .fb-toggle-button {
         margin-top: 2rem;
@@ -2178,6 +3035,24 @@
           margin-right: -0.75rem;
           input {
             height: 3rem;
+          }
+        }
+        .resolution-change-warning {
+          i {
+            color: $darkest_red;
+            margin-right: 1rem;
+          }
+          p {
+            display: inline;
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+          }
+          .click {
+            cursor: pointer;
+            font-weight: bold;
+            &:hover {
+              color: $black;
+            }
           }
         }
       }
@@ -2269,6 +3144,9 @@
 .farmware-env-editor {
   .row {
     margin-bottom: 1rem;
+    &.no-margin {
+      margin: 0;
+    }
   }
   .env-hide-toggle {
     margin-top: 1rem;
@@ -2277,28 +3155,41 @@
   .env-editor-warning {
     margin: 0 -15px 2rem -15px;
     padding: 1rem 1.5rem 1rem 2rem;
-    background: transparentize($orange, 0.6);
+    background: color.adjust($orange, $alpha: -0.6);
     p {
       line-height: 1.75rem;
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: bold;
     }
+  }
+  .bp5-popover-wrapper {
+    display: inline;
+    margin-left: 1rem;
+  }
+}
+
+.env-editor-lua {
+  margin: 0 -15px 0 -15px;
+  padding: 1rem 1.5rem 1rem 2rem;
+  background: color.adjust($blue, $alpha: -0.6);
+  p {
+    line-height: 1.75rem;
+    font-size: 1.2rem;
+    font-weight: bold;
   }
 }
 
 .designer-sequence-list-panel {
   .panel-content {
+    height: calc(100vh - 14rem);
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-bottom: 6rem;
+    @media screen and (max-width: $mobile_max_width) {
+      max-height: calc(100vh - 19rem);
+    }
     .panel-top {
       margin-left: 0 !important;
-    }
-    .non-empty-state {
-      max-height: calc(100vh - 15rem);
-      @media screen and (max-width: 450px) {
-        max-height: calc(100vh - 19rem);
-      }
-      overflow-y: scroll;
-      overflow-x: hidden;
-      padding-bottom: 6rem;
     }
     a {
       text-decoration: none !important;
@@ -2313,15 +3204,27 @@
       margin-right: -1rem;
     }
   }
+  .fullscreen {
+    white-space: nowrap;
+    height: 3rem;
+    margin-top: 0.75rem;
+    margin-right: 1rem;
+    i {
+      margin-left: 1rem;
+    }
+  }
 }
 
+.group-detail-panel,
 .designer-regimen-editor-panel,
 .designer-sequence-editor-panel {
   .panel-header {
     input {
+      position: relative;
+      z-index: 1;
       margin: 1rem;
       width: 84%;
-      @media screen and (max-width: 450px) {
+      @media screen and (max-width: $mobile_max_width) {
         width: 65%;
       }
     }
@@ -2331,6 +3234,9 @@
 .designer-sequence-editor-panel {
   .panel-content {
     .sequence-editor-content {
+      hr {
+        margin-top: 1rem;
+      }
       @media screen and (max-width: 767px) {
         margin-left: 5px;
         padding-right: 0;
@@ -2351,11 +3257,21 @@
   }
 }
 
-.designer-sequence-commands-panel {
-  .panel-content {
-    .step-button-cluster {
-      margin-top: 1rem;
-      margin-right: 5px;
+.weed-info-panel,
+.point-info-panel,
+.designer-regimen-editor-panel,
+.designer-sequence-editor-panel {
+  .green,
+  .red {
+    .panel-title {
+      .fa-paint-brush,
+      .fa-expand,
+      .fa-trash,
+      .fa-clone,
+      .fa-magic,
+      .fa-spinner {
+        color: $white;
+      }
     }
   }
 }
@@ -2373,6 +3289,47 @@
 .designer-regimen-editor-panel {
   .title {
     width: 45%;
+  }
+  .panel-title {
+    input {
+      margin: 1rem;
+      width: 75%;
+    }
+    .fa-clone,
+    .fa-trash,
+    .fa-paint-brush {
+      float: right;
+      margin-top: 1.5rem;
+    }
+    .button-group {
+      margin: 0;
+      float: right;
+      width: unset;
+    }
+    .color-picker {
+      float: right;
+    }
+    .fb-button {
+      margin: 1.5rem;
+    }
+  }
+  .green,
+  .red {
+    .panel-title {
+      .color-picker {
+        .icon-saucer {
+          color: $white;
+        }
+      }
+    }
+  }
+  .panel-content {
+    max-height: calc(100vh - 14rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    label {
+      margin-top: 0;
+    }
   }
 }
 
@@ -2399,7 +3356,7 @@
 .support-panel,
 .tours-panel,
 .help-panel {
-  @media screen and (max-width: 450px) {
+  @media screen and (max-width: $mobile_max_width) {
     .help-panel-header {
       position: relative;
       margin-top: 5rem;
@@ -2465,10 +3422,10 @@
     font-size: 1.25rem;
     color: $medium_gray;
   }
-  .bp3-collapse {
+  .bp5-collapse {
     overflow: visible;
   }
-  .bp3-collapse-body {
+  .bp5-collapse-body {
     position: relative;
     z-index: 1;
     margin: -1rem;
@@ -2527,13 +3484,14 @@
 
 .feedback {
   p {
-    color: $medium_light_gray !important;
+    color: $dark_gray !important;
     margin-bottom: 1rem !important;
     font-weight: normal !important;
     font-style: italic;
   }
   textarea {
     font-size: 1.1rem;
+    height: 7.5rem;
   }
   button {
     margin-top: 1rem;
@@ -2542,7 +3500,7 @@
       font-size: 1rem !important;
     }
   }
-  .bp3-popover-wrapper {
+  .bp5-popover-wrapper {
     display: inline;
     line-height: 0;
     vertical-align: bottom;
@@ -2553,18 +3511,33 @@
 .jobs-panel {
   .panel-content {
     display: inline-block;
-    max-height: calc(100vh - 9rem);
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
     width: 100%;
     padding: 0;
+  }
+}
+
+.jobs-tab {
+  overflow-y: scroll;
+  max-height: 26rem;
+  &.bp5-popover {
+    margin-top: 1.5rem;
+  }
+  table {
     p {
       padding: 1rem;
     }
     .job-name {
-      max-width: 10rem;
+      max-width: 20rem;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: $white;
     }
     tr {
       transform: scale(1);
@@ -2573,6 +3546,13 @@
     td {
       white-space: nowrap;
       font-size: 1.2rem;
+      padding: 0.75rem;
+    }
+    th {
+      text-transform: uppercase;
+    }
+    .right-align {
+      text-align: right;
     }
     .progress {
       position: absolute;
@@ -2583,6 +3563,30 @@
       border-radius: 0;
       pointer-events: none;
     }
+    .fa-clock-o {
+      cursor: default !important;
+    }
+  }
+}
+
+.jobs-panel-portal {
+  .bp5-popover-content {
+    padding: 0;
+    width: min(500px, 100vw - 1rem);
+    max-height: calc(100vh - 10rem);
+    overflow: hidden;
+    padding-top: 1rem;
+  }
+}
+
+.saved-garden-edit-panel {
+  .buttons {
+    position: absolute;
+    top: 1.25rem;
+    right: 0.5rem;
+    .fa-trash {
+      color: $white;
+    }
   }
 }
 
@@ -2591,13 +3595,14 @@
     margin-left: 0.5rem;
     margin-top: 1rem;
   }
-  p {
-    font-size: 1.2rem;
-    text-align: center;
-    padding: 3rem;
+  .point-list-wrapper {
+    margin-top: 2rem;
   }
   .row {
     margin: 0;
+  }
+  textarea {
+    font-size: 1.2rem;
   }
 }
 
@@ -2634,7 +3639,8 @@
     h3 {
       margin-bottom: 0;
       cursor: pointer;
-      i {
+      .fa-caret-up,
+      .fa-caret-down {
         font-size: 2.5rem;
         float: right;
         line-height: 1rem;
@@ -2647,14 +3653,6 @@
         margin-left: 1rem;
         margin-top: 0;
         vertical-align: top;
-        i {
-          margin: 0;
-          margin-top: 0.2rem;
-          margin-right: 0.1rem;
-          &.fa-times {
-            margin-right: 0.2rem;
-          }
-        }
       }
     }
     .saucer {
@@ -2664,12 +3662,12 @@
       height: 1.5rem;
       width: 1.5rem;
       i {
-        font-size: 1.4rem;
+        font-size: 1rem;
         color: $white;
         vertical-align: top;
-        &.fa-times {
-          padding-left: 0.2rem;
-        }
+        width: 1.5rem;
+        line-height: 1.5rem;
+        text-align: center;
       }
     }
     h1 {
@@ -2707,7 +3705,7 @@
       h2 {
         margin-top: 0;
       }
-      .bp3-collapse-body {
+      .bp5-collapse-body {
         margin-bottom: 2rem;
       }
     }
@@ -2717,12 +3715,27 @@
       padding-left: 2rem;
       padding-right: 2rem;
       background: $lighter_gray;
-      .bp3-collapse-body {
+      .bp5-collapse-body {
         margin-bottom: 0;
+      }
+      img {
+        width: 100%;
+        border-radius: 5px;
+        margin-bottom: 1rem;
       }
     }
     .wizard-step-info {
       display: inline;
+    }
+    .warning-banner {
+      margin: 0 -15px 1rem -15px;
+      padding: 1rem 1.5rem 1rem 2rem;
+      background: color.adjust($orange, $alpha: -0.6);
+      p {
+        line-height: 1.75rem;
+        font-size: 1.3rem;
+        font-weight: bold;
+      }
     }
     h2,
     .wizard-step-header {
@@ -2738,14 +3751,14 @@
       cursor: pointer;
       &.open {
         background: $lighter_gray;
+        h3 {
+          font-weight: bold;
+        }
       }
       p {
         display: inline;
         color: $medium_light_gray;
         margin-left: 1rem;
-      }
-      p:first-of-type {
-        font-weight: bold;
       }
     }
     .wizard-answer {
@@ -2763,8 +3776,9 @@
     .wizard-components {
       margin: auto;
       width: fit-content;
-      border: 3px solid $gray;
-      padding: 0.5rem;
+      border-radius: 5px;
+      box-shadow: 0 0 7px $translucent;
+      padding: 1rem;
       background: $panel_light_gray;
       &.no-border {
         border: none;
@@ -2799,7 +3813,8 @@
           height: 2rem;
           width: 2rem;
           .fa {
-            padding-left: 0.05rem;
+            margin-left: -0.25rem;
+            margin-top: -0.1rem;
           }
         }
         .saucer-connector {
@@ -2816,6 +3831,28 @@
         float: none;
         padding: 1rem;
       }
+      .setting {
+        .no-pad {
+          padding-left: 1.5rem;
+          padding-right: 1.5rem;
+        }
+      }
+      .pin-binding-input-rows {
+        .row {
+          margin-bottom: 0.5rem;
+        }
+        label {
+          margin-left: 1.5rem;
+        }
+      }
+      .flow-rate-input {
+        .fb-button {
+          margin-top: 0;
+        }
+      }
+    }
+    .wizard-step-question {
+      font-style: italic;
     }
     .markdown {
       display: block;
@@ -2836,7 +3873,6 @@
         float: none;
         padding: 0;
         padding-left: 0.25rem;
-        text-decoration: none !important;
       }
       .feedback {
         textarea {
@@ -2849,26 +3885,43 @@
       }
     }
     .troubleshooting-tip {
-      margin: 1rem;
-      border: 1px solid $black;
+      margin: 1rem 0;
+      border: 2px solid $medium_light_gray;
       border-radius: 5px;
       padding: 1rem;
       cursor: pointer;
+      background: $panel_light_gray;
       &:hover {
-        background: $light_gray;
+        background: $white;
+        box-shadow: 0 1px 5px 0 $translucent;
+      }
+      p {
+        font-size: 1.4rem;
+        line-height: 2rem;
       }
       a {
-        font-size: 1.1rem;
+        font-size: 1.4rem;
+        text-decoration: underline;
       }
       &.selected {
+        border-color: $dark_gray;
+        background: $white;
         p:first-of-type {
           font-weight: bold;
           padding-bottom: 0.5rem;
         }
+        fieldset {
+          p {
+            font-weight: normal !important;
+          }
+        }
       }
       .fb-button {
-        &:hover {
-          font-size: 1.15rem;
+        float: none;
+      }
+      .arrow-button {
+        p {
+          font-size: 0.9rem;
         }
       }
       .farmbot-origin {
@@ -2881,13 +3934,13 @@
       }
       .dropdown-camera-calibration-config,
       .camera-config-number-box {
-        .bp3-popover-wrapper {
-          display: inline;
+        .bp5-popover-wrapper {
+          display: inline-block;
           margin-left: 1rem;
         }
       }
       .filter-search {
-        .bp3-popover-wrapper {
+        .bp5-popover-wrapper {
           display: unset;
           margin-left: unset;
         }
@@ -2900,6 +3953,9 @@
       }
       iframe {
         margin-top: 1rem;
+      }
+      .wizard-find-home-btn {
+        float: none;
       }
     }
     .setup-complete {
@@ -2955,6 +4011,10 @@
       line-height: 3rem;
     }
   }
+}
+
+.peripherals-check {
+  margin: 1rem;
 }
 
 .camera-calibration-card {

@@ -8,6 +8,7 @@ const mockDeviceDefault: DeepPartial<Farmbot> = {
   emergencyLock: jest.fn(() => Promise.resolve()),
   emergencyUnlock: jest.fn(() => Promise.resolve()),
   execSequence: jest.fn(() => Promise.resolve()),
+  takePhoto: jest.fn(() => Promise.resolve()),
   resetMCU: jest.fn(() => Promise.resolve()),
   moveRelative: jest.fn(() => Promise.resolve()),
   moveAbsolute: jest.fn(() => Promise.resolve()),
@@ -18,7 +19,7 @@ const mockDeviceDefault: DeepPartial<Farmbot> = {
   findHome: jest.fn(() => Promise.resolve()),
   sync: jest.fn(() => Promise.resolve()),
   send: jest.fn(() => Promise.resolve()),
-  readStatus: jest.fn(() => Promise.resolve())
+  readStatus: jest.fn(() => Promise.resolve()),
 };
 
 const mockDevice = { current: mockDeviceDefault };
@@ -49,12 +50,12 @@ import * as actions from "../actions";
 import {
   fakeFirmwareConfig, fakeFbosConfig,
 } from "../../__test_support__/fake_state/resources";
-import { Actions } from "../../constants";
+import { Actions, Content } from "../../constants";
 import { buildResourceIndex } from "../../__test_support__/resource_index_builder";
 import axios from "axios";
 import { success, error, warning, info } from "../../toast/toast";
 import { edit, save } from "../../api/crud";
-import { DeepPartial } from "redux";
+import { DeepPartial } from "../../redux/interfaces";
 import { Farmbot } from "farmbot";
 import { goToFbosSettings } from "../../settings/maybe_highlight";
 
@@ -64,6 +65,31 @@ const replaceDeviceWith = async (d: DeepPartial<Farmbot>, cb: Function) => {
   await cb();
   mockDevice.current = mockDeviceDefault;
 };
+
+describe("sendRPC()", () => {
+  it("calls sendRPC", async () => {
+    await actions.sendRPC({ kind: "sync", args: {} });
+    expect(mockDevice.current.send).toHaveBeenCalledWith({
+      kind: "rpc_request",
+      args: { label: expect.any(String), priority: 600 },
+      body: [{ kind: "sync", args: {} }],
+    });
+  });
+});
+
+describe("readStatus()", () => {
+  it("calls readStatus", async () => {
+    await actions.readStatus();
+    expect(mockDevice.current.readStatus).toHaveBeenCalled();
+  });
+});
+
+describe("readStatusReturnPromise()", () => {
+  it("calls readStatusReturnPromise", async () => {
+    await actions.readStatusReturnPromise();
+    expect(mockDevice.current.readStatus).toHaveBeenCalled();
+  });
+});
 
 describe("checkControllerUpdates()", () => {
   it("calls checkUpdates", async () => {
@@ -165,7 +191,7 @@ describe("sync()", () => {
     state.bot.hardware.informational_settings.controller_version = undefined;
     actions.sync()(jest.fn(), () => state);
     expect(mockDevice.current.sync).not.toHaveBeenCalled();
-    expect(info).toBeCalledWith("FarmBot is not connected.", {
+    expect(info).toHaveBeenCalledWith("FarmBot is not connected.", {
       title: "Disconnected", color: "red",
     });
   });
@@ -211,6 +237,24 @@ describe("execSequence()", () => {
   it("implodes when executing unsaved sequences", () => {
     expect(() => actions.execSequence(undefined)).toThrow();
     expect(mockDevice.current.execSequence).not.toHaveBeenCalled();
+  });
+});
+
+describe("takePhoto()", () => {
+  it("calls takePhoto", async () => {
+    await actions.takePhoto();
+    expect(mockDevice.current.takePhoto).toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith(Content.PROCESSING_PHOTO,
+      { title: "Request sent" });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("calls takePhoto: error", async () => {
+    mockDevice.current.takePhoto = jest.fn(() => Promise.reject("error"));
+    await actions.takePhoto();
+    await expect(mockDevice.current.takePhoto).toHaveBeenCalled();
+    expect(success).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith("Error taking photo");
   });
 });
 
@@ -546,8 +590,6 @@ describe("changeStepSize()", () => {
 
 describe("fetchMinOsFeatureData()", () => {
   const EXPECTED_URL = expect.stringContaining("FEATURE_MIN_VERSIONS.json");
-  afterEach(() =>
-    jest.restoreAllMocks());
 
   it("fetches min OS feature data: empty", async () => {
     mockGet = Promise.resolve({ data: {} });
@@ -576,22 +618,22 @@ describe("fetchMinOsFeatureData()", () => {
   it("fetches bad min OS feature data: not an object", async () => {
     mockGet = Promise.resolve({ data: "bad" });
     const dispatch = jest.fn();
-    const mockConsole = jest.spyOn(console, "log").mockImplementation(() => { });
+    console.log = jest.fn();
     await actions.fetchMinOsFeatureData()(dispatch);
     expect(axios.get).toHaveBeenCalledWith(EXPECTED_URL);
     expect(dispatch).not.toHaveBeenCalled();
-    expect(mockConsole).toHaveBeenCalledWith(
+    expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining("\"bad\""));
   });
 
   it("fetches bad min OS feature data", async () => {
     mockGet = Promise.resolve({ data: { a: "0", b: 0 } });
     const dispatch = jest.fn();
-    const mockConsole = jest.spyOn(console, "log").mockImplementation(() => { });
+    console.log = jest.fn();
     await actions.fetchMinOsFeatureData()(dispatch);
     expect(axios.get).toHaveBeenCalledWith(EXPECTED_URL);
     expect(dispatch).not.toHaveBeenCalled();
-    expect(mockConsole).toHaveBeenCalledWith(
+    expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining("{\"a\":\"0\",\"b\":0}"));
   });
 

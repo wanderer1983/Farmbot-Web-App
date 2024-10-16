@@ -12,7 +12,7 @@ describe Api::RegimensController do
       celery = File.read("spec/lib/celery_script/ast_fixture5.json")
       json = JSON.parse(celery, symbolize_names: true)
       s = Sequences::Create.run!(json, device: user.device)
-      # No paramaters here.
+      # No parameters here.
 
       payload = {
         name: "New regimen 1",
@@ -21,7 +21,7 @@ describe Api::RegimensController do
         body: [
           {
             kind: "variable_declaration",
-            args: { label: "parent", data_value: { kind: "nothing", args: {} } },
+            args: { label: "parent", data_value: { kind: "safe_z", args: {} } },
           },
         ],
       }
@@ -122,7 +122,7 @@ describe Api::RegimensController do
           kind: "parameter_application",
           args: {
             label: "parent",
-            data_value: { kind: "nothing", args: {} },
+            data_value: { kind: "safe_z", args: {} },
           },
         },
       ],
@@ -132,7 +132,7 @@ describe Api::RegimensController do
       post :create, body: payload.to_json, format: :json
       expect(response.status).to eq(422)
       msg = json.fetch(:error)
-      expect(msg).to include("but got nothing")
+      expect(msg).to include("but got safe_z")
       # Make sure corpus entries are properly formatted.
       expect(msg).to include('"coordinate",')
     end

@@ -8,6 +8,7 @@ let mockPointGroup = { body: { id: 323232332 } };
 jest.mock("../../resources/selectors", () => ({
   findPointGroup: jest.fn(() => mockPointGroup),
   selectAllRegimens: jest.fn(),
+  selectAllPlantPointers: jest.fn(() => []),
   findUuid: jest.fn(),
 }));
 
@@ -20,7 +21,7 @@ import {
 import {
   fakePoint, fakePlant, fakeToolSlot, fakePointGroup,
 } from "../../__test_support__/fake_state/resources";
-import { DeepPartial } from "redux";
+import { DeepPartial } from "../../redux/interfaces";
 import { Everything } from "../../interfaces";
 import { DEFAULT_CRITERIA } from "../criteria/interfaces";
 import { cloneDeep } from "lodash";
@@ -40,7 +41,7 @@ describe("createGroup()", () => {
     expect(init).toHaveBeenCalledWith("PointGroup", expect.objectContaining({
       name: "Name123",
       point_ids: [1, 2],
-      sort_type: "xy_ascending",
+      sort_type: "nn",
       criteria: DEFAULT_CRITERIA,
     }));
     expect(save).toHaveBeenCalledWith("???");
@@ -62,7 +63,7 @@ describe("createGroup()", () => {
     expect(init).toHaveBeenCalledWith("PointGroup", expect.objectContaining({
       name: "Untitled Group",
       point_ids: [4],
-      sort_type: "xy_ascending",
+      sort_type: "nn",
       criteria: DEFAULT_CRITERIA,
     }));
     expect(save).toHaveBeenCalledWith("???");

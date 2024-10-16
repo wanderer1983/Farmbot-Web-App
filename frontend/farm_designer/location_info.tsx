@@ -1,8 +1,9 @@
 import React from "react";
-import { Everything, TimeSettings } from "../interfaces";
+import { Everything, MovementState, TimeSettings } from "../interfaces";
 import { BotPosition, UserEnv } from "../devices/interfaces";
 import { connect } from "react-redux";
-import { getUrlQuery, validBotLocationData } from "../util/util";
+import { getUrlQuery } from "../util";
+import { validBotLocationData } from "../util/location";
 import {
   DesignerPanel, DesignerPanelContent, DesignerPanelHeader,
 } from "./designer_panel";
@@ -18,9 +19,11 @@ import { getSoilHeightColor, soilHeightPoint } from "../points/soil_height";
 import {
   TaggedFarmwareEnv,
   TaggedGenericPointer, TaggedImage, TaggedPlantPointer, TaggedPoint,
-  TaggedSensor, TaggedSensorReading, Xyz,
+  TaggedSensor, TaggedSensorReading,
 } from "farmbot";
-import { MoveToForm } from "./move_to";
+import {
+  chooseLocationAction, MoveToForm, unChooseLocationAction, validGoButtonAxes,
+} from "./move_to";
 import { Actions } from "../constants";
 import { push } from "../history";
 import { distance } from "../point_groups/paths";
@@ -60,6 +63,8 @@ export const mapStateToProps = (props: Everything): LocationInfoProps => ({
   farmwareEnvs: selectAllFarmwareEnvs(props.resources.index),
   sensors: selectAllSensors(props.resources.index),
   timeSettings: maybeGetTimeSettings(props.resources.index),
+  arduinoBusy: props.bot.hardware.informational_settings.busy,
+  movementState: props.app.movement,
 });
 
 export interface LocationInfoProps {
@@ -78,6 +83,8 @@ export interface LocationInfoProps {
   sensors: TaggedSensor[];
   timeSettings: TimeSettings;
   farmwareEnvs: TaggedFarmwareEnv[];
+  arduinoBusy: boolean;
+  movementState: MovementState;
 }
 
 export class RawLocationInfo extends React.Component<LocationInfoProps, {}> {
@@ -95,17 +102,13 @@ export class RawLocationInfo extends React.Component<LocationInfoProps, {}> {
     const y = getUrlQuery("y");
     const z = getUrlQuery("z") || "0";
     !this.chosenXY && !isUndefined(x) && !isUndefined(y) &&
-      this.props.dispatch({
-        type: Actions.CHOOSE_LOCATION,
-        payload: { x: parseFloat(x), y: parseFloat(y), z: parseFloat(z) }
-      });
+      this.props.dispatch(chooseLocationAction({
+        x: parseFloat(x), y: parseFloat(y), z: parseFloat(z)
+      }));
   }
 
   componentWillUnmount() {
-    this.props.dispatch({
-      type: Actions.CHOOSE_LOCATION,
-      payload: { x: undefined, y: undefined, z: undefined }
-    });
+    this.props.dispatch(unChooseLocationAction());
   }
 
   render() {
@@ -161,6 +164,9 @@ export class RawLocationInfo extends React.Component<LocationInfoProps, {}> {
                 key={resource.title}
                 items={resource.items}
                 dispatch={this.props.dispatch}
+                arduinoBusy={this.props.arduinoBusy}
+                currentBotLocation={this.props.currentBotLocation}
+                movementState={this.props.movementState}
                 title={resource.title}
                 timeSettings={this.props.timeSettings}
                 sensorNameByPinLookup={sensorNameByPinLookup}
@@ -197,7 +203,7 @@ interface ItemData<T> {
   items: T[];
 }
 
-export function groupItemsByLocation<T extends Item>(
+function groupItemsByLocation<T extends Item>(
   items: T[],
   chosenXY: Record<"x" | "y", number> | undefined,
 ) {
@@ -241,6 +247,9 @@ interface ItemListWrapperProps {
   chosenXY: Record<"x" | "y", number> | undefined;
   hoveredSensorReading: string | undefined;
   farmwareEnvs: TaggedFarmwareEnv[];
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
 }
 
 function ItemListWrapper(props: ItemListWrapperProps) {
@@ -308,6 +317,9 @@ function ItemListWrapper(props: ItemListWrapperProps) {
                 dispatch={props.dispatch}
                 getConfigValue={props.getConfigValue}
                 chosenXY={chosenXY}
+                arduinoBusy={props.arduinoBusy}
+                currentBotLocation={props.currentBotLocation}
+                movementState={props.movementState}
                 timeSettings={props.timeSettings}
                 env={props.env} />;
           }
@@ -396,13 +408,16 @@ export interface ImageListItemProps {
   env: UserEnv;
   chosenXY: Record<"x" | "y", number> | undefined;
   timeSettings: TimeSettings;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
 }
 
 export const ImageListItem = (props: ImageListItemProps) => {
   const images = sortBy(props.images.items, "body.created_at").reverse();
   const [currentImage, setCurrentImage] = React.useState(images[0]);
   return <div className={"image-items"}>
-    <ImageFlipper id={"image-items"}
+    <ImageFlipper id={"image-items-flipper"}
       currentImage={currentImage}
       dispatch={props.dispatch}
       flipActionOverride={nextIndex => setCurrentImage(images[nextIndex])}
@@ -419,21 +434,23 @@ export const ImageListItem = (props: ImageListItemProps) => {
       images={images} />
     <PhotoFooter
       image={images[0]}
-      flags={undefined}
-      size={{ width: undefined, height: undefined }}
-      dispatch={props.dispatch}
       botOnline={false}
       distance={props.images.distance}
+      arduinoBusy={props.arduinoBusy}
+      currentBotLocation={props.currentBotLocation}
+      movementState={props.movementState}
+      defaultAxes={validGoButtonAxes(props.getConfigValue)}
+      dispatch={props.dispatch}
       timeSettings={props.timeSettings} />
   </div>;
 };
 
 interface LocationActionsProps {
   dispatch: Function;
-  currentBotLocation: Record<Xyz, number | undefined>;
+  currentBotLocation: BotPosition;
   botOnline: boolean;
   locked: boolean;
-  chosenLocation: Record<Xyz, number | undefined>;
+  chosenLocation: BotPosition;
 }
 
 const LocationActions = (props: LocationActionsProps) =>
@@ -442,6 +459,7 @@ const LocationActions = (props: LocationActionsProps) =>
       chosenLocation={props.chosenLocation}
       currentBotLocation={props.currentBotLocation}
       locked={props.locked}
+      dispatch={props.dispatch}
       botOnline={props.botOnline} />
     {!isUndefined(props.currentBotLocation.x)
       && !isUndefined(props.currentBotLocation.y)

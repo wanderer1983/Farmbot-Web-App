@@ -25,7 +25,7 @@
   width: 20%;
   float: left;
   &:hover {
-    background-color: darken($white, 40%);
+    background-color: color.adjust($white, $lightness: -40%);
     color: $off_white;
   }
   &:nth-child(n+2) {
@@ -56,9 +56,75 @@
   margin-top: 15px;
   width: auto;
   border: 0;
+  .bp5-popover-wrapper {
+    line-height: 0;
+  }
+  .fa-camera {
+    .bp5-popover-wrapper {
+      z-index: 1;
+      width: 4rem;
+      height: 4rem;
+      margin-top: -3rem;
+      margin-left: -1rem;
+      .bp5-popover-target {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+}
+
+.in-progress {
+  background: $gray !important;
+  border-bottom-color: $medium_gray !important;
+}
+
+.progress-percent {
+  width: 3rem;
+  height: 3rem;
+  margin-top: -0.75rem;
+  margin-left: -0.75rem;
+  border-radius: 50%;
+  padding: 0.25rem;
+  p {
+    display: inline-block;
+    position: relative !important;
+    margin: auto !important;
+    color: $dark_gray !important;
+    background: $gray;
+    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    font-size: 0.7rem;
+    font-weight: bold;
+    line-height: 2.25rem;
+    vertical-align: middle;
+  }
+}
+
+.power-btn-popover {
+  label {
+    color: $off_white;
+  }
+  .bp5-popover-wrapper {
+    display: inline;
+    margin-left: 0.5rem;
+    color: $off_white;
+  }
+  .bp5-popover-content {
+    width: 310px;
+    background: $dark_gray;
+  }
+  .bp5-popover-arrow-fill {
+    fill: $dark_gray;
+  }
+  .fa-anchor {
+    display: none;
+  }
 }
 
 .arrow-button {
+  position: relative;
   margin: 0;
   background-color: $medium_gray;
   border-bottom: 2px solid $dark_gray;
@@ -70,11 +136,40 @@
   width: 40px;
   box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 7px 0px;
   &:hover {
-    background-color: darken($medium_gray, 5%);
+    background-color: color.adjust($medium_gray, $lightness: -5%);
   }
   &:disabled {
     border-bottom: none;
     box-shadow: none !important;
+  }
+  p {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    color: $white;
+    margin-top: -2px;
+    padding-left: 1px;
+    font-size: 0.9rem;
+  }
+  &:before {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.movement-progress {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: $medium_gray;
+}
+
+.camera-message,
+.movement-message {
+  .bp5-popover-content {
+    width: unset !important;
   }
 }
 

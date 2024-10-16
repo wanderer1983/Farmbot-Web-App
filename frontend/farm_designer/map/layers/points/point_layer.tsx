@@ -21,8 +21,10 @@ export interface PointLayerProps {
   interactions: boolean;
   cameraCalibrationData: CameraCalibrationData;
   cropPhotos: boolean;
+  showUncroppedArea: boolean;
   designer: DesignerState;
   farmwareEnvs: TaggedFarmwareEnv[];
+  animate: boolean;
 }
 
 export function PointLayer(props: PointLayerProps) {
@@ -57,9 +59,11 @@ export function PointLayer(props: PointLayerProps) {
             cameraViewGridId={cameraViewGridId}
             cameraCalibrationData={props.cameraCalibrationData}
             cropPhotos={props.cropPhotos}
+            showUncroppedArea={props.showUncroppedArea}
             dispatch={props.dispatch}
             soilHeightLabels={soilHeightLabels}
             getSoilHeightColor={getColor}
+            animate={props.animate}
             mapTransformProps={mapTransformProps} />)}
   </g>;
 }

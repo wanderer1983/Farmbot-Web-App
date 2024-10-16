@@ -1,6 +1,6 @@
 import React from "react";
 import moment from "moment";
-import { success, error } from "../toast/toast";
+import { success, error, warning } from "../toast/toast";
 import {
   TaggedFarmEvent, SpecialStatus, TaggedSequence, TaggedRegimen,
   ParameterApplication,
@@ -26,7 +26,7 @@ import { Content } from "../constants";
 import { EventTimePicker } from "./event_time_picker";
 import { TzWarning } from "./tz_warning";
 import { nextRegItemTimes } from "./map_state_to_props";
-import { first } from "lodash";
+import { first, some } from "lodash";
 import {
   TimeUnit, ExecutableType, FarmEvent,
 } from "farmbot/dist/resources/api_resources";
@@ -42,6 +42,11 @@ import { t } from "../i18next_wrapper";
 import { TimeSettings } from "../interfaces";
 import { ErrorBoundary } from "../error_boundary";
 import { Path } from "../internal_urls";
+import { Collapse } from "@blueprintjs/core";
+import { SectionHeader } from "../sequences/sequence_editor_middle_active";
+import { nearOsUpdateTime } from "../regimens/bulk_scheduler/bulk_scheduler";
+import { timeToMs } from "../regimens/bulk_scheduler/utils";
+import { getDeviceAccountSettings } from "../resources/selectors";
 
 export const NEVER: TimeUnit = "never";
 /** Separate each of the form fields into their own interface. Recombined later
@@ -61,7 +66,7 @@ export interface FarmEventViewModel {
   body?: ParameterApplication[];
 }
 
-export type FarmEventViewModelKey = keyof FarmEventViewModel;
+type FarmEventViewModelKey = keyof FarmEventViewModel;
 
 /** Breaks up a TaggedFarmEvent into a structure that can easily be used
  * by the edit form.
@@ -146,7 +151,7 @@ export interface EditFEProps {
   resources: ResourceIndex;
 }
 
-export interface EditFEFormState {
+interface EditFEFormState {
   /**
    * Hold a partial FarmEvent locally containing only updates made by the form.
    */
@@ -158,10 +163,15 @@ export interface EditFEFormState {
    * Example: Navigating away from the page while editing will discard changes.
    */
   specialStatusLocal: SpecialStatus;
+  variablesCollapsed: boolean;
 }
 
 export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
-  state: EditFEFormState = { fe: {}, specialStatusLocal: SpecialStatus.SAVED };
+  state: EditFEFormState = {
+    fe: {},
+    specialStatusLocal: SpecialStatus.SAVED,
+    variablesCollapsed: false,
+  };
 
   /** API data for the FarmEvent to which form updates can be applied. */
   get viewModel() {
@@ -239,7 +249,8 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
             executable_type: next_executable_type,
             executable_id: ddi.value.toString(),
           },
-          specialStatusLocal: SpecialStatus.DIRTY
+          specialStatusLocal: SpecialStatus.DIRTY,
+          variablesCollapsed: this.state.variablesCollapsed,
         };
         this.overwriteStateFEBody(variableList(varData) || []);
         this.setState(betterMerge(this.state, update));
@@ -267,8 +278,8 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
   fieldGet = (key: FarmEventViewModelKey): string =>
     (this.state.fe[key] || this.viewModel[key] || "").toString();
 
-  nextItemTime = (fe: FarmEvent, now: moment.Moment,
-  ): moment.Moment | undefined => {
+  allItemTimes = (fe: FarmEvent, now: moment.Moment,
+  ): moment.Moment[] | undefined => {
     const { timeSettings } = this.props;
     const kind = fe.executable_type;
     const start = fe.start_time;
@@ -276,19 +287,25 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
       !!(x.kind === "Regimen");
     switch (kind) {
       case "Sequence":
-        return first(scheduleForFarmEvent(fe, now).items);
+        return scheduleForFarmEvent(fe, now).items;
       case "Regimen":
         const r = this.props.findExecutable(kind, fe.executable_id);
-        const nextItem = isRegimen(r)
-          ? first(nextRegItemTimes(r.body.regimen_items, start, now, timeSettings))
+        const items = isRegimen(r)
+          ? nextRegItemTimes(r.body.regimen_items, start, now, timeSettings)
           : undefined;
-        const futureStartTimeFallback = moment(start) > now
-          ? moment(start)
-          : undefined;
-        return nextItem || futureStartTimeFallback;
+        return items;
       default:
         throw new Error(`${kind} is not a valid executable_type`);
     }
+  };
+
+  nextItemTime = (fe: FarmEvent, now: moment.Moment,
+  ): moment.Moment | undefined => {
+    const items = this.allItemTimes(fe, now);
+    const futureStartTimeFallback = moment(fe.start_time) > now
+      ? moment(fe.start_time)
+      : undefined;
+    return first(items) || futureStartTimeFallback;
   };
 
   /** Rejects save of Farm Event if: */
@@ -338,6 +355,11 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
           () => alert(t(Content.REGIMEN_TODAY_SKIPPED_ITEM_RISK)), now));
         success(t("The next item in this event will run {{timeFromNow}}.",
           { timeFromNow: nextRun.from(now) }));
+        const warn = some(
+          (this.allItemTimes(this.updatedFarmEvent, now) as moment.Moment[])
+            .map(item => nearOsUpdateTime(timeToMs(item.format("HH:mm")),
+              getDeviceAccountSettings(this.props.resources).body.ota_hour)));
+        warn && warning(Content.WITHIN_HOUR_OF_OS_UPDATE);
         push(Path.farmEvents());
       })
       .catch(() => {
@@ -346,8 +368,14 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
       });
   };
 
+  toggleVarShow = () =>
+    this.setState({ variablesCollapsed: !this.state.variablesCollapsed });
+
   render() {
     const { farmEvent } = this.props;
+    const variableCount = Object.values(this.variableData || {})
+      .filter(v => v?.celeryNode.kind == "parameter_declaration")
+      .length;
     return <div className="edit-farm-event-form">
       <ErrorBoundary>
         <FarmEventForm
@@ -362,9 +390,18 @@ export class EditFEForm extends React.Component<EditFEProps, EditFEFormState> {
           specialStatus={farmEvent.specialStatus
             || this.state.specialStatusLocal}
           onSave={() => this.commitViewModel()}>
-          <ErrorBoundary>
-            <this.LocalsList />
-          </ErrorBoundary>
+          <div className={"farm-event-form-content"}>
+            {variableCount > 0 &&
+              <SectionHeader title={t("Variables")}
+                count={variableCount}
+                collapsed={this.state.variablesCollapsed}
+                toggle={this.toggleVarShow} />}
+            <Collapse isOpen={!this.state.variablesCollapsed}>
+              <ErrorBoundary>
+                <this.LocalsList />
+              </ErrorBoundary>
+            </Collapse>
+          </div>
         </FarmEventForm>
       </ErrorBoundary>
       <FarmEventDeleteButton
@@ -459,7 +496,7 @@ export const RepeatForm = (props: RepeatFormProps) => {
   </div>;
 };
 
-export const dateCheck = (
+const dateCheck = (
   fieldGet: (key: FarmEventViewModelKey) => string,
 ): string | undefined => {
   const startDate = fieldGet("startDate");
@@ -469,7 +506,7 @@ export const dateCheck = (
   }
 };
 
-export const timeCheck = (
+const timeCheck = (
   fieldGet: (key: FarmEventViewModelKey) => string,
   timeSettings: TimeSettings,
 ): string | undefined => {
@@ -491,18 +528,16 @@ export interface FarmEventDeleteButtonProps {
 }
 
 export const FarmEventDeleteButton = (props: FarmEventDeleteButtonProps) =>
-  <button className="fb-button red" hidden={props.hidden}
+  <i className={"fa fa-trash fb-icon-button"} hidden={props.hidden}
     title={t("Delete")}
     onClick={() =>
       props.dispatch(destroy(props.farmEvent.uuid))
         .then(() => {
           push(Path.farmEvents());
           success(t("Deleted event."), { title: t("Deleted") });
-        })}>
-    {t("Delete")}
-  </button>;
+        })} />;
 
-export interface FarmEventFormProps {
+interface FarmEventFormProps {
   isRegimen: boolean;
   fieldGet(key: FarmEventViewModelKey): string;
   fieldSet(key: FarmEventViewModelKey, value: string): void;
@@ -525,7 +560,7 @@ export const FarmEventForm = (props: FarmEventFormProps) => {
     {props.executableOptions.filter(x => !x.heading).length < 1 &&
       <Help
         text={Content.MISSING_EXECUTABLE}
-        customIcon={"exclamation-triangle"} />}
+        customIcon={"fa-exclamation-triangle"} />}
     <FBSelect
       list={props.executableOptions}
       onChange={props.executableSet}

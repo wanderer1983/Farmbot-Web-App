@@ -1,6 +1,5 @@
 import { OpenFarm } from "../open_farm/openfarm";
 import { DropDownItem } from "../ui";
-import { CowardlyDictionary } from "../util";
 import {
   TaggedFarmEvent,
   TaggedSequence,
@@ -22,6 +21,8 @@ import {
   TaggedFarmwareEnv,
   TaggedPlantTemplate,
   TaggedPlantPointer,
+  TaggedCurve,
+  PlantStage,
 } from "farmbot";
 import { SlotWithTool, ResourceIndex, UUID } from "../resources/interfaces";
 import {
@@ -37,8 +38,9 @@ import {
   ExecutableType, PlantPointer, ToolPulloutDirection,
 } from "farmbot/dist/resources/api_resources";
 import { BooleanConfigKey } from "farmbot/dist/resources/configs/web_app";
-import { TimeSettings } from "../interfaces";
+import { MovementState, TimeSettings } from "../interfaces";
 import { ExtendedPointGroupSortType } from "../point_groups/paths";
+import { PeripheralValues } from "./map/layers/farmbot/bot_trail";
 
 /* BotOriginQuadrant diagram
 
@@ -95,7 +97,7 @@ export interface FarmDesignerProps {
   botLocationData: BotLocationData;
   botMcuParams: McuParams;
   botSize: BotSize;
-  peripherals: { label: string, value: boolean }[];
+  peripheralValues: PeripheralValues;
   eStopStatus: boolean;
   latestImages: TaggedImage[];
   cameraCalibrationData: CameraCalibrationData;
@@ -110,6 +112,8 @@ export interface FarmDesignerProps {
   deviceTarget: string;
   sourceFbosConfig: SourceFbosConfig;
   farmwareEnvs: TaggedFarmwareEnv[];
+  children?: React.ReactNode;
+  curves: TaggedCurve[];
 }
 
 export interface MovePointsProps {
@@ -119,12 +123,20 @@ export interface MovePointsProps {
   gridSize: AxisNumberProperty;
 }
 
+export interface MovePointToProps {
+  x: number;
+  y: number;
+  point: TaggedPoint | TaggedPlantTemplate;
+  gridSize: AxisNumberProperty;
+}
+
 /**
  * OFCrop bundled with corresponding profile image from OpenFarm API.
  */
 export interface CropLiveSearchResult {
   crop: OpenFarm.OFCrop;
-  image: string;
+  images: string[];
+  companions: OpenFarm.CompanionsData[];
 }
 
 export interface Crop {
@@ -139,6 +151,7 @@ export interface DesignerState {
   selectionPointType: PointType[] | undefined;
   hoveredPlant: HoveredPlantPayl;
   hoveredPoint: string | undefined;
+  hoveredSpread: number | undefined;
   hoveredPlantListItem: string | undefined;
   hoveredToolSlot: string | undefined;
   hoveredSensorReading: string | undefined;
@@ -146,12 +159,13 @@ export interface DesignerState {
   cropSearchQuery: string;
   cropSearchResults: CropLiveSearchResult[];
   cropSearchInProgress: boolean;
+  companionIndex: number | undefined;
   plantTypeChangeId: number | undefined;
   bulkPlantSlug: string | undefined;
   chosenLocation: BotPosition;
   drawnPoint: DrawnPointPayl | undefined;
   drawnWeed: DrawnWeedPayl | undefined;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
   tryGroupSortType: ExtendedPointGroupSortType | undefined;
   editGroupAreaInMap: boolean;
   visualizedSequence: UUID | undefined;
@@ -167,12 +181,18 @@ export interface DesignerState {
   hoveredMapImage: number | undefined;
   cameraViewGridId: string | undefined;
   gridIds: string[];
+  gridStart: Record<"x" | "y", number>;
   soilHeightLabels: boolean;
   profileOpen: boolean;
   profileAxis: "x" | "y";
   profilePosition: Record<"x" | "y", number | undefined>;
   profileWidth: number;
   profileFollowBot: boolean;
+  cropWaterCurveId: number | undefined;
+  cropSpreadCurveId: number | undefined;
+  cropHeightCurveId: number | undefined;
+  cropStage: PlantStage | undefined;
+  cropPlantedAt: string | undefined;
 }
 
 export type TaggedExecutable = TaggedSequence | TaggedRegimen;
@@ -183,9 +203,9 @@ export interface AddEditFarmEventProps {
   executableOptions: DropDownItem[];
   repeatOptions: DropDownItem[];
   farmEvents: TaggedFarmEvent[];
-  regimensById: CowardlyDictionary<TaggedRegimen>;
-  sequencesById: CowardlyDictionary<TaggedSequence>;
-  farmEventsById: CowardlyDictionary<TaggedFarmEvent>;
+  regimensById: Record<string, TaggedRegimen | undefined>;
+  sequencesById: Record<string, TaggedSequence | undefined>;
+  farmEventsById: Record<string, TaggedFarmEvent | undefined>;
   getFarmEvent(): TaggedFarmEvent | undefined;
   findFarmEventByUuid(uuid: string | undefined): TaggedFarmEvent | undefined;
   handleTime(e: React.SyntheticEvent<HTMLInputElement>, currentISO: string): string;
@@ -259,7 +279,7 @@ export interface GardenMapProps {
   zoomLvl: number;
   mapTransformProps: MapTransformProps;
   gridOffset: AxisNumberProperty;
-  peripherals: { label: string, value: boolean }[];
+  peripheralValues: PeripheralValues;
   eStopStatus: boolean;
   latestImages: TaggedImage[];
   cameraCalibrationData: CameraCalibrationData;
@@ -273,18 +293,18 @@ export interface GardenMapProps {
   logs: TaggedLog[];
   deviceTarget: string;
   farmwareEnvs: TaggedFarmwareEnv[];
+  curves: TaggedCurve[];
 }
 
 export interface GardenMapState {
   isDragging: boolean | undefined;
   botOriginQuadrant: BotOriginQuadrant;
-  qPageX: number | undefined;
-  qPageY: number | undefined;
   activeDragXY: BotPosition | undefined;
   activeDragSpread: number | undefined;
   selectionBox: SelectionBoxData | undefined;
   previousSelectionBoxArea: number | undefined;
   toLocation: Vector3 | undefined;
+  cursorPosition: AxisNumberProperty | undefined;
 }
 
 export type PlantOptions = Partial<PlantPointer>;
@@ -292,11 +312,19 @@ export type PlantOptions = Partial<PlantPointer>;
 export interface EditPlantInfoProps {
   dispatch: Function;
   findPlant(stringyID: string | undefined): TaggedPlant | undefined;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
   timeSettings: TimeSettings;
   getConfigValue: GetWebAppConfigValue;
   soilHeightPoints: TaggedGenericPointer[];
   farmwareEnvs: TaggedFarmwareEnv[];
+  botOnline: boolean;
+  arduinoBusy: boolean;
+  currentBotLocation: BotPosition;
+  movementState: MovementState;
+  sourceFbosConfig: SourceFbosConfig;
+  botSize: BotSize;
+  curves: TaggedCurve[];
+  plants: TaggedPlantPointer[];
 }
 
 export interface DraggableEvent {
@@ -326,13 +354,15 @@ export interface CropCatalogProps {
 
 export interface CropInfoProps {
   dispatch: Function;
-  cropSearchQuery: string | undefined;
-  cropSearchResults: CropLiveSearchResult[];
-  cropSearchInProgress: boolean;
-  openedSavedGarden: string | undefined;
-  openfarmSearch: OpenfarmSearch;
+  designer: DesignerState;
+  openfarmCropFetch: OpenfarmSearch;
   botPosition: BotPosition;
   xySwap: boolean;
+  getConfigValue: GetWebAppConfigValue;
+  sourceFbosConfig: SourceFbosConfig;
+  botSize: BotSize;
+  curves: TaggedCurve[];
+  plants: TaggedPlantPointer[];
 }
 
 export interface CameraCalibrationData {

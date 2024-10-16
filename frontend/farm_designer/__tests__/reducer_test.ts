@@ -17,7 +17,7 @@ import {
 } from "../../__test_support__/fake_crop_search_result";
 import { fakeDesignerState } from "../../__test_support__/fake_designer_state";
 import { PointGroupSortType } from "farmbot/dist/resources/api_resources";
-import { PointType } from "farmbot";
+import { PlantStage, PointType } from "farmbot";
 import { UUID } from "../../resources/interfaces";
 import { push } from "../../history";
 
@@ -64,6 +64,60 @@ describe("designer reducer", () => {
     expect(newState.hoveredPlant).toEqual({
       icon: "icon", plantUUID: "plantUuid"
     });
+  });
+
+  it("sets hovered spread", () => {
+    const action: ReduxAction<number | undefined> = {
+      type: Actions.TOGGLE_HOVERED_SPREAD,
+      payload: 100,
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.hoveredSpread).toEqual(100);
+  });
+
+  it("sets crop water curve id", () => {
+    const action: ReduxAction<number | undefined> = {
+      type: Actions.SET_CROP_WATER_CURVE_ID,
+      payload: 1,
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.cropWaterCurveId).toEqual(1);
+  });
+
+  it("sets crop spread curve id", () => {
+    const action: ReduxAction<number | undefined> = {
+      type: Actions.SET_CROP_SPREAD_CURVE_ID,
+      payload: 2,
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.cropSpreadCurveId).toEqual(2);
+  });
+
+  it("sets crop height curve id", () => {
+    const action: ReduxAction<number | undefined> = {
+      type: Actions.SET_CROP_HEIGHT_CURVE_ID,
+      payload: 3,
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.cropHeightCurveId).toEqual(3);
+  });
+
+  it("sets crop stage", () => {
+    const action: ReduxAction<PlantStage | undefined> = {
+      type: Actions.SET_CROP_STAGE,
+      payload: "planned",
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.cropStage).toEqual("planned");
+  });
+
+  it("sets crop planted at", () => {
+    const action: ReduxAction<string | undefined> = {
+      type: Actions.SET_CROP_PLANTED_AT,
+      payload: "2020-01-20T20:00:00.000Z",
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.cropPlantedAt).toEqual("2020-01-20T20:00:00.000Z");
   });
 
   it("sets hovered plant list item", () => {
@@ -202,10 +256,10 @@ describe("designer reducer", () => {
   });
 
   it("sets opened saved garden", () => {
-    const payload = "savedGardenUuid";
-    const action: ReduxAction<string | undefined> = {
+    const payload = 1;
+    const action: ReduxAction<number | undefined> = {
       type: Actions.CHOOSE_SAVED_GARDEN,
-      payload
+      payload,
     };
     const newState = designer(oldState(), action);
     expect(newState.openedSavedGarden).toEqual(payload);
@@ -221,6 +275,14 @@ describe("designer reducer", () => {
     const newState = designer(oldState(), action);
     expect(newState.cropSearchResults).toEqual(payload);
     expect(newState.cropSearchInProgress).toEqual(false);
+  });
+
+  it("sets companion index", () => {
+    const action: ReduxAction<number> = {
+      type: Actions.SET_COMPANION_INDEX, payload: 1,
+    };
+    const newState = designer(oldState(), action);
+    expect(newState.companionIndex).toEqual(1);
   });
 
   it("starts search", () => {
@@ -439,6 +501,16 @@ describe("designer reducer", () => {
     };
     const newState = designer(state, action);
     expect(newState.gridIds).toEqual([]);
+  });
+
+  it("sets grid start", () => {
+    const state = oldState();
+    state.gridStart = { x: 100, y: 100 };
+    const action: ReduxAction<Record<"x" | "y", number>> = {
+      type: Actions.SET_GRID_START, payload: { x: 200, y: 300 }
+    };
+    const newState = designer(state, action);
+    expect(newState.gridStart).toEqual({ x: 200, y: 300 });
   });
 
   it("toggle soil height labels", () => {

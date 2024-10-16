@@ -11,6 +11,7 @@ export interface FarmbotSettingsProps {
   timeSettings: TimeSettings;
   botOnline: boolean;
   settingsPanelState: SettingsPanelState;
+  showAdvanced: boolean;
 }
 
 export interface NameRowProps {
@@ -51,12 +52,14 @@ export interface OtaTimeSelectorRowProps {
   sourceFbosConfig: SourceFbosConfig;
   device: TaggedDevice;
   timeSettings: TimeSettings;
+  showAdvanced: boolean;
 }
 
 export interface PowerAndResetProps {
   settingsPanelState: SettingsPanelState;
   dispatch: Function;
   botOnline: boolean;
+  showAdvanced: boolean;
 }
 
 export interface FactoryResetRowsProps {
@@ -70,6 +73,7 @@ export interface FarmbotOsRowProps {
   botOnline: boolean;
   timeSettings: TimeSettings;
   device: TaggedDevice;
+  showAdvanced: boolean;
 }
 
 export interface FarmbotOsRowState {

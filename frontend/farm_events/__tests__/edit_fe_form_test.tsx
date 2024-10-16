@@ -30,15 +30,16 @@ import { SpecialStatus, ParameterApplication } from "farmbot";
 import moment from "moment";
 import { push } from "../../history";
 import {
-  buildResourceIndex,
+  buildResourceIndex, fakeDevice,
 } from "../../__test_support__/resource_index_builder";
 import { fakeVariableNameSet } from "../../__test_support__/fake_variables";
 import { save, destroy } from "../../api/crud";
 import { fakeTimeSettings } from "../../__test_support__/fake_time_settings";
-import { error, success } from "../../toast/toast";
+import { error, success, warning } from "../../toast/toast";
 import { BlurableInput } from "../../ui";
 import { ExecutableType } from "farmbot/dist/resources/api_resources";
 import { Path } from "../../internal_urls";
+import { Content } from "../../constants";
 
 const mockSequence = fakeSequence();
 
@@ -100,7 +101,7 @@ describe("<EditFEForm />", () => {
     const p = fakeProps();
     p.farmEvent.body.executable_type = "nope" as ExecutableType;
     console.error = jest.fn();
-    expect(() => instance(p)).toThrowError("nope is not a valid executable_type");
+    expect(() => instance(p)).toThrow("nope is not a valid executable_type");
   });
 
   it("sets the executable", () => {
@@ -185,7 +186,7 @@ describe("<EditFEForm />", () => {
       resources={buildResourceIndex([]).index} />);
     el.update();
     const txt = el.text().replace(/\s+/g, " ");
-    expect(txt).toContain("Save *");
+    expect(txt).toContain("Save");
   });
 
   it("displays success message on save", async () => {
@@ -301,6 +302,21 @@ describe("<EditFEForm />", () => {
     expect(error).toHaveBeenCalledWith("Unable to save event.");
   });
 
+  it("displays warning", async () => {
+    const p = fakeProps();
+    const device = fakeDevice();
+    device.body.ota_hour = 3;
+    p.resources = buildResourceIndex([device]).index;
+    p.farmEvent.body.start_time = "2017-05-22T03:00:00.000Z";
+    p.farmEvent.body.end_time = "2017-06-22T06:00:00.000Z";
+    const i = instance(p);
+    await i.commitViewModel(moment("2017-05-21T03:00:00.000Z"));
+    await expect(save).toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith(
+      "The next item in this event will run in a day.");
+    expect(warning).toHaveBeenCalledWith(Content.WITHIN_HOUR_OF_OS_UPDATE);
+  });
+
   it("throws error for invalid executable_type", () => {
     const p = fakeProps();
     p.farmEvent.body.start_time = "2017-06-01T01:00:00.000Z";
@@ -308,7 +324,7 @@ describe("<EditFEForm />", () => {
     const i = instance(p);
     p.farmEvent.body.executable_type = "nope" as ExecutableType;
     const action = () => i.nextItemTime(p.farmEvent.body, fakeNow);
-    expect(action).toThrowError("nope is not a valid executable_type");
+    expect(action).toThrow("nope is not a valid executable_type");
   });
 
   it("handles incorrect kind", () => {
@@ -457,6 +473,36 @@ describe("<EditFEForm />", () => {
     const wrapper = shallow(<EditFEForm {...p} />);
     wrapper.find(FarmEventForm).simulate("save");
     expect(error).toHaveBeenCalled();
+  });
+
+  it("displays correct variable count", () => {
+    const p = fakeProps();
+    const sequence = fakeSequence();
+    p.findExecutable = () => sequence;
+    p.resources = buildResourceIndex([]).index;
+    const variables = fakeVariableNameSet("foo");
+    variables["none"] = undefined;
+    variables["bar"] = {
+      celeryNode: {
+        kind: "parameter_declaration",
+        args: {
+          label: "foo",
+          default_value: { kind: "coordinate", args: { x: 0, y: 0, z: 0 } }
+        }
+      },
+      dropdown: { label: "", value: "" },
+      vector: { x: 0, y: 0, z: 0 },
+    };
+    p.resources.sequenceMetas[sequence.uuid] = variables;
+    const wrapper = mount(<EditFEForm {...p} />);
+    expect(wrapper.text().toLowerCase()).toContain("variables (1)");
+  });
+
+  it("collapses variables section", () => {
+    const wrapper = shallow<EditFEForm>(<EditFEForm {...fakeProps()} />);
+    expect(wrapper.state().variablesCollapsed).toEqual(false);
+    wrapper.instance().toggleVarShow();
+    expect(wrapper.state().variablesCollapsed).toEqual(true);
   });
 });
 
@@ -667,7 +713,7 @@ describe("<FarmEventDeleteButton />", () => {
   it("deletes farm event", async () => {
     const p = fakeProps();
     const wrapper = shallow(<FarmEventDeleteButton {...p} />);
-    await wrapper.find("button").simulate("click");
+    await wrapper.find("i").simulate("click");
     expect(destroy).toHaveBeenCalledWith(p.farmEvent.uuid);
     expect(push).toHaveBeenCalledWith(Path.farmEvents());
     expect(success).toHaveBeenCalledWith("Deleted event.", { title: "Deleted" });

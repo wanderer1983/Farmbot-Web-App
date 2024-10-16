@@ -1,7 +1,7 @@
 import { AuthState } from "./auth/interfaces";
 import { ConfigState } from "./config/interfaces";
-import { BotState } from "./devices/interfaces";
-import { Color as FarmBotJsColor } from "farmbot";
+import { BotPosition, BotState } from "./devices/interfaces";
+import { Color as FarmBotJsColor, Xyz } from "farmbot";
 import { DraggableState } from "./draggable/interfaces";
 import { RestResources } from "./resources/interfaces";
 import { AppState } from "./reducer";
@@ -46,6 +46,7 @@ export interface SettingsPanelState {
   pin_guard: boolean;
   pin_reporting: boolean;
   parameter_management: boolean;
+  custom_settings: boolean;
   farm_designer: boolean;
   account: boolean;
   other_settings: boolean;
@@ -59,7 +60,6 @@ export interface PlantsPanelState {
 
 export interface WeedsPanelState {
   groups: boolean;
-  weeds: boolean;
   pending: boolean;
   active: boolean;
   removed: boolean;
@@ -69,4 +69,43 @@ export interface PointsPanelState {
   groups: boolean;
   points: boolean;
   soilHeight: boolean;
+}
+
+export interface CurvesPanelState {
+  water: boolean;
+  spread: boolean;
+  height: boolean;
+}
+
+export interface SequencesPanelState {
+  sequences: boolean;
+  featured: boolean;
+}
+
+export interface MetricPanelState {
+  realtime: boolean;
+  network: boolean;
+  history: boolean;
+}
+
+export interface MovementState {
+  start: BotPosition;
+  distance: Record<Xyz, number>;
+}
+
+export interface JobsAndLogsState {
+  jobs: boolean;
+  logs: boolean;
+}
+
+export interface ControlsState {
+  move: boolean;
+  peripherals: boolean;
+  webcams: boolean;
+}
+
+export interface PopupsState {
+  controls: boolean;
+  jobs: boolean;
+  connectivity: boolean;
 }

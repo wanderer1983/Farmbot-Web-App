@@ -1,4 +1,4 @@
-import { connect, MqttClient } from "mqtt";
+import mqtt, { ClientSubscribeCallback, IConnackPacket } from "mqtt";
 import React from "react";
 import { uuid } from "farmbot";
 import axios from "axios";
@@ -6,10 +6,13 @@ import { ExternalUrl } from "../external_urls";
 import { t } from "../i18next_wrapper";
 import { tourPath } from "../help/tours";
 import { Path } from "../internal_urls";
+import { FBSelect } from "../ui";
+import { SEED_DATA_OPTIONS, SEED_DATA_OPTIONS_DDI } from "../messages/cards";
 
 interface State {
   error: Error | undefined;
   stage: string;
+  productLine: string;
 }
 
 const WS_CONFIG = {
@@ -25,16 +28,19 @@ export const WAITING_ON_API = "Planting your demo garden...";
 
 // APPLICATION CODE ==============================
 export class DemoIframe extends React.Component<{}, State> {
-  state: State =
-    { error: undefined, stage: t("DEMO THE APP") };
+  state: State = {
+    error: undefined,
+    stage: t("DEMO THE APP"),
+    productLine: "genesis_1.7",
+  };
 
   setError = (error?: Error) => this.setState({ error });
 
-  connectMqtt = (): Promise<MqttClient> => {
-    const client = connect(globalConfig.MQTT_WS, WS_CONFIG);
+  connectMqtt = (): Promise<IConnackPacket> => {
+    const client = mqtt.connect(globalConfig.MQTT_WS, WS_CONFIG);
     return new Promise(resolve => {
       client.on("message", this.handleMessage);
-      client.subscribe(MQTT_CHAN, this.setError);
+      client.subscribe(MQTT_CHAN, this.setError as ClientSubscribeCallback);
       client.on("connect", resolve);
     });
   };
@@ -44,7 +50,10 @@ export class DemoIframe extends React.Component<{}, State> {
     is51 && this.setState({ stage: EASTER_EGG });
 
     return axios
-      .post<string>(HTTP_URL, { secret: SECRET })
+      .post<string>(HTTP_URL, {
+        secret: SECRET,
+        product_line: this.state.productLine,
+      })
       .then(() => this.setState({ stage: WAITING_ON_API }))
       .catch(this.setError);
   };
@@ -57,11 +66,11 @@ export class DemoIframe extends React.Component<{}, State> {
     };
 
   requestAccount = () => {
-    return this.connectMqtt().then(this.connectApi);
+    this.connectMqtt().then(this.connectApi);
   };
 
   ok = () => {
-
+    const selection = this.state.productLine;
     return <div className="demo-container">
       <video muted={true} autoPlay={true} loop={true} className="demo-video">
         <source src={ExternalUrl.Video.desktop} type="video/mp4" />
@@ -72,6 +81,13 @@ export class DemoIframe extends React.Component<{}, State> {
         onClick={this.requestAccount}>
         {this.state.stage}
       </button>
+      <FBSelect
+        key={selection}
+        extraClass={"demo-options"}
+        list={SEED_DATA_OPTIONS(true).filter(x => x.value != "none")}
+        customNullLabel={t("Select a model")}
+        selectedItem={SEED_DATA_OPTIONS_DDI()[selection]}
+        onChange={ddi => this.setState({ productLine: "" + ddi.value })} />
     </div>;
   };
 

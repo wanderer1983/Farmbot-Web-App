@@ -11,6 +11,8 @@ import {
   fakeTool,
   fakeToolSlot,
   fakePointGroup,
+  fakePeripheral,
+  fakeSensor,
 } from "../../__test_support__/fake_state/resources";
 import {
   buildResourceIndex,
@@ -20,11 +22,11 @@ import {
 } from "../../sequences/locals_list/sanitize_nodes";
 import {
   formatPoint, NO_VALUE_SELECTED_DDI, formatTool,
-} from "../../sequences/locals_list/location_form_list";
+} from "../../sequences/locals_list/variable_form_list";
 import { Point, Tool } from "farmbot";
 import { fakeVariableNameSet } from "../../__test_support__/fake_variables";
-import { NOTHING_SELECTED } from "../../sequences/locals_list/handle_select";
 import { VariableNode } from "../../sequences/locals_list/locals_list_support";
+import { NOTHING } from "../../sequences/locals_list/handle_select";
 
 describe("determineDropdown", () => {
   it("crashes on unknown DDIs", () => {
@@ -41,12 +43,33 @@ describe("determineDropdown", () => {
     };
     const r = () =>
       determineDropdown(baddata as VariableNode, buildResourceIndex([]).index);
-    expect(r).toThrowError("WARNING: Unknown, possibly new data_value.kind?");
+    expect(r).toThrow("WARNING: Unknown, possibly new data_value.kind?");
   });
 
   it("returns a label for `PointGroup`", () => {
     const pg = fakePointGroup();
     pg.body.id = 12;
+    pg.body.point_ids = [1];
+    pg.body.member_count = 1;
+    const p = fakePoint();
+    p.body.id = 1;
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x",
+        data_value: {
+          kind: "point_group", args: { point_group_id: 12 }
+        }
+      }
+    }, buildResourceIndex([pg, p]).index);
+    expect(r.label).toEqual(pg.body.name + " (1)");
+    expect(r.value).toEqual(pg.body.id);
+  });
+
+  it("returns a label for `PointGroup`: no member count", () => {
+    const pg = fakePointGroup();
+    pg.body.id = 12;
+    pg.body.member_count = undefined;
     const r = determineDropdown({
       kind: "parameter_application",
       args: {
@@ -56,11 +79,11 @@ describe("determineDropdown", () => {
         }
       }
     }, buildResourceIndex([pg]).index);
-    expect(r.label).toEqual(pg.body.name);
+    expect(r.label).toEqual(pg.body.name + " (0)");
     expect(r.value).toEqual(pg.body.id);
   });
 
-  it("Returns a label for `parameter_declarations`", () => {
+  it("returns a label for `parameter_declarations`", () => {
     const r = determineDropdown({
       kind: "parameter_declaration",
       args: {
@@ -73,7 +96,7 @@ describe("determineDropdown", () => {
     expect(r.value).toBe("?");
   });
 
-  it("Returns a label for `coordinate`", () => {
+  it("returns a label for `coordinate`", () => {
     const r = determineDropdown({
       kind: "parameter_application",
       args: {
@@ -85,7 +108,19 @@ describe("determineDropdown", () => {
     expect(r.value).toBe("{\"x\":0,\"y\":1.1,\"z\":2}");
   });
 
-  it("Returns a label for `identifier`", () => {
+  it("returns a label for `location_placeholder`", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x",
+        data_value: { kind: "location_placeholder", args: {} }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("None");
+    expect(r.value).toBe("");
+  });
+
+  it("returns a label for `identifier`", () => {
     const varData = fakeVariableNameSet("variable");
     const ri = buildResourceIndex([]).index;
     ri.sequenceMetas["sequence uuid"] = varData;
@@ -100,7 +135,7 @@ describe("determineDropdown", () => {
     expect(r.value).toBe("?");
   });
 
-  it("Returns a label for `point`", () => {
+  it("returns a label for `point`", () => {
     const point = fakePoint();
     const pointNode: Point = {
       kind: "point",
@@ -117,7 +152,7 @@ describe("determineDropdown", () => {
     expect(r.value).toBe("" + point.body.id);
   });
 
-  it("Returns a label for `tool`", () => {
+  it("returns a label for `tool`", () => {
     const tool = fakeTool();
     tool.body.id = 1;
     const toolNode: Tool = {
@@ -134,7 +169,7 @@ describe("determineDropdown", () => {
     expect(r.value).toBe("" + tool.body.id);
   });
 
-  it("Returns a label for `tool (no toolSlot)", () => {
+  it("returns a label for `tool (no toolSlot)", () => {
     const tool = fakeTool();
     tool.body.id = 1;
     const toolNode: Tool = {
@@ -147,6 +182,168 @@ describe("determineDropdown", () => {
     }, buildResourceIndex([tool]).index);
     expect(r.label).toBe(formatTool(tool, undefined).label);
     expect(r.value).toBe("" + tool.body.id);
+  });
+
+  it("returns a label for numeric", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: { label: "x", data_value: { kind: "numeric", args: { number: 1 } } }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("Number: 1");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for `number_placeholder`", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x",
+        data_value: { kind: "number_placeholder", args: {} }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("None");
+    expect(r.value).toBe(0);
+  });
+
+  it("returns a label for text", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: { label: "x", data_value: { kind: "text", args: { string: "text" } } }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("Text: text");
+    expect(r.value).toBe("text");
+  });
+
+  it("returns a label for `text_placeholder`", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x",
+        data_value: { kind: "text_placeholder", args: {} }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("None");
+    expect(r.value).toBe("");
+  });
+
+  it("returns a label for resource: Sequence", () => {
+    const sequence = fakeSequence();
+    sequence.body.id = 1;
+    sequence.body.name = "my sequence";
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Sequence",
+          }
+        }
+      }
+    }, buildResourceIndex([sequence]).index);
+    expect(r.label).toBe("my sequence");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for resource: Peripheral", () => {
+    const peripheral = fakePeripheral();
+    peripheral.body.id = 1;
+    peripheral.body.label = "my peripheral";
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Peripheral",
+          }
+        }
+      }
+    }, buildResourceIndex([peripheral]).index);
+    expect(r.label).toBe("my peripheral");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for resource: Sensor", () => {
+    const sensor = fakeSensor();
+    sensor.body.id = 1;
+    sensor.body.label = "my sensor";
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Sensor",
+          }
+        }
+      }
+    }, buildResourceIndex([sensor]).index);
+    expect(r.label).toBe("my sensor");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for missing resource: Sequence", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Sequence",
+          }
+        }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label.toLowerCase()).toBe("not found");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for missing resource: Peripheral", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Peripheral",
+          }
+        }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label.toLowerCase()).toBe("not found");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for missing resource: Sensor", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource", args: {
+            resource_id: 1,
+            resource_type: "Sensor",
+          }
+        }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label.toLowerCase()).toBe("not found");
+    expect(r.value).toBe(1);
+  });
+
+  it("returns a label for resource_placeholder: Sequence", () => {
+    const r = determineDropdown({
+      kind: "parameter_application",
+      args: {
+        label: "x", data_value: {
+          kind: "resource_placeholder", args: {
+            resource_type: "Sequence",
+          }
+        }
+      }
+    }, buildResourceIndex([]).index);
+    expect(r.label).toBe("Sequence");
+    expect(r.value).toBe("Sequence");
   });
 });
 
@@ -263,13 +460,19 @@ describe("determineVarDDILabel()", () => {
   it("returns 'select location' variable label", () => {
     const varData = fakeVariableNameSet("parent");
     const data = Object.values(varData)[0];
-    data && (data.celeryNode = NOTHING_SELECTED);
+    data && (data.celeryNode = {
+      kind: "parameter_application",
+      args: {
+        label: "parent",
+        data_value: NOTHING,
+      }
+    });
     const ri = buildResourceIndex().index;
     ri.sequenceMetas = { "sequence uuid": varData };
     const label = determineVarDDILabel({
       label: "parent", resources: ri, uuid: "sequence uuid"
     });
-    expect(label).toEqual("Location variable - Select a location");
+    expect(label).toEqual("Location - Select a location");
   });
 
   it("returns 'externally defined' variable label", () => {

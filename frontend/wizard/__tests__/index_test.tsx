@@ -18,6 +18,7 @@ import { fakeState } from "../../__test_support__/fake_state";
 import { WizardSectionSlug, WizardStepSlug, WIZARD_STEPS } from "../data";
 import { BooleanSetting } from "../../session_keys";
 import {
+  fakeUser,
   fakeWebAppConfig, fakeWizardStepResult,
 } from "../../__test_support__/fake_state/resources";
 import {
@@ -28,7 +29,7 @@ import {
 
 describe("<SetupWizard />", () => {
   const fakeProps = (): SetupWizardProps => ({
-    resources: buildResourceIndex([fakeDevice()]).index,
+    resources: buildResourceIndex([fakeDevice(), fakeUser()]).index,
     bot: bot,
     dispatch: jest.fn(() => Promise.resolve()),
     getConfigValue: jest.fn(),
@@ -121,7 +122,9 @@ describe("<SetupWizard />", () => {
 
   it("updates data and completes setup", async () => {
     const p = fakeProps();
-    p.wizardStepResults = WIZARD_STEPS(undefined).map(step => {
+    p.wizardStepResults = WIZARD_STEPS({
+      firmwareHardware: undefined,
+    }).map(step => {
       const stepResult = fakeWizardStepResult();
       stepResult.body.answer = true;
       stepResult.body.slug = step.slug;

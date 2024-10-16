@@ -2,16 +2,20 @@ import React from "react";
 import { connect } from "react-redux";
 import { StepButtonCluster } from "./step_button_cluster";
 import { SequenceEditorMiddle } from "./sequence_editor_middle";
-import { Page, Row, LeftPanel, CenterPanel, RightPanel } from "../ui";
+import { Page, Row, Col } from "../ui";
 import { SequencesProps } from "./interfaces";
 import { mapStateToProps } from "./state_to_props";
-import { ToolTips } from "../constants";
 import { isTaggedSequence } from "../resources/tagged_resources";
 import { setActiveSequenceByName } from "./set_active_sequence_by_name";
 import { t } from "../i18next_wrapper";
 import { unselectSequence, closeCommandMenu } from "./actions";
-import { isNumber } from "lodash";
-import { Folders } from "../folders/component";
+import { isNumber, noop } from "lodash";
+import { RawDesignerSequenceList } from "./panel/list";
+import { Path } from "../internal_urls";
+import { push } from "../history";
+import { urlFriendly } from "../util";
+import { ErrorBoundary } from "../error_boundary";
+import { isMobile } from "../screen_size";
 
 export interface SequenceBackButtonProps {
   dispatch: Function;
@@ -33,51 +37,54 @@ export class RawSequences extends React.Component<SequencesProps, {}> {
   }
 
   render() {
-    const { sequence } = this.props;
+    const { sequence, sequencesState } = this.props;
+    const { stepIndex } = sequencesState;
     const sequenceSelected = sequence && isTaggedSequence(sequence);
     const sequenceOpen = sequenceSelected ? "open" : "";
-    const insertingStep = isNumber(this.props.stepIndex) ? "inserting-step" : "";
+    const insertingStep = isNumber(stepIndex) ? "inserting-step" : "";
     const activeClasses = [sequenceOpen, insertingStep].join(" ");
+    isMobile() && !Path.inDesigner() && push(Path.designerSequences(
+      sequenceSelected ? urlFriendly(sequence.body.name) : undefined));
     return <Page className="sequence-page">
       <Row>
-        <LeftPanel
-          className={`sequence-list-panel ${activeClasses}`}
-          title={t("Sequences")}>
-          <Folders {...this.props.folderData} dispatch={this.props.dispatch} />
-        </LeftPanel>
-        <CenterPanel
-          className={`sequence-editor-panel ${activeClasses}`}
-          backButton={<SequenceBackButton
-            className={activeClasses}
-            dispatch={this.props.dispatch} />}
-          title={sequenceOpen ? t("Edit Sequence") : t("Sequence Editor")}
-          helpText={t(ToolTips.SEQUENCE_EDITOR)}>
-          <SequenceEditorMiddle
-            syncStatus={this.props.syncStatus}
-            dispatch={this.props.dispatch}
-            sequence={this.props.sequence}
-            resources={this.props.resources}
-            hardwareFlags={this.props.hardwareFlags}
-            farmwareData={this.props.farmwareData}
-            getWebAppConfigValue={this.props.getWebAppConfigValue}
-            menuOpen={this.props.menuOpen} />
-        </CenterPanel>
-        <RightPanel
-          className={`step-button-cluster-panel ${activeClasses}`}
-          backButton={<SequenceBackButton
-            className={activeClasses}
-            dispatch={this.props.dispatch} />}
-          title={insertingStep ? t("Add Command") : t("Commands")}
-          helpText={t(ToolTips.SEQUENCE_COMMANDS)}
-          show={sequenceSelected}>
-          <StepButtonCluster
-            current={this.props.sequence}
-            dispatch={this.props.dispatch}
-            farmwareData={this.props.farmwareData}
-            sequences={this.props.sequences}
-            resources={this.props.resources}
-            stepIndex={this.props.stepIndex} />
-        </RightPanel>
+        <Col sm={3}>
+          <div className={`sequence-list-panel ${activeClasses}`}>
+            <ErrorBoundary>
+              <RawDesignerSequenceList {...this.props} />
+            </ErrorBoundary>
+          </div>
+        </Col>
+        <Col sm={6} lg={6}>
+          <div className={`sequence-editor-panel ${activeClasses}`}>
+            <ErrorBoundary>
+              <SequenceEditorMiddle
+                syncStatus={this.props.syncStatus}
+                dispatch={this.props.dispatch}
+                sequence={this.props.sequence}
+                sequences={this.props.sequences}
+                resources={this.props.resources}
+                hardwareFlags={this.props.hardwareFlags}
+                farmwareData={this.props.farmwareData}
+                getWebAppConfigValue={this.props.getWebAppConfigValue}
+                sequencesState={sequencesState} />
+            </ErrorBoundary>
+          </div>
+        </Col>
+        <Col sm={3} lg={3}>
+          {sequenceSelected &&
+            <div className={`step-button-cluster-panel ${activeClasses}`}>
+              <ErrorBoundary>
+                <StepButtonCluster
+                  close={noop}
+                  current={this.props.sequence}
+                  dispatch={this.props.dispatch}
+                  farmwareData={this.props.farmwareData}
+                  sequences={this.props.sequences}
+                  resources={this.props.resources}
+                  stepIndex={stepIndex} />
+              </ErrorBoundary>
+            </div>}
+        </Col>
       </Row>
     </Page>;
   }

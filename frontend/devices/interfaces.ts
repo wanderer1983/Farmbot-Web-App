@@ -35,10 +35,12 @@ export enum Feature {
   endstop_invert = "endstop_invert",
   express_k10 = "express_k10",
   express_k11 = "express_k11",
+  express_k12 = "express_k12",
   express_stall_detection = "express_stall_detection",
   farmduino_k14 = "farmduino_k14",
   farmduino_k15 = "farmduino_k15",
   farmduino_k16 = "farmduino_k16",
+  farmduino_k17 = "farmduino_k17",
   firmware_restart = "firmware_restart",
   flash_firmware = "flash_firmware",
   groups = "groups",
@@ -52,16 +54,18 @@ export enum Feature {
   no_auto_reset = "no_auto_reset",
   no_firmware_logs = "no_firmware_logs",
   none_firmware = "none_firmware",
+  number_variables = "number_variables",
   ota_update_hour = "ota_update_hour",
   planted_at_now = "planted_at_now",
-  pin_reporting = "pin_reporting",
   quiet_motors = "quiet_motors",
+  resource_variables = "resource_variables",
   rpi_led_control = "rpi_led_control",
   safe_height_input = "safe_height_input",
   sensors = "sensors",
   soil_height = "soil_height",
   sort_type_optimized = "sort_type_optimized",
   sort_type_alternating = "sort_type_alternating",
+  string_variables = "string_variables",
   toggle_peripheral = "toggle_peripheral",
   update_resource = "update_resource",
   use_update_channel = "use_update_channel",
@@ -99,6 +103,8 @@ export interface BotState {
    * lets us know if it is safe to do data critical tasks with the bot */
   consistent: boolean;
   connectivity: ConnectionState;
+  needVersionCheck: boolean;
+  alreadyToldUserAboutMalformedMsg: boolean;
 }
 
 /** Status registers for the bot's status */

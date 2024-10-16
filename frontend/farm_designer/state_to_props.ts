@@ -20,15 +20,15 @@ import {
   selectAllLogs,
   selectAllTools,
   selectAllFarmwareEnvs,
+  selectAllCurves,
 } from "../resources/selectors";
-import {
-  validBotLocationData, validFwConfig, unpackUUID, validFbosConfig,
-} from "../util";
+import { validFwConfig, validFbosConfig } from "../util";
+import { validBotLocationData } from "../util/location";
 import { getWebAppConfigValue } from "../config_storage/actions";
 import { FarmDesignerProps, CameraCalibrationData } from "./interfaces";
 import { TaggedPlant, BotSize } from "./map/interfaces";
 import { RestResources } from "../resources/interfaces";
-import { isString, uniq, chain } from "lodash";
+import { isFinite, uniq, chain } from "lodash";
 import { BooleanSetting } from "../session_keys";
 import { getEnv } from "../farmware/state_to_props";
 import { getFirmwareConfig, getFbosConfig } from "../resources/getters";
@@ -50,9 +50,9 @@ export const getPlants = (resources: RestResources) => {
   const onlyPlants = selectAllPlantPointers(resources.index);
   const plantTemplates = selectAllPlantTemplates(resources.index);
   const { openedSavedGarden } = resources.consumers.farm_designer;
-  return isString(openedSavedGarden)
+  return isFinite(openedSavedGarden)
     ? plantTemplates.filter(x =>
-      x.body.saved_garden_id === unpackUUID(openedSavedGarden).remoteId)
+      x.body.saved_garden_id === openedSavedGarden)
     : onlyPlants;
 };
 
@@ -102,7 +102,7 @@ export function mapStateToProps(props: Everything): FarmDesignerProps {
     flipped: isToolFlipped(mountedToolSlotInfo?.meta),
   };
 
-  const peripherals = uniq(selectAllPeripherals(props.resources.index))
+  const peripheralValues = uniq(selectAllPeripherals(props.resources.index))
     .map(x => {
       const label = x.body.label;
       const pinStatus = x.body.pin
@@ -141,7 +141,7 @@ export function mapStateToProps(props: Everything): FarmDesignerProps {
     botLocationData: validBotLocationData(hardware.location_data),
     botMcuParams: firmwareSettings,
     botSize: botSize(props),
-    peripherals,
+    peripheralValues,
     eStopStatus: hardware.informational_settings.locked,
     deviceTarget: hardware.informational_settings.target,
     latestImages,
@@ -156,6 +156,7 @@ export function mapStateToProps(props: Everything): FarmDesignerProps {
     logs: selectAllLogs(props.resources.index),
     sourceFbosConfig: sourceFbosConfigValue(fbosConfig, hardware.configuration),
     farmwareEnvs: selectAllFarmwareEnvs(props.resources.index),
+    curves: selectAllCurves(props.resources.index),
   };
 }
 

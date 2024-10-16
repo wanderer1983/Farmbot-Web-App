@@ -8,10 +8,12 @@ class DashboardController < ApplicationController
                         :front_page,
                         :main_app,
                         :os_download,
+                        :featured,
                         :password_reset,
                         :terminal,
                         :tos_update,
                         :try_farmbot,
+                        :promo,
                       ]
 
   OUTPUT_URL = "/" + File.join("assets", "parcel") # <= served from public/ dir
@@ -31,7 +33,9 @@ class DashboardController < ApplicationController
     tos_update: "/tos_update/index.tsx",
     demo: "/demo/index.tsx",
     try_farmbot: "/try_farmbot/index.tsx",
+    promo: "/promo/index.tsx",
     os_download: "/os_download/index.tsx",
+    featured: "/featured/index.tsx",
     terminal: "/terminal/index.tsx",
   }.with_indifferent_access
 
@@ -138,6 +142,7 @@ class DashboardController < ApplicationController
       .dump
       .merge(Release.latest_image(platform: "rpi"))
       .merge(Release.latest_image(platform: "rpi3"))
+      .merge(Release.latest_image(platform: "rpi4"))
       .to_json
   end
 end

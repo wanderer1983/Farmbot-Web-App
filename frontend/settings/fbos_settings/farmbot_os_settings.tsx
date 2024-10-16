@@ -1,5 +1,4 @@
 import React from "react";
-import { Feature } from "../../devices/interfaces";
 import { FarmbotSettingsProps } from "./interfaces";
 import { FarmbotOsRow } from "./farmbot_os_row";
 import { AutoUpdateRow } from "./auto_update_row";
@@ -12,8 +11,11 @@ import { Header } from "../hardware_settings/header";
 import { DeviceSetting } from "../../constants";
 import { Collapse } from "@blueprintjs/core";
 import { OrderNumberRow } from "./order_number_row";
-import { shouldDisplayFeature } from "../../devices/should_display";
 import { GardenLocationRow } from "./garden_location_row";
+import { BoardType } from "../firmware/board_type";
+import { FirmwarePathRow } from "../firmware/firmware_path";
+import { validFirmwareHardware } from "../firmware/firmware_hardware_support";
+import { RpiModel } from "./rpi_model";
 
 export enum ColWidth {
   label = 3,
@@ -23,9 +25,11 @@ export enum ColWidth {
 
 export const FarmBotSettings = (props: FarmbotSettingsProps) => {
   const {
-    dispatch, device, timeSettings, sourceFbosConfig, botOnline,
+    dispatch, device, timeSettings, sourceFbosConfig, botOnline, showAdvanced, bot,
   } = props;
-  const commonProps = { dispatch, device };
+  const { value } = props.sourceFbosConfig("firmware_hardware");
+  const firmwareHardware = validFirmwareHardware(value);
+  const commonProps = { dispatch, device, showAdvanced, sourceFbosConfig, bot };
   return <Highlight className={"section"}
     settingName={DeviceSetting.farmbotSettings}>
     <Header {...commonProps}
@@ -39,16 +43,21 @@ export const FarmBotSettings = (props: FarmbotSettingsProps) => {
       <TimezoneRow {...commonProps} />
       <GardenLocationRow {...commonProps} />
       <OtaTimeSelectorRow {...commonProps}
-        timeSettings={timeSettings}
-        sourceFbosConfig={sourceFbosConfig} />
-      <AutoUpdateRow {...commonProps}
-        sourceFbosConfig={sourceFbosConfig} />
+        timeSettings={timeSettings} />
+      <AutoUpdateRow {...commonProps} />
       <FarmbotOsRow {...commonProps}
-        bot={props.bot}
-        sourceFbosConfig={sourceFbosConfig}
         botOnline={botOnline}
         timeSettings={timeSettings} />
-      {shouldDisplayFeature(Feature.boot_sequence) && <BootSequenceSelector />}
+      <BootSequenceSelector />
+      <BoardType {...commonProps}
+        botOnline={botOnline}
+        alerts={props.alerts}
+        timeSettings={props.timeSettings}
+        firmwareHardware={firmwareHardware} />
+      <FirmwarePathRow {...commonProps}
+        firmwarePath={"" + sourceFbosConfig("firmware_path").value} />
+      <RpiModel {...commonProps}
+        firmwareHardware={firmwareHardware} />
     </Collapse>
   </Highlight>;
 };

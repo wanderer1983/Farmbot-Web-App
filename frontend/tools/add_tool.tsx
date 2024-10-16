@@ -23,6 +23,10 @@ import {
 } from "../farmware/state_to_props";
 import { CustomToolGraphicsInput } from "./custom_tool_graphics";
 import { Path } from "../internal_urls";
+import {
+  reduceToolName, ToolName,
+} from "../farm_designer/map/tool_graphics/all_tools";
+import { WaterFlowRateInput } from "./edit_tool";
 
 export const mapStateToProps = (props: Everything): AddToolProps => ({
   dispatch: props.dispatch,
@@ -34,7 +38,7 @@ export const mapStateToProps = (props: Everything): AddToolProps => ({
 });
 
 export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
-  state: AddToolState = { toolName: "", toAdd: [], uuid: undefined };
+  state: AddToolState = { toolName: "", toAdd: [], uuid: undefined, flowRate: 0 };
 
   filterExisting = (n: string) => !this.props.existingToolNames.includes(n);
 
@@ -50,25 +54,39 @@ export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
 
   newTool = (name: string) => this.props.dispatch(initSave("Tool", { name }));
 
+  back = () => push(Path.tools());
+
   save = () => {
-    const initTool = init("Tool", { name: this.state.toolName });
+    const initTool = init("Tool", {
+      name: this.state.toolName,
+      flow_rate_ml_per_s: this.state.flowRate,
+    });
     this.props.dispatch(initTool);
     const { uuid } = initTool.payload;
     this.setState({ uuid });
     this.props.dispatch(save(uuid))
-      .then(() => {
-        this.setState({ uuid: undefined });
-        push(Path.tools());
-      }).catch(() => { });
+      .then(() => this.setState({ uuid: undefined }, this.back))
+      .catch(() => { });
   };
 
   componentWillUnmount = () =>
     this.state.uuid && this.props.dispatch(destroy(this.state.uuid));
 
   stockToolNames = () => {
-    const TROUGHS = [t("Seed Trough 1"), t("Seed Trough 2")];
-    const BASE_TOOLS = [t("Watering Nozzle"), t("Weeder"), t("Soil Sensor")];
-    const SEED_TOOLS = [t("Seeder"), t("Seed Bin"), t("Seed Tray")];
+    const TROUGHS = [
+      t("Seed Trough 1"),
+      t("Seed Trough 2"),
+    ];
+    const BASE_TOOLS = [
+      t("Watering Nozzle"),
+    ];
+    const GENESIS_TOOLS = [
+      t("Seeder"),
+      t("Weeder"),
+      t("Soil Sensor"),
+      t("Seed Bin"),
+      t("Seed Tray"),
+    ];
     switch (this.props.firmwareHardware) {
       case "arduino":
       case "farmduino":
@@ -76,24 +94,29 @@ export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
       default:
         return [
           ...BASE_TOOLS,
-          ...SEED_TOOLS,
+          ...GENESIS_TOOLS,
         ];
       case "farmduino_k15":
         return [
           ...BASE_TOOLS,
-          ...SEED_TOOLS,
+          ...GENESIS_TOOLS,
           ...TROUGHS,
         ];
       case "farmduino_k16":
+      case "farmduino_k17":
         return [
           ...BASE_TOOLS,
           t("Rotary Tool"),
-          ...SEED_TOOLS,
+          ...GENESIS_TOOLS,
           ...TROUGHS,
         ];
       case "express_k10":
       case "express_k11":
-        return TROUGHS;
+      case "express_k12":
+        return [
+          ...BASE_TOOLS,
+          ...TROUGHS,
+        ];
     }
   };
 
@@ -136,6 +159,8 @@ export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
     </div>;
   };
 
+  changeFlowRate = (flowRate: number) => this.setState({ flowRate });
+
   render() {
     const { toolName, uuid } = this.state;
     const alreadyAdded = !uuid && !this.filterExisting(toolName);
@@ -145,7 +170,14 @@ export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
         panelName={panelName}
         title={t("Add new")}
         backTo={Path.tools()}
-        panel={Panel.Tools} />
+        panel={Panel.Tools}>
+        <div className={"tool-action-btn-group"}>
+          <SaveBtn
+            onClick={this.save}
+            disabled={!this.state.toolName || alreadyAdded}
+            status={SpecialStatus.DIRTY} />
+        </div>
+      </DesignerPanelHeader>
       <DesignerPanelContent panelName={panelName}>
         <div className="add-new-tool">
           <ToolSVG toolName={this.state.toolName} profile={true} />
@@ -156,13 +188,12 @@ export class RawAddTool extends React.Component<AddToolProps, AddToolState> {
             env={this.props.env} />
           <label>{t("Name")}</label>
           <input defaultValue={this.state.toolName}
-            name="name"
+            name="toolName"
             onChange={e =>
               this.setState({ toolName: e.currentTarget.value })} />
-          <SaveBtn
-            onClick={this.save}
-            disabled={!this.state.toolName || alreadyAdded}
-            status={SpecialStatus.DIRTY} />
+          {reduceToolName(toolName) == ToolName.wateringNozzle &&
+            <WaterFlowRateInput value={this.state.flowRate}
+              onChange={this.changeFlowRate} />}
           <p className="name-error">
             {alreadyAdded ? t("Already added.") : ""}
           </p>

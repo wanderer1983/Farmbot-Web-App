@@ -1,5 +1,6 @@
-import { isUndefined } from "lodash";
+import { isUndefined, last } from "lodash";
 import { getPathArray } from "./history";
+import { t } from "./i18next_wrapper";
 
 export namespace Path {
   const appended = (path: string | number | undefined) => path ? "/" + path : "";
@@ -10,13 +11,16 @@ export namespace Path {
     getPathArray().join("/").startsWith(withApp(path));
   export const equals = (path: string) =>
     getPathArray().join("/") == withApp(path);
+  export const getLastChunk = () => last(getPathArray()) || "";
+  export const lastChunkEquals = (chunk: string) => chunk == getLastChunk();
+  export const lastChunkIsNum = (): boolean => !isNaN(parseInt(getLastChunk()));
 
   export const route = (path: string) => path.replace("/app", "");
   export const withApp = (path: string) =>
     path.startsWith("/app") ? path : "/app" + path;
   export const mock = withApp;
 
-  export const app = (path?: string) => appended(path);
+  export const app = (path?: string) => withApp("") + appended(path);
 
   export const designer = (path?: string) => app("designer") + appended(path);
   export const logs = (path?: string) => app("logs") + appended(path);
@@ -39,6 +43,8 @@ export namespace Path {
     designer("regimens") + appended(path);
   export const farmEvents = (path?: string | number) =>
     designer("events") + appended(path);
+  export const sensors = (path?: string | number) =>
+    designer("sensors") + appended(path);
   export const zones = (path?: string | number) =>
     designer("zones") + appended(path);
   export const farmware = (path?: string) =>
@@ -47,10 +53,11 @@ export namespace Path {
     designer("tools") + appended(path);
   export const toolSlots = (path?: string | number) =>
     designer("tool-slots") + appended(path);
+  export const curves = (path?: string | number) =>
+    designer("curves") + appended(path);
 
   export const messages = () => designer("messages");
   export const controls = () => designer("controls");
-  export const photos = () => designer("photos");
   export const support = () => designer("support");
   export const setup = () => designer("setup");
   export const tours = () => designer("tours");
@@ -64,6 +71,7 @@ export namespace Path {
     inDesigner() ? Path.designerSequences(path) : Path.sequencePage(path);
 
   export const settings = (path?: string) => designer("settings") + highlight(path);
+  export const photos = (path?: string) => designer("photos") + highlight(path);
 
   export const help = (path?: string) => designer("help") + page(path);
   export const developer = (path?: string) => designer("developer") + page(path);
@@ -82,7 +90,7 @@ export namespace Path {
         : Path.designer(`location?x=${x}?y=${y}?z=${z}`);
     };
 
-  export const idIndex = (path: string) => path.split("/").length + 1;
+  export const idIndex = (path: string) => path.split("/").length + 0;
   export const getSlug = (path: string): string =>
     getPathArray()[Path.idIndex(path)] || "";
 }
@@ -92,6 +100,7 @@ export namespace FilePath {
   export const language = (lang: string) => `${resource("languages")}/${lang}.json`;
   const images = (path: string) => resource("img") + "/" + path;
   export const image = (img: string, ext = "svg") => `${images(img)}.${ext}`;
+  export const setupWizardImage = (img: string) => images(`setup_wizard/${img}`);
   export const icon = (icon: Icon) => `${images("icons")}/${icon}.svg`;
   export const bug = (bug?: Bug) =>
     bug ? `${images("bugs")}/${bug}.svg` : images("bugs");
@@ -106,6 +115,7 @@ export enum Icon {
   weeds = "weeds",
   point = "point",
   groups = "groups",
+  curves = "curves",
   sequence = "sequence",
   regimens = "regimen",
   gardens = "gardens",
@@ -149,3 +159,29 @@ export const BUGS = [
   Bug.ladybug,
   Bug["roly-poly"],
 ];
+
+export const PAGE_SLUGS = (): { [x: string]: string } => ({
+  "map": t("Map"),
+  "plants": t("Plants"),
+  "weeds": t("Weeds"),
+  "points": t("Points"),
+  "curves": t("Curves"),
+  "sequences": t("Sequences"),
+  "regimens": t("Regimens"),
+  "events": t("Events"),
+  "sensors": t("Sensors"),
+  "photos": t("Photos"),
+  "tools": t("Tools"),
+  "messages": t("Messages"),
+  "help": t("Help"),
+  "settings": t("Settings"),
+  "tours": t("Tours"),
+});
+
+export const landingPagePath = (page: string) => {
+  switch (page) {
+    case "map": return Path.designer();
+    case "logs": return Path.logs();
+    default: return Path.designer(page);
+  }
+};

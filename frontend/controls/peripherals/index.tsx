@@ -2,18 +2,18 @@ import React from "react";
 import { error } from "../../toast/toast";
 import { PeripheralList } from "./peripheral_list";
 import { PeripheralForm } from "./peripheral_form";
-import {
-  Widget, WidgetBody, WidgetHeader, SaveBtn, EmptyStateWrapper,
-  EmptyStateGraphic,
-} from "../../ui";
+import { SaveBtn, EmptyStateWrapper, EmptyStateGraphic } from "../../ui";
 import { PeripheralsProps, PeripheralState } from "./interfaces";
 import { getArrayStatus } from "../../resources/tagged_resources";
 import { saveAll, init } from "../../api/crud";
-import { ToolTips, Content } from "../../constants";
+import { Content } from "../../constants";
 import { uniq, isNumber } from "lodash";
 import { t } from "../../i18next_wrapper";
 import { DIGITAL } from "farmbot";
-import { isBotOnlineFromState } from "../../devices/must_be_online";
+import { isBotOnline } from "../../devices/must_be_online";
+import { getStatus } from "../../connectivity/reducer_support";
+import { BoxTop } from "../../settings/pin_bindings/box_top";
+import { BooleanSetting } from "../../session_keys";
 
 export class Peripherals
   extends React.Component<PeripheralsProps, PeripheralState> {
@@ -22,9 +22,16 @@ export class Peripherals
     this.state = { isEditing: false };
   }
 
+  get botOnline() {
+    const { hardware, connectivity } = this.props.bot;
+    const { sync_status } = hardware.informational_settings;
+    const botToMqttStatus = getStatus(connectivity.uptime["bot.mqtt"]);
+    return isBotOnline(sync_status, botToMqttStatus);
+  }
+
   get disabled() {
     return !!this.props.bot.hardware.informational_settings.busy
-      || !isBotOnlineFromState(this.props.bot);
+      || !this.botOnline;
   }
 
   toggle = () => this.setState({ isEditing: !this.state.isEditing });
@@ -95,6 +102,7 @@ export class Peripherals
           ...EXTRA_PERIPHERALS,
         ];
       case "farmduino_k16":
+      case "farmduino_k17":
         return [
           ...BASE_PERIPHERALS,
           ...ROTARY_TOOL,
@@ -102,6 +110,7 @@ export class Peripherals
         ];
       case "express_k10":
       case "express_k11":
+      case "express_k12":
         return BASE_PERIPHERALS;
     }
   }
@@ -112,8 +121,26 @@ export class Peripherals
     const editButtonText = isEditing
       ? t("Back")
       : t("Edit");
-    return <Widget className="peripherals-widget">
-      <WidgetHeader title={t("Peripherals")} helpText={ToolTips.PERIPHERALS}>
+    return <div className={"peripherals-widget"}>
+      {!this.props.hidePinBindings &&
+        <BoxTop
+          threeDimensions={!!this.props.getConfigValue(
+            BooleanSetting.enable_3d_electronics_box_top)}
+          isEditing={isEditing}
+          dispatch={this.props.dispatch}
+          resources={this.props.resources}
+          firmwareHardware={this.props.firmwareHardware}
+          bot={this.props.bot}
+          botOnline={this.botOnline} />}
+      <EmptyStateWrapper
+        notEmpty={this.props.peripherals.length > 0 || isEditing}
+        graphic={EmptyStateGraphic.regimens}
+        title={t("No Peripherals yet.")}
+        text={Content.NO_PERIPHERALS}
+        colorScheme={"peripherals"}>
+        {this.showPins()}
+      </EmptyStateWrapper>
+      <div className={"peripherals-buttons"}>
         <button
           className="fb-button gray"
           onClick={this.toggle}
@@ -143,17 +170,7 @@ export class Peripherals
           <i className="fa fa-plus" style={{ marginRight: "0.5rem" }} />
           {t("Stock")}
         </button>
-      </WidgetHeader>
-      <WidgetBody>
-        <EmptyStateWrapper
-          notEmpty={this.props.peripherals.length > 0 || isEditing}
-          graphic={EmptyStateGraphic.regimens}
-          title={t("No Peripherals yet.")}
-          text={Content.NO_PERIPHERALS}
-          colorScheme={"peripherals"}>
-          {this.showPins()}
-        </EmptyStateWrapper>
-      </WidgetBody>
-    </Widget>;
+      </div>
+    </div>;
   }
 }

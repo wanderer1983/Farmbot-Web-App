@@ -30,13 +30,8 @@ const assignVariable = (props: StepParams<Execute>) =>
       }));
     };
 
-interface ExecuteStepState {
-  pinnedView: boolean;
-}
-
 export class TileExecute
-  extends React.Component<StepParams<Execute>, ExecuteStepState> {
-  state: ExecuteStepState = { pinnedView: true };
+  extends React.Component<StepParams<Execute>> {
 
   /**
    * Replace `sequence_id` with the new selection and fill the execute step
@@ -59,22 +54,17 @@ export class TileExecute
     }));
   };
 
-  get pinnedView() { return this.state.pinnedView; }
-  togglePinnedView = () => this.setState({ pinnedView: !this.pinnedView });
-
   render() {
     const { currentStep, currentSequence, resources,
     } = this.props;
     const { sequence_id } = currentStep.args;
-    const calleeUuid = sequence_id
-      ? findSequenceById(resources, sequence_id).uuid
+    const callee = sequence_id
+      ? findSequenceById(resources, sequence_id)
       : undefined;
-    const calledSequenceVariableData = calleeUuid
-      ? resources.sequenceMetas[calleeUuid]
+    const calledSequenceVariableData = callee?.uuid
+      ? resources.sequenceMetas[callee.uuid]
       : undefined;
-    const pinned = sequence_id
-      ? findSequenceById(resources, sequence_id).body.pinned
-      : undefined;
+    const pinned = callee?.body.pinned;
     const hasVariables = Object.values(calledSequenceVariableData || {})
       .filter(v => v && isParameterDeclaration(v.celeryNode))
       .length > 0;
@@ -83,17 +73,17 @@ export class TileExecute
         "execute-step",
         pinned ? "pinned" : "",
         hasVariables ? "" : "no-inputs",
+        sequence_id ? "sequence-selected" : "",
       ].join(" ")}
-      helpText={ToolTips.EXECUTE_SEQUENCE}
-      pinnedView={this.pinnedView}
-      togglePinnedView={this.togglePinnedView}>
-      {(!pinned || !this.pinnedView) &&
+      helpText={callee?.body.description || ToolTips.EXECUTE_SEQUENCE}
+      enableMarkdown={!!callee?.body.description}>
+      {!sequence_id &&
         <Row>
           <Col>
             <SequenceSelectBox
               onChange={this.changeSelection}
               resources={resources}
-              sequenceId={currentStep.args.sequence_id} />
+              sequenceId={sequence_id} />
           </Col>
         </Row>}
       {hasVariables &&

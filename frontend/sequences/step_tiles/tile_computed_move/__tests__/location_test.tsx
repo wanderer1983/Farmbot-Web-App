@@ -1,8 +1,3 @@
-let mockShouldDisplay = false;
-jest.mock("../../../../devices/should_display", () => ({
-  shouldDisplayFeature: () => mockShouldDisplay,
-}));
-
 import React from "react";
 import { shallow } from "enzyme";
 import {
@@ -24,7 +19,7 @@ import {
 import { DropDownItem } from "../../../../ui";
 import { Move, VariableDeclaration } from "farmbot";
 import { fakeVariableNameSet } from "../../../../__test_support__/fake_variables";
-import { COORDINATE_DDI } from "../../../locals_list/location_form_list";
+import { COORDINATE_DDI } from "../../../locals_list/variable_form_list";
 
 describe("<LocationSelection />", () => {
   const fakeProps = (): LocationSelectionProps => ({
@@ -95,7 +90,7 @@ describe("<LocationSelection />", () => {
     [
       LocSelection.identifier,
       { kind: "identifier", args: { label: "variable" } },
-      { label: "Location variable - Add new", value: "variable" },
+      { label: "Location - Add new", value: "variable" },
     ],
     [
       LocSelection.tool,
@@ -129,7 +124,6 @@ describe("<LocationSelection />", () => {
   });
 
   it("shows location list", () => {
-    mockShouldDisplay = true;
     const p = fakeProps();
     p.locationNode = { kind: "identifier", args: { label: "parent" } };
     p.locationSelection = LocSelection.identifier;
@@ -166,13 +160,13 @@ describe("<LocationSelection />", () => {
       },
       {
         headingId: "Identifier",
-        label: "Location variable - fake variable info label",
+        label: "Location - fake variable info label",
         value: "parent",
       },
       {
         headingId: "Identifier",
         label: "Add new",
-        value: "Location variable 1",
+        value: "Location 1",
       },
       {
         headingId: "Tool",

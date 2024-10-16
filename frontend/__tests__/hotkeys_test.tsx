@@ -19,15 +19,13 @@ jest.mock("../api/crud", () => ({ save: jest.fn() }));
 import React from "react";
 import { shallow } from "enzyme";
 import {
-  HotKey, HotKeys, HotKeysProps, hotkeysWithActions, openHotkeyHelpOverlay,
+  HotKey, HotKeys, HotKeysProps, hotkeysWithActions, toggleHotkeyHelpOverlay,
 } from "../hotkeys";
 import { push } from "../history";
 import { sync } from "../devices/actions";
 import { unselectPlant } from "../farm_designer/map/actions";
-import {
-  showHotkeysDialog,
-} from "@blueprintjs/core/lib/esm/components/hotkeys/hotkeysDialog";
 import { save } from "../api/crud";
+import { Actions } from "../constants";
 
 describe("hotkeysWithActions()", () => {
   it("has key bindings", () => {
@@ -61,26 +59,41 @@ describe("hotkeysWithActions()", () => {
     hotkeys[HotKey.addEvent].onKeyDown?.(e);
     expect(push).toHaveBeenCalledWith(Path.farmEvents("add"));
 
-    hotkeys[HotKey.backToPlantOverview].onKeyDown?.(e);
+    hotkeysSettingsPath[HotKey.backToPlantOverview].onKeyDown?.(e);
     expect(push).toHaveBeenCalledWith(Path.plants());
     expect(unselectPlant).toHaveBeenCalled();
+    jest.clearAllMocks();
+    const hotkeysPhotosPath = hotkeysWithActions(dispatch, "photos");
+    hotkeysPhotosPath[HotKey.backToPlantOverview].onKeyDown?.(e);
+    expect(push).not.toHaveBeenCalled();
+    expect(unselectPlant).not.toHaveBeenCalled();
   });
 });
 
-describe("openHotkeyHelpOverlay()", () => {
+describe("toggleHotkeyHelpOverlay()", () => {
   it("opens overlay", () => {
-    openHotkeyHelpOverlay();
-    expect(showHotkeysDialog).toHaveBeenCalled();
+    const dispatch = jest.fn();
+    toggleHotkeyHelpOverlay(dispatch)();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: Actions.TOGGLE_HOTKEY_GUIDE, payload: undefined,
+    });
   });
 });
 
 describe("<HotKeys />", () => {
   const fakeProps = (): HotKeysProps => ({
     dispatch: jest.fn(),
+    hotkeyGuide: false,
   });
 
   it("renders", () => {
     mockPath = Path.mock(Path.designer("nope"));
+    const wrapper = shallow(<HotKeys {...fakeProps()} />);
+    expect(wrapper.html()).toEqual("<div class=\"hotkeys\"></div>");
+  });
+
+  it("renders default", () => {
+    mockPath = Path.mock(Path.designer());
     const wrapper = shallow(<HotKeys {...fakeProps()} />);
     expect(wrapper.html()).toEqual("<div class=\"hotkeys\"></div>");
   });

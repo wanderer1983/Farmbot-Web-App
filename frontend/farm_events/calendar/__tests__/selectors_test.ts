@@ -13,6 +13,7 @@ jest.mock("../../../resources/selectors", () => ({
   selectAllFarmEvents: () => [mockSeqFarmEvent, mockRegFarmEvent],
   indexSequenceById: () => ({ 1: mockSequence }),
   indexRegimenById: () => ({ 2: mockRegimen }),
+  selectAllPlantPointers: () => [],
   findUuid: jest.fn(),
 }));
 
@@ -34,12 +35,12 @@ describe("joinFarmEventsToExecutable()", () => {
   it("throws error for missing executable", () => {
     mockSeqFarmEvent.body.executable_id = 123;
     mockRegFarmEvent.body.executable_id = 456;
-    expect(() => joinFarmEventsToExecutable({} as ResourceIndex)).toThrowError();
+    expect(() => joinFarmEventsToExecutable({} as ResourceIndex)).toThrow();
   });
 
   it("throws error for missing executable id", () => {
     mockSeqFarmEvent.body.executable_id = 0;
     mockRegFarmEvent.body.executable_id = 0;
-    expect(() => joinFarmEventsToExecutable({} as ResourceIndex)).toThrowError();
+    expect(() => joinFarmEventsToExecutable({} as ResourceIndex)).toThrow();
   });
 });

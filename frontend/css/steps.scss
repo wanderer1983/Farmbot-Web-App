@@ -47,41 +47,42 @@
 }
 
 .step-header {
-  display: flex;
   letter-spacing: .05rem;
   padding: .75rem 1rem;
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
-  &.pinned.no-inputs {
-    border-radius: 3px;
-  }
   margin-bottom: -1px;
-  .bp3-popover-wrapper {
-    float: right;
-    margin-top: 0.35rem;
+  .step-header-flex {
+    display: flex;
   }
-  ::-webkit-input-placeholder {
-    color: $dark_gray;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-  ::-moz-placeholder {
-    color: $dark_gray;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-  :-ms-input-placeholder {
-    color: $dark_gray;
-    font-weight: bold;
-    text-transform: uppercase;
+  &.sequence-selected.no-inputs {
+    border-radius: 3px;
   }
   .step-comment {
     display: inline;
     width: 100%;
     overflow: hidden;
+    ::-webkit-input-placeholder {
+      color: $dark_gray;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    ::-moz-placeholder {
+      color: $dark_gray;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    :-ms-input-placeholder {
+      color: $dark_gray;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
   }
   .input {
     width: 100%;
+  }
+  .step-label {
+    height: auto !important;
   }
   input {
     width: 100%;
@@ -199,14 +200,42 @@
     float: right;
   }
   .step-warning {
-    font-size: 1.4rem;
-    color: $darkest_red;
-    .bp3-popover-wrapper {
-      float: left;
+    i {
+      color: $darkest_red;
+      font-size: 1.2rem;
     }
   }
   .input {
     display: inline-block;
+  }
+  .prompt-wrapper {
+    margin-top: 1rem;
+    textarea {
+      font-size: 1rem;
+      height: 8rem;
+    }
+    .generate-code {
+      display: flex;
+      height: 3rem;
+      .feedback {
+        width: 7rem;
+        margin-top: 0.75rem;
+        transition: opacity 2s ease;
+        i:first-of-type {
+          margin-right: 0.5rem;
+        }
+      }
+      p {
+        display: inline-block;
+        width: 100%;
+        line-height: 1rem;
+        color: $medium_gray;
+        padding: 0.75rem;
+      }
+      button {
+        margin-top: 0.5rem;
+      }
+    }
   }
 }
 
@@ -218,36 +247,24 @@
     margin-right: 0.35rem;
     margin-left: 0 !important;
   }
+  .fa-arrow-circle-up {
+    margin-bottom: 1rem;
+  }
 }
 
 .step-control-icons {
   display: flex;
-}
-
-.step-control-icons i,
-.step-control-icons .bp3-popover-wrapper,
-.step-control {
-  width: 1.2rem;
-  margin-top: 0.5rem;
-  margin-left: 2rem;
-  float: right;
-  line-height: 1rem;
-  .bp3-popover-target {
-    display: block;
-    margin-top: -0.5rem;
-  }
-  &.fa-external-link {
-    padding-top: 0.2rem;
-  }
-  &.fa-code {
-    font-weight: bold;
-  }
-  &.fa-thumb-tack,
-  &.fa-font,
-  &.fa-code {
-    color: $placeholder_gray;
-    &.enabled {
-      color: $dark_gray;
+  i {
+    &.fa-code {
+      font-weight: bold;
+    }
+    &.fa-thumb-tack,
+    &.fa-font,
+    &.fa-code {
+      color: $placeholder_gray;
+      &.enabled {
+        color: $dark_gray;
+      }
     }
   }
 }
@@ -290,6 +307,11 @@
     .execute-row {
       margin-top: 1rem;
     }
+    .locals-list {
+      margin-top: 1rem;
+      margin-left: -1rem;
+      margin-right: -0.5rem;
+    }
   }
   &.assertion-step {
     background: $light_purple;
@@ -307,18 +329,29 @@
     .row {
       margin: 0;
     }
+    .locals-list {
+      margin-left: -1rem;
+      margin-right: 0;
+    }
+    .location-form:not(:first-of-type) {
+      margin-top: 1rem;
+    }
+    .location-form {
+      .row:not(:first-of-type) {
+        margin-top: 1rem;
+      }
+    }
     &.pinned-view {
       .location-form {
         background: none;
         margin-top: 0;
         max-width: unset;
         box-shadow: none;
-        .location-form-header {
-          background: none;
-          padding: 0;
-        }
         .location-form-content {
           padding: 0;
+        }
+        .row {
+          margin-top: 1rem;
         }
         label {
           margin-top: 0.5rem;
@@ -417,7 +450,7 @@
   .expandable-header {
     font-size: 1.6rem;
   }
-  .bp3-collapse {
+  .bp5-collapse {
     overflow: hidden;
   }
   p {

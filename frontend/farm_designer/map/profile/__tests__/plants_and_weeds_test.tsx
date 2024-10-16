@@ -6,13 +6,16 @@ jest.mock("../../../../open_farm/cached_crop", () => ({
 import React from "react";
 import { svgMount } from "../../../../__test_support__/svg_mount";
 import {
-  fakePlant, fakeWeed,
+  fakePlant, fakePlantTemplate, fakeWeed,
 } from "../../../../__test_support__/fake_state/resources";
 import { TaggedWeedPointer } from "farmbot";
 import { TaggedPlant } from "../../interfaces";
 import { ProfilePointProps } from "../interfaces";
 import { PlantPoint, WeedPoint } from "../plants_and_weeds";
 import { Color } from "../../../../ui";
+import {
+  fakeDesignerState,
+} from "../../../../__test_support__/fake_designer_state";
 
 describe("<PlantPoint />", () => {
   const fakeProps = (): ProfilePointProps<TaggedPlant> => ({
@@ -23,6 +26,7 @@ describe("<PlantPoint />", () => {
     reversed: false,
     soilHeight: 0,
     getConfigValue: () => true,
+    designer: fakeDesignerState(),
   });
 
   it("renders plant point", () => {
@@ -44,11 +48,35 @@ describe("<PlantPoint />", () => {
     expect(wrapper.find("#point-coordinate-indicator").props().cy).toEqual(100);
   });
 
+  it("renders plant template", () => {
+    const p = fakeProps();
+    p.point = fakePlantTemplate();
+    const wrapper = svgMount(<PlantPoint {...p} />);
+    expect(wrapper.find("#plant-profile-point").length).toEqual(1);
+  });
+
   it("renders default spread", () => {
     mockSpread = 0;
-    const wrapper = svgMount(<PlantPoint {...fakeProps()} />);
+    const p = fakeProps();
+    const plant = fakePlant();
+    plant.body.radius = 25;
+    p.point = plant;
+    const wrapper = svgMount(<PlantPoint {...p} />);
     expect(wrapper.find("#plant-profile-point").length).toEqual(1);
     expect(wrapper.find("#spread-profile").length).toEqual(1);
+    expect(wrapper.find(".plant-radius").props().r).toEqual(25);
+  });
+
+  it("renders hovered spread", () => {
+    mockSpread = 0;
+    const p = fakeProps();
+    const plant = fakePlant();
+    plant.body.radius = 25;
+    p.point = plant;
+    p.designer.selectedPoints = [plant.uuid];
+    p.designer.hoveredSpread = 1000;
+    const wrapper = svgMount(<PlantPoint {...p} />);
+    expect(wrapper.find(".plant-radius").props().r).toEqual(500);
   });
 });
 
@@ -61,6 +89,7 @@ describe("<WeedPoint />", () => {
     reversed: false,
     soilHeight: 0,
     getConfigValue: () => true,
+    designer: fakeDesignerState(),
   });
 
   it("renders weed point", () => {

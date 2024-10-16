@@ -94,7 +94,7 @@ export const SupportPanel = () =>
     </DesignerPanelContent>
   </DesignerPanel>;
 
-export interface FeedbackProps {
+interface FeedbackProps {
   stepSlug?: WizardStepSlug;
   keep?: boolean;
 }
@@ -112,13 +112,15 @@ export const Feedback = (props: FeedbackProps) => {
     <p>{t(Content.FEEDBACK_NOTICE)}</p>
     <button className={`fb-button ${sent ? "gray" : "green"}`}
       disabled={!orderNumber}
-      onClick={() => sent
-        ? success(t("Feedback already sent."))
-        : axios.post(API.current.feedbackPath, { message, slug: props.stepSlug })
-          .then(() => {
-            success(t("Feedback sent."));
-            props.keep ? setSent(true) : setMessage("");
-          })}>
+      onClick={() => {
+        sent
+          ? success(t("Feedback already sent."))
+          : axios.post(API.current.feedbackPath, { message, slug: props.stepSlug })
+            .then(() => {
+              success(t("Feedback sent."));
+              props.keep ? setSent(true) : setMessage("");
+            });
+      }}>
       {sent ? t("submitted") : t("submit")}
     </button>
     {!orderNumber && <Help text={Content.MUST_REGISTER} links={[

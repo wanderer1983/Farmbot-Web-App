@@ -29,9 +29,9 @@ input:not([role="combobox"]) {
     display: none;
   }
   &.dim {
-    background: darken($white, 2%) !important;
+    background: color.adjust($white, $lightness: -2%) !important;
     &.gray {
-      background: darken($medium_light_gray, 2%) !important;
+      background: color.adjust($medium_light_gray, $lightness: -2%) !important;
     }
   }
   &.error {
@@ -44,19 +44,23 @@ input:not([role="combobox"]) {
   }
 }
 
+input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]) {
+  height: 3rem;
+}
+
 .input {
   position: relative;
-  .bp3-popover-wrapper {
+  .bp5-popover-wrapper {
     position: unset;
   }
 }
 
 .input-error-wrapper {
   height: 0;
-  .bp3-popover-content {
+  .bp5-popover-content {
     min-width: 120px;
   }
-  .bp3-overlay {
+  .bp5-overlay {
     display: inline-block;
   }
 }
@@ -95,40 +99,56 @@ select {
 .filter-search {
   span {
     width: 100%;
+    color: $dark_gray;
+  }
+  .bp5-popover-target {
+    position: relative;
   }
   i {
     position: absolute;
-    top: 20%;
-    right: 0.65rem;
+    right: 1rem;
+    line-height: 3rem;
     color: $dark_gray
   }
   &.dim {
     Button {
-      background: darken($white, 2%) !important;
+      background: color.adjust($white, $lightness: -2%) !important;
       &:hover {
-        background: darken($white, 2%) !important;
+        background: color.adjust($white, $lightness: -2%) !important;
       }
     }
   }
   &.disabled {
     pointer-events: none;
     button {
-      background: darken($white, 10%) !important;
+      background: color.adjust($white, $lightness: -10%) !important;
+    }
+  }
+  &.warning {
+    button {
+      background: $light_red !important;
+      border: 3px solid $red !important;
+      &:hover {
+        background: $light_red !important;
+      }
     }
   }
 }
 
 .filter-search-popover {
-  .bp3-popover-content {
+  .bp5-popover-content {
     max-width: 40rem;
     padding: 0;
-    .bp3-menu {
+    .bp5-menu {
       padding-left: 0;
       padding-right: 0;
     }
+    .bp5-input {
+      height: auto !important;
+    }
   }
   &.few-items {
-    .bp3-input-group {
+    .bp5-input-group {
       display: none;
     }
   }
@@ -137,7 +157,7 @@ select {
 .filter-search-item {
   padding-left: 1rem;
   font-weight: normal !important;
-  .bp3-text-overflow-ellipsis {
+  .bp5-text-overflow-ellipsis {
     white-space: normal;
     padding-left: 1rem;
     text-indent: -1rem;

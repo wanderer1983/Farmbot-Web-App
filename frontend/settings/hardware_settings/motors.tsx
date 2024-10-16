@@ -17,6 +17,7 @@ import { Col, Help, Row, ToggleButton } from "../../ui";
 import { t } from "../../i18next_wrapper";
 import { McuInputBox } from "./mcu_input_box";
 import { getDefaultFwConfigValue, getModifiedClassName } from "./default_values";
+import { floor, round } from "lodash";
 
 export const calculateScale =
   (sourceFwConfig: SourceFwConfig): Record<Xyz, number> => {
@@ -59,7 +60,7 @@ export function Motors(props: MotorsProps) {
       dispatch={dispatch} />
     {settingsPanelState.motors &&
       <Help customClass={"hw-warn"} text={ToolTips.HW_SETTINGS}
-        customIcon={"exclamation-triangle"} />}
+        customIcon={"fa-exclamation-triangle"} />}
     <Collapse isOpen={!!settingsPanelState.motors}>
       <SpacePanelHeader />
       <NumericMCUInputGroup {...commonProps}
@@ -82,7 +83,7 @@ export function Motors(props: MotorsProps) {
                 z: getDefault("movement_max_spd_z2") / scale.z
               })} />
           </Col>
-          <Col xs={4} className={"z-param-input"}>
+          <Col xs={4} className={"z-param-input low-pad"}>
             <McuInputBox {...commonProps}
               setting={"movement_max_spd_z2"}
               scale={scale.z} />
@@ -119,7 +120,7 @@ export function Motors(props: MotorsProps) {
                 z: getDefault("movement_min_spd_z2") / scale.z
               })} />
           </Col>
-          <Col xs={4} className={"z-param-input"}>
+          <Col xs={4} className={"z-param-input low-pad"}>
             <McuInputBox {...commonProps}
               setting={"movement_min_spd_z2"}
               scale={scale.z} />
@@ -146,7 +147,7 @@ export function Motors(props: MotorsProps) {
                 z: getDefault("movement_steps_acc_dec_z2") / scale.z
               })} />
           </Col>
-          <Col xs={4} className={"z-param-input"}>
+          <Col xs={4} className={"z-param-input low-pad"}>
             <McuInputBox {...commonProps}
               setting={"movement_steps_acc_dec_z2"}
               scale={scale.z} />
@@ -190,7 +191,11 @@ export function Motors(props: MotorsProps) {
           tooltip={ToolTips.MOTOR_CURRENT}
           x={"movement_motor_current_x"}
           y={"movement_motor_current_y"}
-          z={"movement_motor_current_z"} />}
+          z={"movement_motor_current_z"}
+          advanced={true}
+          inputMax={100}
+          toInput={motorCurrentMaToPercent}
+          fromInput={motorCurrentPercentToMa} />}
       {isTMCBoard(firmwareHardware) &&
         <BooleanMCUInputGroup {...commonProps}
           label={DeviceSetting.quietMode}
@@ -266,3 +271,25 @@ const microstepWarning = (sourceFwConfig: SourceFwConfig) => ({
     ? t(ToolTips.MICROSTEP_WARNING)
     : undefined,
 });
+
+// calculated from L57 & L59 equations in `farmbot-arduino-firmware/src/TMC2130.cpp`
+const EQ1_M = 0.032683964;
+const EQ2_M = 0.018101888;
+
+/** Convert an existing mA value to the percent of max current it will produce. */
+export const motorCurrentMaToPercent = (mA: number) => {
+  let CS = EQ2_M * mA - 1;
+  if (CS < 16) { CS = EQ1_M * mA - 1; }
+  CS = Math.max(CS, 0) % 32;
+  const percent = round(CS / 32 * 100);
+  return percent;
+};
+
+/** Convert a desired percent of max current to a mA value that will produce it. */
+export const motorCurrentPercentToMa = (percent: number) => {
+  const CS = percent / 100 * 32;
+  let mA = (CS + 1) / EQ2_M;
+  if (mA < 940) { mA = (CS + 1) / EQ1_M; }
+  mA = floor(mA);
+  return mA;
+};

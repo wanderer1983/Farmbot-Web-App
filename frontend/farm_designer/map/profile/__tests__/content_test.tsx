@@ -13,7 +13,9 @@ import React from "react";
 import { mount } from "enzyme";
 import { getProfileX, ProfileSvg } from "../content";
 import { ProfileSvgProps } from "../interfaces";
-import { fakeBotSize } from "../../../../__test_support__/fake_bot_data";
+import {
+  fakeBotLocationData, fakeBotSize,
+} from "../../../../__test_support__/fake_bot_data";
 import {
   fakePlant,
   fakePoint, fakeTool, fakeToolSlot, fakeWeed,
@@ -28,16 +30,19 @@ import { BotOriginQuadrant } from "../../../interfaces";
 import { ToolPulloutDirection } from "farmbot/dist/resources/api_resources";
 import { ToolDimensions } from "../../tool_graphics/tool";
 import { SlotDimensions } from "../../tool_graphics/slot";
+import {
+  fakeDesignerState,
+} from "../../../../__test_support__/fake_designer_state";
 
 describe("<ProfileSvg />", () => {
   const fakeProps = (): ProfileSvgProps => ({
     allPoints: [],
-    selectionWidth: 100,
-    axis: "y",
+    designer: fakeDesignerState(),
     position: { x: 0, y: 110 },
     expanded: false,
     botSize: fakeBotSize(),
-    botPosition: { x: undefined, y: undefined, z: undefined },
+    botLocationData: fakeBotLocationData(),
+    peripheralValues: [],
     negativeZ: true,
     sourceFbosConfig: () => ({ value: 0, consistent: true }),
     mountedToolInfo: fakeMountedToolInfo(),
@@ -66,6 +71,7 @@ describe("<ProfileSvg />", () => {
   it("renders expanded", () => {
     const p = fakeProps();
     p.expanded = true;
+    p.designer.profileAxis = "y";
     p.allPoints = [fakePoint(), fakePoint()];
     p.allPoints[0].body.x = 200;
     p.allPoints[0].body.y = 100;
@@ -105,7 +111,8 @@ describe("<ProfileSvg />", () => {
 
   it("renders UTM", () => {
     const p = fakeProps();
-    p.botPosition = { x: 200, y: 100, z: 100 };
+    p.designer.profileAxis = "y";
+    p.botLocationData.position = { x: 200, y: 100, z: 100 };
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#UTM-and-axis").find("line").length).toEqual(1);
     expect(wrapper.find("#UTM-and-axis").find("rect").length).toEqual(1);
@@ -115,24 +122,26 @@ describe("<ProfileSvg />", () => {
   it("renders UTM when expanded", () => {
     const p = fakeProps();
     p.expanded = true;
-    p.botPosition = { x: 200, y: 100, z: 100 };
+    p.designer.profileAxis = "y";
+    p.botLocationData.position = { x: 200, y: 100, z: 100 };
     const wrapper = mount(<ProfileSvg {...p} />);
-    expect(wrapper.find("#UTM-and-axis").find("rect").length).toEqual(3);
+    expect(wrapper.find("#UTM-and-axis").find("rect").length).toEqual(4);
     expect(wrapper.html()).toContain("image");
   });
 
   it("renders UTM when expanded: y-axis", () => {
     const p = fakeProps();
     p.expanded = true;
-    p.axis = "y";
-    p.botPosition = { x: 200, y: 100, z: 100 };
+    p.designer.profileAxis = "y";
+    p.botLocationData.position = { x: 200, y: 100, z: 100 };
     const wrapper = mount(<ProfileSvg {...p} />);
-    expect(wrapper.find("#UTM-and-axis").find("rect").length).toEqual(3);
+    expect(wrapper.find("#UTM-and-axis").find("rect").length).toEqual(4);
     expect(wrapper.html()).toContain("image");
   });
 
   it("renders with matching points", () => {
     const p = fakeProps();
+    p.designer.profileAxis = "y";
     p.botSize.z = { value: 100, isDefault: false };
     p.allPoints = [
       fakePoint(), fakePoint(), fakePoint(), fakePoint(), fakePoint(),
@@ -185,6 +194,7 @@ describe("<ProfileSvg />", () => {
   it("renders tools", () => {
     const p = fakeProps();
     p.expanded = true;
+    p.designer.profileAxis = "y";
     const tool = fakeTool();
     tool.body.id = 1;
     p.tools = [tool];
@@ -217,7 +227,8 @@ describe("<ProfileSvg />", () => {
   it("renders trough at new coordinate", () => {
     const p = fakeProps();
     p.expanded = true;
-    p.botPosition.x = 1000;
+    p.designer.profileAxis = "y";
+    p.botLocationData.position.x = 1000;
     const trough = fakeTool();
     trough.body.id = 1;
     trough.body.name = "Seed trough";
@@ -232,7 +243,7 @@ describe("<ProfileSvg />", () => {
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#profile-tool").first().find("rect").props()).toEqual({
       id: "tool-body", fill: "rgba(128, 128, 128)", opacity: 0.75,
-      x: 975.5, y: 200, width: 49, height: ToolDimensions.thickness,
+      x: 976.25, y: 200, width: 47.5, height: ToolDimensions.thickness,
     });
   });
 
@@ -291,6 +302,7 @@ describe("<ProfileSvg />", () => {
 
   it("renders tool implements: side", () => {
     const p = toolGraphicsProps();
+    p.designer.profileAxis = "y";
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#rotary-tool-implement-profile").length).toEqual(1);
     expect(wrapper.find("#weeder-implement-profile").length).toEqual(1);
@@ -311,7 +323,7 @@ describe("<ProfileSvg />", () => {
 
   it("renders tool implements: front", () => {
     const p = toolGraphicsProps();
-    p.axis = "x";
+    p.designer.profileAxis = "x";
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#rotary-tool-implement-profile").length).toEqual(1);
     expect(wrapper.find("#weeder-implement-profile").length).toEqual(1);
@@ -333,7 +345,7 @@ describe("<ProfileSvg />", () => {
   it("renders all points", () => {
     const p = fakeProps();
     p.expanded = true;
-    p.selectionWidth = 10000;
+    p.designer.profileWidth = 10000;
     p.allPoints = [fakePlant(), fakeWeed(), fakeToolSlot(), fakePoint()];
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#profile-map-point").length).toEqual(1);
@@ -345,7 +357,7 @@ describe("<ProfileSvg />", () => {
   it("doesn't render any points", () => {
     const p = fakeProps();
     p.expanded = true;
-    p.selectionWidth = 10000;
+    p.designer.profileWidth = 10000;
     p.getConfigValue = () => false;
     p.allPoints = [fakePlant(), fakeWeed(), fakeToolSlot(), fakePoint()];
     const wrapper = mount(<ProfileSvg {...p} />);
@@ -382,7 +394,7 @@ describe("<ProfileSvg />", () => {
   ])("renders orientation: %s-axis, origin: %s, xySwap: %s, slot: %s, flip: %s",
     (axis, quadrant, xySwap, slotDirection, flipped, expected) => {
       const p = fakeProps();
-      p.axis = axis;
+      p.designer.profileAxis = axis;
       p.mapTransformProps.quadrant = quadrant;
       p.mapTransformProps.xySwap = xySwap;
       p.expanded = true;
@@ -407,6 +419,7 @@ describe("<ProfileSvg />", () => {
     mockPath = Path.mock(Path.location());
     const p = fakeProps();
     p.expanded = true;
+    p.designer.profileAxis = "y";
     p.sourceFbosConfig = () => ({ value: 100, consistent: true });
     const wrapper = mount(<ProfileSvg {...p} />);
     expect(wrapper.find("#interpolated-soil-height").find("rect").length)

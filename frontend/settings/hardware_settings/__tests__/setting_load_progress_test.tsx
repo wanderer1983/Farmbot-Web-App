@@ -1,8 +1,3 @@
-let mockShouldDisplay = false;
-jest.mock("../../../devices/should_display", () => ({
-  shouldDisplayFeature: () => mockShouldDisplay,
-}));
-
 import React from "react";
 import { mount } from "enzyme";
 import {
@@ -16,10 +11,6 @@ import type { FirmwareConfig } from "farmbot/dist/resources/configs/firmware";
 import { Color } from "../../../ui";
 
 describe("<SettingLoadProgress />", () => {
-  beforeEach(() => {
-    mockShouldDisplay = false;
-  });
-
   const fakeProps =
     (extraConfig?: keyof FirmwareConfig): SettingLoadProgressProps => {
       type ConsistencyLookup = Record<keyof FirmwareConfig, boolean>;
@@ -57,26 +48,6 @@ describe("<SettingLoadProgress />", () => {
 
   it("shows setting load progress: 67%", () => {
     const p = fakeProps();
-    p.firmwareHardware = "farmduino_k15";
-    const wrapper = mount(<SettingLoadProgress {...p} />);
-    const barStyle = wrapper.find(".load-progress-bar").props().style;
-    expect(barStyle?.width).toEqual("67%");
-    expect(barStyle?.background).toEqual(Color.white);
-  });
-
-  it("shows setting load progress: 50% (new parameters)", () => {
-    mockShouldDisplay = true;
-    const p = fakeProps("movement_calibration_retry_total_x");
-    p.firmwareHardware = "farmduino_k15";
-    const wrapper = mount(<SettingLoadProgress {...p} />);
-    const barStyle = wrapper.find(".load-progress-bar").props().style;
-    expect(barStyle?.width).toEqual("50%");
-    expect(barStyle?.background).toEqual(Color.white);
-  });
-
-  it("shows setting load progress: 67% (new parameters)", () => {
-    mockShouldDisplay = false;
-    const p = fakeProps("movement_calibration_retry_total_x");
     p.firmwareHardware = "farmduino_k15";
     const wrapper = mount(<SettingLoadProgress {...p} />);
     const barStyle = wrapper.find(".load-progress-bar").props().style;

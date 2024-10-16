@@ -84,7 +84,9 @@ export class ImageFilterMenu
       let value = undefined;
       switch (datetime) {
         case "beginDate":
-          value = offsetTime(input, beginTime || "00:00", timeSettings);
+          if (input) {
+            value = offsetTime(input, beginTime || "00:00", timeSettings);
+          }
           this.setValues({ photo_filter_begin: value });
           break;
         case "beginTime":
@@ -94,7 +96,9 @@ export class ImageFilterMenu
           }
           break;
         case "endDate":
-          value = offsetTime(input, endTime || "00:00", timeSettings);
+          if (input) {
+            value = offsetTime(input, endTime || "00:00", timeSettings);
+          }
           this.setValues({ photo_filter_end: value });
           break;
         case "endTime":
@@ -184,13 +188,17 @@ export class ImageFilterMenu
           <tr>
             <th />
             <th>
-              <i className={"fa fa-step-backward"} onClick={this.oldest} />
+              <i className={"fa fa-step-backward fb-icon-button"}
+                onClick={this.oldest} />
               {beginDate &&
-                <i className={"fa fa-caret-left"} onClick={this.dateStep(-1)} />}
+                <i className={"fa fa-caret-left fb-icon-button"}
+                  onClick={this.dateStep(-1)} />}
               <label>{t("Date")}</label>
               {beginDate &&
-                <i className={"fa fa-caret-right"} onClick={this.dateStep(1)} />}
-              <i className={"fa fa-step-forward"} onClick={this.newest} />
+                <i className={"fa fa-caret-right fb-icon-button"}
+                  onClick={this.dateStep(1)} />}
+              <i className={"fa fa-step-forward fb-icon-button"}
+                onClick={this.newest} />
             </th>
             <th><label>{t("Time")}</label></th>
           </tr>

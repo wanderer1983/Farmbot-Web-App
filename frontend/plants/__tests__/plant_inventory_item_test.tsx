@@ -17,6 +17,7 @@ jest.mock("../../farm_designer/map/actions", () => ({
 
 import React from "react";
 import {
+  daysOldText,
   PlantInventoryItem, PlantInventoryItemProps,
 } from "../plant_inventory_item";
 import { shallow, mount } from "enzyme";
@@ -28,6 +29,7 @@ import { maybeGetCachedPlantIcon } from "../../open_farm/cached_crop";
 import {
   mapPointClickAction, setHoveredPlant, selectPoint,
 } from "../../farm_designer/map/actions";
+import moment from "moment";
 
 describe("<PlantInventoryItem />", () => {
   const fakeProps = (): PlantInventoryItemProps => ({
@@ -38,15 +40,18 @@ describe("<PlantInventoryItem />", () => {
 
   it("renders", () => {
     const wrapper = shallow(<PlantInventoryItem {...fakeProps()} />);
-    expect(wrapper.text()).toEqual("Strawberry Plant 11 days old");
+    expect(wrapper.text()).toEqual("Strawberry Plant 1planned");
     expect(wrapper.find("div").first().hasClass("hovered")).toBeFalsy();
   });
 
   it("handles missing plant name", () => {
     const p = fakeProps();
-    p.plant.body.name = "";
+    const plant = fakePlant();
+    plant.body.name = "";
+    plant.body.planted_at = "" + moment().toISOString();
+    p.plant = plant;
     const wrapper = shallow(<PlantInventoryItem {...p} />);
-    expect(wrapper.text()).toEqual("Unknown plant1 days old");
+    expect(wrapper.text()).toEqual("Unknown plant1 day old");
     expect(wrapper.find("div").first().hasClass("hovered")).toBeFalsy();
   });
 
@@ -61,13 +66,13 @@ describe("<PlantInventoryItem />", () => {
     const p = fakeProps();
     const wrapper = shallow(<PlantInventoryItem {...p} />);
     wrapper.simulate("mouseEnter");
-    expect(setHoveredPlant).toBeCalledWith(p.plant.uuid, "");
+    expect(setHoveredPlant).toHaveBeenCalledWith(p.plant.uuid, "");
   });
 
   it("hover end", () => {
     const wrapper = shallow(<PlantInventoryItem {...fakeProps()} />);
     wrapper.simulate("mouseLeave");
-    expect(setHoveredPlant).toBeCalledWith(undefined, "");
+    expect(setHoveredPlant).toHaveBeenCalledWith(undefined, "");
   });
 
   it("selects plant", () => {
@@ -76,7 +81,7 @@ describe("<PlantInventoryItem />", () => {
     const wrapper = shallow(<PlantInventoryItem {...p} />);
     wrapper.simulate("click");
     expect(mapPointClickAction).not.toHaveBeenCalled();
-    expect(selectPoint).toBeCalledWith([p.plant.uuid]);
+    expect(selectPoint).toHaveBeenCalledWith([p.plant.uuid]);
     expect(push).toHaveBeenCalledWith(Path.plants(p.plant.body.id));
   });
 
@@ -85,7 +90,7 @@ describe("<PlantInventoryItem />", () => {
     p.plant.body.id = 0;
     const wrapper = shallow(<PlantInventoryItem {...p} />);
     wrapper.simulate("click");
-    expect(selectPoint).toBeCalledWith([p.plant.uuid]);
+    expect(selectPoint).toHaveBeenCalledWith([p.plant.uuid]);
     expect(push).toHaveBeenCalledWith(Path.plants("ERR_NO_PLANT_ID"));
   });
 
@@ -106,7 +111,7 @@ describe("<PlantInventoryItem />", () => {
     p.plant = fakePlantTemplate();
     const wrapper = shallow(<PlantInventoryItem {...p} />);
     wrapper.simulate("click");
-    expect(selectPoint).toBeCalledWith([p.plant.uuid]);
+    expect(selectPoint).toHaveBeenCalledWith([p.plant.uuid]);
     expect(push).toHaveBeenCalledWith(
       Path.savedGardens(`templates/${p.plant.body.id}`));
   });
@@ -126,5 +131,15 @@ describe("<PlantInventoryItem />", () => {
     expect(wrapper.state().icon).toEqual("");
     wrapper.instance().updateStateIcon("fake icon");
     expect(wrapper.state().icon).toEqual("fake icon");
+  });
+});
+
+describe("daysOldText()", () => {
+  it("returns correct text", () => {
+    expect(daysOldText({ age: 1 })).toEqual("1 day old");
+    expect(daysOldText({ age: 0 })).toEqual("0 days old");
+    expect(daysOldText({ age: 2 })).toEqual("2 days old");
+    expect(daysOldText({ age: 2, stage: "planted" })).toEqual("2 days old");
+    expect(daysOldText({ age: undefined, stage: "planned" })).toEqual("planned");
   });
 });

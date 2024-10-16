@@ -14,23 +14,12 @@ import {
   setActiveSequenceByName,
 } from "../../sequences/set_active_sequence_by_name";
 import { Path } from "../../internal_urls";
-
-/** Make room for the regimen header variable form when necessary. */
-const regimenSectionHeight =
-  (regimen: TaggedRegimen, varsCollapsed: boolean) => {
-    let subHeight = 200;
-    const variables = regimen.body.body.length > 0;
-    if (variables) { subHeight = 500; }
-    if (varsCollapsed) { subHeight = 300; }
-    const variablesDiv = document.getElementById("regimen-editor-tools");
-    if (variablesDiv) { subHeight = 200 + variablesDiv.offsetHeight; }
-    return `calc(100vh - ${subHeight}px)`;
-  };
+import {
+  determineVariableType, VariableIcon,
+} from "../../sequences/locals_list/new_variable";
 
 export const RegimenRows = (props: RegimenRowsProps) =>
-  <div className="regimen" style={{
-    height: regimenSectionHeight(props.regimen, props.varsCollapsed)
-  }}>
+  <div className={"regimen"}>
     {props.calendar.map(regimenDay(props.dispatch, props.resources))}
   </div>;
 
@@ -47,17 +36,21 @@ const regimenItemRow = (
   (row: RegimenItemCalendarRow, itemIndex: number) =>
     <div className={`${row.color} regimen-event`}
       key={`${dayIndex}.${itemIndex}`}>
-      <span className="regimen-event-title">
-        {row.sequenceName}
-        <Link to={Path.sequences(urlFriendly(row.sequenceName))}
-          onClick={setActiveSequenceByName}>
-          <i className="fa fa-external-link" />
-        </Link>
-      </span>
-      <span className="regimen-event-time">{row.hhmm}</span>
-      <DisplayVarValue row={row} resources={resources} />
-      <i className="fa fa-trash regimen-control" onClick={() =>
-        dispatch(removeRegimenItem(row.item, row.regimen))} />
+      <div className={"regimen-event-titlebar"}>
+        <span className={"regimen-event-title"}>
+          {row.sequenceName}
+          <Link to={Path.sequences(urlFriendly(row.sequenceName))}
+            onClick={setActiveSequenceByName}>
+            <i className={"fa fa-external-link fb-icon-button"} />
+          </Link>
+        </span>
+        <span className="regimen-event-time">{row.hhmm}</span>
+        <i className={"fa fa-trash regimen-control fb-icon-button"}
+          onClick={() =>
+            dispatch(removeRegimenItem(row.item, row.regimen))} />
+      </div>
+      {row.variables.length > 0 &&
+        <DisplayVarValue row={row} resources={resources} />}
     </div>;
 
 const removeRegimenItem = (item: RegimenItem, r: TaggedRegimen) => {
@@ -75,12 +68,14 @@ const DisplayVarValue = (props: DisplayVarValueProps) => {
         if (variableNode) {
           return <span key={variable}
             className="regimen-event-variable">
+            <VariableIcon variableType={determineVariableType(variableNode)} />
             {withPrefix(variable,
               determineDropdown(variableNode, props.resources).label)}
           </span>;
         }
       }
-      return <span key={"no-variable"} className={"no-regimen-variable"} />;
+      return <span key={"no-variable-" + variable}
+        className={"no-regimen-variable"} />;
     })}
   </div>;
 };

@@ -14,8 +14,7 @@ import {
   EditToolSlotMetaProps,
 } from "./interfaces";
 import { betterMerge } from "../util";
-import { push } from "../history";
-import { Path } from "../internal_urls";
+import { GoToThisLocationButton } from "../farm_designer/move_to";
 
 export const GantryMountedInput = (props: GantryMountedInputProps) =>
   <fieldset className="gantry-mounted-input">
@@ -50,7 +49,7 @@ export const SlotDirectionInputRow = (props: SlotDirectionInputRowProps) => {
     <label>
       {t("slot direction")}
     </label>
-    <i className={`direction-icon ${iconClass}`}
+    <i className={`direction-icon ${iconClass} fb-icon-button`}
       onClick={() => props.onChange({
         pullout_direction: newSlotDirection(props.toolPulloutDirection)
       })} />
@@ -71,6 +70,9 @@ export const ToolSelection = (props: ToolSelectionProps) =>
         || tool.body.id != props.selectedTool?.body.id)
       .filter(tool => !props.filterActiveTools
         || !props.isActive(tool.body.id))
+      .filter(tool => props.noUTM
+        ? tool.body.name?.toLowerCase().includes("trough")
+        : true)
       .map(tool => ({
         label: tool.body.name || "untitled",
         value: tool.body.id || 0,
@@ -99,14 +101,19 @@ export const ToolInputRow = (props: ToolInputRowProps) =>
           selectedTool={props.selectedTool}
           onChange={props.onChange}
           isActive={props.isActive}
+          noUTM={props.noUTM}
           filterSelectedTool={false}
           filterActiveTools={true} />
       </Col>
     </Row>
   </div>;
 
-export const SlotLocationInputRow = (props: SlotLocationInputRowProps) =>
-  <div className="tool-slot-location-input">
+export const SlotLocationInputRow = (props: SlotLocationInputRowProps) => {
+  const x = props.gantryMounted
+    ? props.botPosition.x ?? props.slotLocation.x
+    : props.slotLocation.x;
+  const { y, z } = props.slotLocation;
+  return <div className="tool-slot-location-input">
     <Row>
       <Col xs={11} className="axis-inputs">
         {["x", "y", "z"].map((axis: Xyz) =>
@@ -126,19 +133,16 @@ export const SlotLocationInputRow = (props: SlotLocationInputRowProps) =>
       <UseCurrentLocation botPosition={props.botPosition}
         onChange={props.onChange} />
     </Row>
-    <button
-      className={"fb-button gray no-float"}
-      title={t("move to this location")}
-      onClick={() => {
-        const x = props.gantryMounted
-          ? props.botPosition.x ?? props.slotLocation.x
-          : props.slotLocation.x;
-        const { y, z } = props.slotLocation;
-        push(Path.location({ x, y, z }));
-      }}>
-      {t("Move FarmBot to slot location")}
-    </button>
+    <GoToThisLocationButton
+      dispatch={props.dispatch}
+      locationCoordinate={{ x, y, z }}
+      botOnline={props.botOnline}
+      arduinoBusy={props.arduinoBusy}
+      currentBotLocation={props.botPosition}
+      movementState={props.movementState}
+      defaultAxes={props.defaultAxes} />
   </div>;
+};
 
 export interface UseCurrentLocationProps {
   botPosition: BotPosition;
@@ -173,7 +177,11 @@ export const SlotEditRows = (props: SlotEditRowsProps) =>
       slotLocation={props.toolSlot.body}
       gantryMounted={props.toolSlot.body.gantry_mounted}
       botPosition={props.botPosition}
+      movementState={props.movementState}
       botOnline={props.botOnline}
+      dispatch={props.dispatch}
+      arduinoBusy={props.arduinoBusy}
+      defaultAxes={props.defaultAxes}
       onChange={props.updateToolSlot} />
     <ToolInputRow
       noUTM={props.noUTM}
@@ -205,14 +213,14 @@ const directionIconClass = (slotDirection: ToolPulloutDirection) => {
   }
 };
 
-export const positionButtonTitle = (botPosition: BotPosition): string => {
+const positionButtonTitle = (botPosition: BotPosition): string => {
   const position = definedPosition(botPosition);
   return position
     ? `(${position.x}, ${position.y}, ${position.z})`
     : t("(unknown)");
 };
 
-export const newSlotDirection =
+const newSlotDirection =
   (old: ToolPulloutDirection | undefined): ToolPulloutDirection =>
     isNumber(old) && old < 4 ? old + 1 : ToolPulloutDirection.NONE;
 
@@ -224,7 +232,7 @@ export const definedPosition =
       : undefined;
   };
 
-export const DIRECTION_CHOICES_DDI = (): { [index: number]: DropDownItem } => ({
+const DIRECTION_CHOICES_DDI = (): { [index: number]: DropDownItem } => ({
   [ToolPulloutDirection.NONE]:
     { label: t("None"), value: ToolPulloutDirection.NONE },
   [ToolPulloutDirection.POSITIVE_X]:

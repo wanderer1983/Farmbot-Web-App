@@ -29,7 +29,10 @@ export class RawDesignerSequencePreview
   componentDidMount = () => {
     loadSequenceVersion({
       id: Path.getSlug(Path.sequenceVersion()),
-      onSuccess: sequence => this.setState({ sequence }),
+      onSuccess: sequence => this.setState({
+        sequence,
+        descriptionCollapsed: !sequence.body.description,
+      }),
       onError: () => this.setState({ error: true }),
     });
   };
@@ -46,6 +49,7 @@ export class RawDesignerSequencePreview
       <DesignerPanelHeader
         panelName={panelName}
         panel={Panel.Sequences}
+        colorClass={sequence?.body.color}
         titleElement={<ResourceTitle
           key={sequence?.body.name}
           readOnly={true}
@@ -61,6 +65,7 @@ export class RawDesignerSequencePreview
             dispatch={this.props.dispatch}
             resources={this.props.resources}
             toggleSection={this.toggleSection}
+            sequencesState={this.props.sequencesState}
             showToolbar={true}
             {...this.state} />
         </div>

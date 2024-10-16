@@ -1,9 +1,9 @@
 import { times } from "lodash";
-import { connect, MqttClient } from "mqtt";
-import { Terminal } from "xterm";
+import mqtt, { MqttClient } from "mqtt";
+import { Terminal } from "@xterm/xterm";
 
 type TerminalLike = Pick<Terminal, "write" | "onKey">;
-type KeysWeNeed = "publish" | "on" | "once" | "publish" | "subscribe";
+type KeysWeNeed = "publish" | "on" | "once" | "subscribe";
 
 const CR = "\r";
 const DELETE = String.fromCharCode(127);
@@ -17,7 +17,7 @@ export class TerminalSession {
   constructor(url: string, public username: string,
     password: string,
     private terminal: TerminalLike) {
-    this.client = connect(url, { username, password });
+    this.client = mqtt.connect(url, { username, password });
   }
 
   get rx() { return `bot/${this.username}/terminal_output`; }

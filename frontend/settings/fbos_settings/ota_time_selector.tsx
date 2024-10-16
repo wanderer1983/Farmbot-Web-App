@@ -3,7 +3,6 @@ import moment from "moment";
 import { t } from "../../i18next_wrapper";
 import { FBSelect, Row, Col, DropDownItem, Help } from "../../ui";
 import { edit, save } from "../../api/crud";
-import { ColWidth } from "./farmbot_os_settings";
 import { Content, DeviceSetting } from "../../constants";
 import { Highlight } from "../maybe_highlight";
 import { OtaTimeSelectorProps, OtaTimeSelectorRowProps } from "./interfaces";
@@ -11,9 +10,12 @@ import { isNumber, range } from "lodash";
 import { getModifiedClassNameSpecifyDefault } from "../default_values";
 import { updateConfig } from "../../devices/actions";
 
-const hourToUtcHour =
-  (hour: number | undefined, offset: number): number | undefined =>
-    !isNumber(hour) ? undefined : (hour + offset) % 24;
+export const localHourToUtcHour =
+  (hour: number | undefined, offset: number, direction = 1): number | undefined =>
+    !isNumber(hour) ? undefined : (hour - (direction * offset)) % 24;
+
+export const utcHourToLocalHour = (hour: number | undefined, offset: number) =>
+  localHourToUtcHour(hour, offset, -1);
 
 export const DDI_ASAP = (): DropDownItem =>
   ({ label: t("As soon as possible"), value: "", isNull: true });
@@ -29,7 +31,7 @@ const formatHour = (hour: number | undefined, hour24: boolean) =>
 export const OtaTimeSelector = (props: OtaTimeSelectorProps) => {
   const { device, dispatch, timeSettings } = props;
   const { utcOffset, hour24 } = timeSettings;
-  const localHour = hourToUtcHour(device.body.ota_hour_utc, -utcOffset) ??
+  const localHour = utcHourToLocalHour(device.body.ota_hour_utc, utcOffset) ??
     device.body.ota_hour;
   const osAutoUpdate = props.sourceFbosConfig("os_auto_update");
   const selected = () => {
@@ -50,7 +52,7 @@ export const OtaTimeSelector = (props: OtaTimeSelectorProps) => {
       const newLocalHour = ddi ? parseInt("" + ddi.value) : undefined;
       dispatch(edit(device, {
         ota_hour: newLocalHour,
-        ota_hour_utc: hourToUtcHour(newLocalHour, utcOffset),
+        ota_hour_utc: localHourToUtcHour(newLocalHour, utcOffset),
       }));
       dispatch(save(device.uuid));
     }}
@@ -67,7 +69,9 @@ export const OtaTimeSelector = (props: OtaTimeSelectorProps) => {
 };
 
 export function OtaTimeSelectorRow(props: OtaTimeSelectorRowProps) {
-  return <Highlight settingName={DeviceSetting.osAutoUpdate}>
+  return <Highlight settingName={DeviceSetting.osAutoUpdate}
+    hidden={!props.showAdvanced}
+    className={"advanced"}>
     <Row>
       <Col xs={5}>
         <label>
@@ -75,7 +79,7 @@ export function OtaTimeSelectorRow(props: OtaTimeSelectorRowProps) {
         </label>
         <Help text={Content.OS_AUTO_UPDATE} />
       </Col>
-      <Col xs={ColWidth.description}>
+      <Col xs={7}>
         <OtaTimeSelector
           sourceFbosConfig={props.sourceFbosConfig}
           timeSettings={props.timeSettings}

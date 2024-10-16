@@ -16,6 +16,7 @@ import { Actions } from "../../constants";
 import { push } from "../../history";
 import { ImageFlipper } from "../../photos/images/image_flipper";
 import { Path } from "../../internal_urls";
+import { fakeMovementState } from "../../__test_support__/fake_bot_data";
 
 describe("<LocationInfo />", () => {
   const fakeProps = (): LocationInfoProps => ({
@@ -34,6 +35,8 @@ describe("<LocationInfo />", () => {
     hoveredSensorReading: undefined,
     locked: false,
     farmwareEnvs: [],
+    arduinoBusy: false,
+    movementState: fakeMovementState(),
   });
 
   it("renders empty panel", () => {
@@ -176,6 +179,9 @@ describe("<ImageListItem />", () => {
       env: {},
       chosenXY: undefined,
       timeSettings: fakeTimeSettings(),
+      arduinoBusy: false,
+      currentBotLocation: { x: 0, y: 0, z: 0 },
+      movementState: fakeMovementState(),
     };
   };
 

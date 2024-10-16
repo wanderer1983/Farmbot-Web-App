@@ -1,30 +1,5 @@
-import { editRegimen, selectRegimen, unselectRegimen } from "../actions";
-import { fakeRegimen } from "../../__test_support__/fake_state/resources";
+import { selectRegimen } from "../actions";
 import { Actions } from "../../constants";
-import { SpecialStatus } from "farmbot";
-
-describe("editRegimen()", () => {
-  it("doesn't call edit", () => {
-    const dispatch = jest.fn();
-    editRegimen(undefined, {})(dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
-  it("calls edit", () => {
-    const dispatch = jest.fn();
-    const regimen = fakeRegimen();
-    regimen.uuid = "Regimen";
-    editRegimen(regimen, {})(dispatch);
-    expect(dispatch).toHaveBeenCalledWith({
-      payload: {
-        update: {},
-        uuid: "Regimen",
-        specialStatus: SpecialStatus.DIRTY
-      },
-      type: Actions.EDIT_RESOURCE
-    });
-  });
-});
 
 describe("selectRegimen()", () => {
   it("selects regimen", () => {
@@ -37,14 +12,6 @@ describe("selectRegimen()", () => {
 
   it("crashes if malformed", () => {
     console.warn = jest.fn();
-    expect(() => selectRegimen("wrong")).toThrowError();
-  });
-});
-
-describe("unselectRegimen()", () => {
-  it("deselects regimen", () => {
-    expect(unselectRegimen()).toEqual({
-      type: Actions.SELECT_REGIMEN, payload: undefined
-    });
+    expect(() => selectRegimen("wrong")).toThrow();
   });
 });

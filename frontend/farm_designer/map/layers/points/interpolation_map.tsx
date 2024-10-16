@@ -22,7 +22,7 @@ export enum InterpolationKey {
   opts = "interpolationOpts",
 }
 
-export enum MoistureInterpolationKey {
+enum MoistureInterpolationKey {
   data = "interpolationDataMoisture",
   hash = "interpolationHashMoisture",
 }
@@ -60,6 +60,23 @@ export const fetchInterpolationOptions =
     return options;
   };
 
+export interface GetZAtLocationProps {
+  x: number | undefined;
+  y: number | undefined;
+  farmwareEnvs: TaggedFarmwareEnv[] | undefined;
+  points: TaggedGenericPointer[] | undefined;
+}
+
+export const getZAtLocation =
+  (props: GetZAtLocationProps) => {
+    const { x, y, farmwareEnvs, points } = props;
+    if (isUndefined(x) || isUndefined(y)
+      || isUndefined(farmwareEnvs) || isUndefined(points)) { return; }
+    const options = fetchInterpolationOptions(farmwareEnvs);
+    const interpolationPoints = selectMostRecentPoints(points);
+    return interpolatedZ({ x, y }, interpolationPoints, options);
+  };
+
 interface GenerateInterpolationMapDataProps {
   kind: "Point" | "SensorReading";
   points: (TaggedGenericPointer | TaggedSensorReading)[];
@@ -68,14 +85,14 @@ interface GenerateInterpolationMapDataProps {
   options: InterpolationOptions;
 }
 
-export interface PointObject {
+interface PointObject {
   uuid: string;
   x: number;
   y: number;
   value: number;
 }
 
-export const convertToPointObject =
+const convertToPointObject =
   (point: TaggedPoint | TaggedSensorReading): PointObject | undefined =>
     !isUndefined(point.body.x) && !isUndefined(point.body.y)
       ? ({
@@ -167,7 +184,7 @@ export const InterpolationMap = (props: InterpolationMapProps) => {
   </g>;
 };
 
-export interface InterpolationSettingsProps {
+interface InterpolationSettingsProps {
   dispatch: Function;
   farmwareEnvs: TaggedFarmwareEnv[];
   saveFarmwareEnv: SaveFarmwareEnv;

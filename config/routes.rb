@@ -7,7 +7,9 @@ FarmBot::Application.routes.draw do
 
     # Standard API Resources:
     {
+      ai_feedbacks: [:create],
       alerts: [:create, :destroy, :index],
+      curves: [:create, :destroy, :index, :show, :update],
       farm_events: [:create, :destroy, :index, :show, :update],
       farmware_envs: [:create, :destroy, :index, :show, :update],
       first_party_farmwares: [:show, :index],
@@ -23,6 +25,8 @@ FarmBot::Application.routes.draw do
       sensor_readings: [:create, :destroy, :index, :show],
       sensors: [:create, :destroy, :index, :show, :update],
       sequences: [:create, :destroy, :index, :show, :update],
+      telemetries: [:create, :destroy, :index, :show],
+      featured_sequences: [:index],
       sequence_versions: [:show],
       tools: [:create, :destroy, :index, :show, :update],
       webcam_feeds: [:create, :destroy, :index, :show, :update],
@@ -31,13 +35,14 @@ FarmBot::Application.routes.draw do
 
     # Singular API Resources:
     {
+      ai: [:create],
       feedback: [:create],
       demo_account: [:create],
-      device: [:create, :destroy, :show, :update],
+      device: [:show, :update],
       fbos_config: [:destroy, :show, :update],
       firmware_config: [:destroy, :show, :update],
       public_key: [:show],
-      tokens: [:create, :show],
+      tokens: [:create, :destroy, :show],
       web_app_config: [:destroy, :show, :update],
     }.to_a.map { |(name, only)| resource name, only: only }
     get "/corpus" => "corpuses#show", as: :api_corpus
@@ -125,10 +130,13 @@ FarmBot::Application.routes.draw do
 
   get "/demo" => "dashboard#demo", as: :demo_main
   get "/try_farmbot" => "dashboard#try_farmbot", as: :try_farmbot_main
+  get "/promo" => "dashboard#promo", as: :promo_main
   get "/os" => "dashboard#os_download", as: :os_download
+  get "/featured" => "dashboard#featured", as: :featured
   get "/password_reset/*token" => "dashboard#password_reset", as: :password_reset
   get "/tos_update" => "dashboard#tos_update", as: :tos_update
   get "/verify/:token" => "dashboard#confirmation_page", as: :confirmation_page
   post "/csp_reports" => "dashboard#csp_reports", as: :csp_report
   post "/direct_upload" => "dashboard#direct_upload", as: :direct_upload
+  post "/webhooks" => "webhooks#create", as: :webhooks
 end

@@ -24,13 +24,15 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
     offsetPacking: false,
     cameraView: false,
     previous: "",
+    autoPreview: true,
   };
 
   get initGridState() {
     const spread = (this.props.spread || DEFAULT_PLANT_RADIUS) * 10;
+    const gridStart = this.props.designer?.gridStart || { x: 100, y: 100 };
     return {
-      startX: 100,
-      startY: 100,
+      startX: gridStart.x,
+      startY: gridStart.y,
       spacingH: spread,
       spacingV: spread,
       numPlantsH: 2,
@@ -45,35 +47,50 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
 
   onChange = (key: PlantGridKey, val: number) => {
     const grid = { ...this.state.grid, [key]: val };
-    this.setState({ grid }, this.performPreview);
+    ["startX", "startY"].includes(key) &&
+      this.props.dispatch({
+        type: Actions.SET_GRID_START,
+        payload: { x: grid.startX, y: grid.startY },
+      });
+    this.setState({ grid }, this.performPreview());
   };
 
   onUseCurrentPosition = (position: Record<"x" | "y", number>) => {
     const grid = { ...this.state.grid, startX: position.x, startY: position.y };
-    this.setState({ grid }, this.performPreview);
+    this.setState({ grid }, this.performPreview());
   };
 
   getKey = () => JSON.stringify({
     itemName: this.props.itemName,
+    grid: this.state.grid,
     offsetPacking: this.state.offsetPacking,
     radius: this.props.radius,
     z: this.props.z,
     meta: this.props.meta,
+    plantStage: this.props.designer?.cropStage,
+    plantedAt: this.props.designer?.cropPlantedAt,
+    waterCurveId: this.props.designer?.cropWaterCurveId,
+    spreadCurveId: this.props.designer?.cropSpreadCurveId,
+    heightCurveId: this.props.designer?.cropHeightCurveId,
   });
 
+  get outdated() { return this.getKey() != this.state.previous; }
+  get dirty() { return this.state.status === "dirty"; }
+
   componentDidUpdate = () => {
-    if (this.state.status === "dirty" && this.getKey() != this.state.previous) {
-      this.performPreview();
+    if (this.dirty && this.outdated) {
+      this.performPreview()();
     }
   };
 
   componentWillUnmount() {
-    (this.state.status === "dirty") &&
+    this.dirty &&
       this.props.dispatch(stashGrid(this.state.gridId));
     this.props.dispatch(showCameraViewPoints(undefined));
   }
 
-  performPreview = () => {
+  performPreview = (force = false) => () => {
+    if (!this.state.autoPreview && !force) { return; }
     this.revertPreview({ setStatus: false })();
     if (this.plantCount > 100) {
       error(t("Please make a grid with less than 100 {{ itemType }}",
@@ -90,6 +107,7 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
       radius: this.props.radius,
       z: this.props.z,
       meta: this.props.meta,
+      designer: this.props.designer,
     });
     plants.map(p => this.props.dispatch(init("Point", p)));
     this.setState({ status: "dirty", previous: this.getKey() });
@@ -110,8 +128,7 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
           grid: this.initGridState,
           gridId: uuid(),
           status: "clean",
-        });
-        this.props.close?.();
+        }, this.props.close);
       });
 
   Buttons = () => {
@@ -120,7 +137,7 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
         return <div className={"preview-grid-button"}>
           <a className={"preview-button"}
             title={t("Preview")}
-            onClick={this.performPreview}>
+            onClick={this.performPreview(true)}>
             {t("Preview")}
           </a>
         </div>;
@@ -131,31 +148,34 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
             onClick={this.revertPreview({ setStatus: true })}>
             {t("Cancel")}
           </a>
-          <a className={"save-button"}
-            title={t("Save")}
-            onClick={this.saveGrid}>
-            {t("Save")}
-          </a>
+          {this.outdated && this.dirty
+            ? <a className={"update-button"}
+              title={t("Update preview")}
+              onClick={this.performPreview(true)}>
+              {t("Update preview")}
+            </a>
+            : <a className={"save-button"}
+              title={t("Save")}
+              onClick={this.saveGrid}>
+              {t("Save")}
+            </a>}
         </div>;
     }
   };
 
   render() {
     return <div className={"grid-and-row-planting"}>
-      <hr />
-      <h3>
-        {this.props.openfarm_slug ? t("Grid and Row Planting") : t("Grid")}
-      </h3>
+      <h3>{t("Add Grid or Row")}</h3>
       <GridInput
         key={JSON.stringify(this.state.grid)}
         itemType={this.props.openfarm_slug ? "plants" : "points"}
         xy_swap={this.props.xy_swap}
-        disabled={this.state.status === "dirty"}
+        disabled={this.dirty}
         grid={this.state.grid}
         botPosition={this.props.botPosition}
         onChange={this.onChange}
         onUseCurrentPosition={this.onUseCurrentPosition}
-        preview={this.performPreview} />
+        preview={this.performPreview()} />
       <HexPackingToggle value={this.state.offsetPacking}
         toggle={() => this.setState({
           offsetPacking: !this.state.offsetPacking,
@@ -165,15 +185,26 @@ export class PlantGrid extends React.Component<PlantGridProps, PlantGridState> {
               ? round(0.866 * this.state.grid.spacingV)
               : this.state.grid.spacingH,
           },
-        }, this.performPreview)} />
+        }, this.performPreview())} />
       {!this.props.openfarm_slug &&
         <ToggleCameraViewArea value={this.state.cameraView}
           toggle={() => {
             this.props.dispatch(showCameraViewPoints(
               this.state.cameraView ? undefined : this.state.gridId));
             this.setState({ cameraView: !this.state.cameraView },
-              this.performPreview);
+              this.performPreview());
           }} />}
+      <div className={"grid-planting-toggle"}>
+        <label>{t("auto-update preview")}</label>
+        <ToggleButton
+          toggleValue={this.state.autoPreview}
+          toggleAction={() => {
+            const enabled = this.state.autoPreview;
+            if (!enabled) { this.performPreview(true); }
+            this.setState({ autoPreview: !enabled });
+          }}
+          title={t("automatically update preview")} />
+      </div>
       <this.Buttons />
     </div>;
   }

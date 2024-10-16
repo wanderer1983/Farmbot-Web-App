@@ -2,7 +2,9 @@ import React from "react";
 import { mount } from "enzyme";
 import { ProfileViewerProps } from "../interfaces";
 import { ProfileViewer } from "../viewer";
-import { fakeBotSize } from "../../../../__test_support__/fake_bot_data";
+import {
+  fakeBotLocationData, fakeBotSize,
+} from "../../../../__test_support__/fake_bot_data";
 import {
   fakeDesignerState,
 } from "../../../../__test_support__/fake_designer_state";
@@ -18,7 +20,8 @@ describe("<ProfileViewer />", () => {
     designer: fakeDesignerState(),
     allPoints: [],
     botSize: fakeBotSize(),
-    botPosition: { x: undefined, y: undefined, z: undefined },
+    botLocationData: fakeBotLocationData(),
+    peripheralValues: [],
     negativeZ: true,
     sourceFbosConfig: () => ({ value: 0, consistent: true }),
     mountedToolInfo: fakeMountedToolInfo(),
@@ -34,9 +37,19 @@ describe("<ProfileViewer />", () => {
     expect(wrapper.find(".profile-button").props().title).toContain("open");
   });
 
+  it("renders when closed and follow bot is selected", () => {
+    const p = fakeProps();
+    p.botLocationData.position = { x: 1, y: 2, z: 3 };
+    p.designer.profileFollowBot = true;
+    const wrapper = mount(<ProfileViewer {...p} />);
+    expect(wrapper.find("div").first().hasClass("open")).toBeFalsy();
+    expect(wrapper.find("div").first().hasClass("none-chosen")).toBeTruthy();
+  });
+
   it("renders when open: y-axis", () => {
     const p = fakeProps();
     p.designer.profileOpen = true;
+    p.designer.profileAxis = "x";
     const wrapper = mount(<ProfileViewer {...p} />);
     expect(wrapper.find("div").first().hasClass("open")).toBeTruthy();
     expect(wrapper.find(".profile-button").props().title).toContain("close");
@@ -58,7 +71,7 @@ describe("<ProfileViewer />", () => {
     const p = fakeProps();
     p.designer.profileOpen = true;
     p.designer.profileFollowBot = true;
-    p.botPosition = { x: undefined, y: undefined, z: undefined };
+    p.botLocationData.position = { x: undefined, y: undefined, z: undefined };
     const wrapper = mount(<ProfileViewer {...p} />);
     expect(wrapper.find("div").first().hasClass("open")).toBeTruthy();
     expect(wrapper.text()).not.toContain("choose a profile");
@@ -69,6 +82,7 @@ describe("<ProfileViewer />", () => {
   it("renders when open: follow", () => {
     const p = fakeProps();
     p.designer.profileOpen = true;
+    p.designer.profileAxis = "x";
     const wrapper = mount(<ProfileViewer {...p} />);
     expect(wrapper.find("div").first().hasClass("open")).toBeTruthy();
     expect(wrapper.find(".profile-button").props().title).toContain("close");
@@ -82,7 +96,7 @@ describe("<ProfileViewer />", () => {
     const p = fakeProps();
     p.designer.profileOpen = true;
     p.designer.profileFollowBot = true;
-    p.botPosition = { x: 1, y: 2, z: 3 };
+    p.botLocationData.position = { x: 1, y: 2, z: 3 };
     const wrapper = mount(<ProfileViewer {...p} />);
     expect(wrapper.find("div").first().hasClass("open")).toBeTruthy();
     expect(wrapper.text()).not.toContain("choose a profile");
@@ -105,7 +119,7 @@ describe("<ProfileViewer />", () => {
     p.designer.profilePosition = { x: 1, y: 2 };
     const wrapper = mount(<ProfileViewer {...p} />);
     wrapper.find("i").last().simulate("click");
-    expect(wrapper.find("svg").hasClass("expand")).toBeTruthy();
+    expect(wrapper.find("svg").hasClass("expand")).toBeFalsy();
     wrapper.find("div").at(1).simulate("click");
     expect(p.dispatch).toHaveBeenCalledWith({
       type: Actions.SET_PROFILE_OPEN, payload: false,

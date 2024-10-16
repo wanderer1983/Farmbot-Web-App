@@ -23,12 +23,12 @@ export interface DataXferBase {
 }
 
 /** Data transfer payload used when moving a *new* step into an existing step */
-export interface StepSpliceDataXfer extends DataXferBase {
+interface StepSpliceDataXfer extends DataXferBase {
   intent: "step_splice";
 }
 
 /** Data transfer payload used when reordering an existing step. */
-export interface StepMoveDataXfer extends DataXferBase {
+interface StepMoveDataXfer extends DataXferBase {
   intent: "step_move";
 }
 
@@ -39,6 +39,7 @@ export interface DraggableState {
 export interface DropAreaProps {
   callback(key: string): void;
   isLocked?: boolean;
+  children?: React.ReactNode;
 }
 
 export interface DropAreaState {
@@ -52,4 +53,6 @@ export interface StepDraggerProps {
   children?: React.ReactNode;
   draggerId: number;
   resourceUuid?: UUID;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }

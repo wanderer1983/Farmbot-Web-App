@@ -1,5 +1,4 @@
-import { TaggedRegimen, TaggedSequence } from "farmbot";
-import { RegimenItem } from "farmbot/dist/resources/api_resources";
+import { TaggedDevice, TaggedRegimen, TaggedSequence } from "farmbot";
 import { ResourceIndex } from "../../resources/interfaces";
 
 export interface RegimenSchedulerProps {
@@ -10,11 +9,7 @@ export interface RegimenSchedulerProps {
   selectedSequence: TaggedSequence | undefined;
   dailyOffsetMs: number;
   weeks: Week[];
-}
-
-export interface BulkSchedulerOutput {
-  index: number;
-  regimenItems: RegimenItem[];
+  device: TaggedDevice;
 }
 
 export interface BulkEditorProps {
@@ -24,6 +19,7 @@ export interface BulkEditorProps {
   resources: ResourceIndex;
   sequences: TaggedSequence[];
   dispatch: Function;
+  device: TaggedDevice;
 }
 
 type WeekDay =
@@ -57,12 +53,6 @@ export interface ToggleDayParams {
 export interface AddButtonProps {
   active: boolean;
   onClick: React.EventHandler<React.FormEvent<{}>>;
-}
-
-export interface SequenceListProps {
-  sequences: TaggedSequence[];
-  current: TaggedSequence | undefined;
-  dispatch: Function;
 }
 
 export interface WeekGridProps {

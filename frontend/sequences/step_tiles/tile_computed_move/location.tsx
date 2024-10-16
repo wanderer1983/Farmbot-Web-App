@@ -10,17 +10,19 @@ import {
 } from "../../../resources/selectors";
 import { maybeFindVariable, SequenceMeta } from "../../../resources/sequence_meta";
 import {
-  formatPoint, locationFormList, formatTool, COORDINATE_DDI,
-} from "../../locals_list/location_form_list";
+  formatPoint, variableFormList, formatTool, COORDINATE_DDI,
+} from "../../locals_list/variable_form_list";
 import { Move, Xyz } from "farmbot";
-import { generateVariableListItems } from "../../locals_list/location_form";
-import { AllowedVariableNodes } from "../../locals_list/locals_list_support";
+import { generateVariableListItems } from "../../locals_list/variable_form";
+import {
+  AllowedVariableNodes, VariableType,
+} from "../../locals_list/locals_list_support";
 
 export const LocationSelection = (props: LocationSelectionProps) => {
   const { resources, sequenceUuid } = props;
   return <FBSelect
     key={JSON.stringify(props.sequence)}
-    list={locationFormList(
+    list={variableFormList(
       resources,
       [{
         headingId: "Offset",
@@ -30,6 +32,7 @@ export const LocationSelection = (props: LocationSelectionProps) => {
       generateVariableListItems({
         allowedVariableNodes: AllowedVariableNodes.identifier,
         resources, sequenceUuid, headingId: "Identifier",
+        variableType: VariableType.Location,
       }),
     )}
     customNullLabel={t("Choose location")}
@@ -127,7 +130,7 @@ const resourceVariableLabel = (variable: SequenceMeta | undefined) => {
   const label = variable?.celeryNode.args.label;
   const varLabel = label == "parent" ? undefined : label;
   const infoLabel = variable?.dropdown.label;
-  return `${varLabel || t("Location variable")} - ${infoLabel || t("Add new")}`;
+  return `${varLabel || t("Location")} - ${infoLabel || t("Add new")}`;
 };
 
 export const LOCATION_NODES = ["point", "tool", "identifier"];

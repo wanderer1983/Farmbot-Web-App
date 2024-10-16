@@ -15,16 +15,17 @@ import {
 } from "../../photos/data_management/toggle_highlight_modified";
 import { BooleanSetting } from "../../session_keys";
 import { setWebAppConfigValue } from "../../config_storage/actions";
-import { getModifiedClassName, modifiedFromDefault } from "../default_values";
+import { getModifiedClassName } from "../default_values";
 
 export function ParameterManagement(props: ParameterManagementProps) {
   const {
     dispatch, onReset, botOnline, arduinoBusy, firmwareHardware,
-    getConfigValue,
+    getConfigValue, showAdvanced,
   } = props;
   const { parameter_management } = props.settingsPanelState;
-  return <Highlight className={"section"}
-    settingName={DeviceSetting.parameterManagement}>
+  return <Highlight className={"section advanced"}
+    settingName={DeviceSetting.parameterManagement}
+    hidden={!showAdvanced}>
     <Header
       expanded={parameter_management}
       title={DeviceSetting.parameterManagement}
@@ -81,10 +82,7 @@ export function ParameterManagement(props: ParameterManagementProps) {
         </Row>
       </Highlight>
       <ParameterImport dispatch={dispatch} arduinoBusy={arduinoBusy} />
-      <Highlight settingName={DeviceSetting.highlightModifiedSettings}
-        hidden={!(!!getConfigValue(BooleanSetting.show_advanced_settings)
-          || modifiedFromDefault(BooleanSetting.highlight_modified_settings))}
-        className={"advanced"}>
+      <Highlight settingName={DeviceSetting.highlightModifiedSettings}>
         <ToggleHighlightModified
           dispatch={dispatch}
           getConfigValue={getConfigValue} />

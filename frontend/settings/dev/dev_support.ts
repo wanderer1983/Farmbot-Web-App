@@ -11,6 +11,7 @@ namespace devStorage {
     FUTURE_FE_FEATURES = "FUTURE_FE_FEATURES",
     FBOS_VERSION_OVERRIDE = "FBOS_VERSION_OVERRIDE",
     QUICK_DELETE_MODE = "QUICK_DELETE_MODE",
+    SHOW_INTERNAL_ENVS = "SHOW_INTERNAL_ENVS",
   }
   type Storage = { [K in Key]: string };
 
@@ -50,7 +51,7 @@ export namespace DevSettings {
     devStorage.removeItem(FUTURE_FE_FEATURES);
 
   export const FBOS_VERSION_OVERRIDE = devStorage.Key.FBOS_VERSION_OVERRIDE;
-  export const MAX_FBOS_VERSION_OVERRIDE = "1000.0.0";
+  const MAX_FBOS_VERSION_OVERRIDE = "1000.0.0";
   /**
    * Escape hatch for platform developers doing offline development.
    * Use `setFbosVersionOverride` or `setMaxFbosVersionOverride`
@@ -72,4 +73,12 @@ export namespace DevSettings {
     devStorage.setItem(QUICK_DELETE_MODE, "true");
   export const disableQuickDelete = () =>
     devStorage.removeItem(QUICK_DELETE_MODE);
+
+  export const SHOW_INTERNAL_ENVS = devStorage.Key.SHOW_INTERNAL_ENVS;
+  export const showInternalEnvsEnabled = () =>
+    !!devStorage.getItem(SHOW_INTERNAL_ENVS);
+  export const enableShowInternalEnvs = () =>
+    devStorage.setItem(SHOW_INTERNAL_ENVS, "true");
+  export const disableShowInternalEnvs = () =>
+    devStorage.removeItem(SHOW_INTERNAL_ENVS);
 }

@@ -1,3 +1,5 @@
+jest.mock("../../devices/actions", () => ({ move: jest.fn() }));
+
 import React from "react";
 import { shallow, mount } from "enzyme";
 import {
@@ -27,8 +29,8 @@ import {
   SlotEditRowsProps,
   EditToolSlotMetaProps,
 } from "../interfaces";
-import { push } from "../../history";
-import { Path } from "../../internal_urls";
+import { move } from "../../devices/actions";
+import { fakeMovementState } from "../../__test_support__/fake_bot_data";
 
 describe("<GantryMountedInput />", () => {
   const fakeProps = (): GantryMountedInputProps => ({
@@ -143,6 +145,7 @@ describe("<ToolSelection />", () => {
     filterSelectedTool: false,
     isActive: jest.fn(),
     filterActiveTools: true,
+    noUTM: false,
   });
 
   it("renders", () => {
@@ -160,6 +163,26 @@ describe("<ToolSelection />", () => {
     p.tools = [tool];
     const wrapper = shallow(<ToolSelection {...p} />);
     expect(wrapper.find("FBSelect").props().list).toEqual([NULL_CHOICE]);
+  });
+
+  it("shows available items", () => {
+    const p = fakeProps();
+    const trough = fakeTool();
+    trough.body.id = 1;
+    trough.body.name = "seed trough";
+    const tool = fakeTool();
+    tool.body.id = 2;
+    tool.body.name = "watering nozzle";
+    const otherTool = fakeTool();
+    otherTool.body.id = 3;
+    otherTool.body.name = undefined;
+    p.tools = [trough, tool, otherTool];
+    p.noUTM = true;
+    const wrapper = shallow(<ToolSelection {...p} />);
+    expect(wrapper.find("FBSelect").props().list).toEqual([
+      NULL_CHOICE,
+      { label: "seed trough", value: 1 },
+    ]);
   });
 
   it("handles missing selected tool data", () => {
@@ -223,6 +246,10 @@ describe("<SlotLocationInputRow />", () => {
     onChange: jest.fn(),
     botPosition: { x: undefined, y: undefined, z: undefined },
     botOnline: true,
+    arduinoBusy: false,
+    defaultAxes: "XYZ",
+    dispatch: jest.fn(),
+    movementState: fakeMovementState(),
   });
 
   it("renders", () => {
@@ -261,9 +288,9 @@ describe("<SlotLocationInputRow />", () => {
     p.slotLocation.y = 2;
     p.slotLocation.z = 3;
     p.gantryMounted = false;
-    const wrapper = shallow(<SlotLocationInputRow {...p} />);
-    wrapper.find("button").last().simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.location({ x: 1, y: 2, z: 3 }));
+    const wrapper = mount(<SlotLocationInputRow {...p} />);
+    wrapper.find("button").at(1).simulate("click");
+    expect(move).toHaveBeenCalledWith({ x: 1, y: 2, z: 3 });
   });
 
   it("moves to gantry-mounted tool slot", () => {
@@ -273,9 +300,9 @@ describe("<SlotLocationInputRow />", () => {
     p.slotLocation.y = 2;
     p.slotLocation.z = 3;
     p.gantryMounted = true;
-    const wrapper = shallow(<SlotLocationInputRow {...p} />);
-    wrapper.find("button").last().simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.location({ x: 10, y: 2, z: 3 }));
+    const wrapper = mount(<SlotLocationInputRow {...p} />);
+    wrapper.find("button").at(1).simulate("click");
+    expect(move).toHaveBeenCalledWith({ x: 10, y: 2, z: 3 });
   });
 
   it("falls back to tool slot when moving to gantry-mounted tool slot", () => {
@@ -285,9 +312,9 @@ describe("<SlotLocationInputRow />", () => {
     p.slotLocation.y = 2;
     p.slotLocation.z = 3;
     p.gantryMounted = true;
-    const wrapper = shallow(<SlotLocationInputRow {...p} />);
-    wrapper.find("button").last().simulate("click");
-    expect(push).toHaveBeenCalledWith(Path.location({ x: 1, y: 2, z: 3 }));
+    const wrapper = mount(<SlotLocationInputRow {...p} />);
+    wrapper.find("button").at(1).simulate("click");
+    expect(move).toHaveBeenCalledWith({ x: 1, y: 2, z: 3 });
   });
 });
 
@@ -324,6 +351,10 @@ describe("<SlotEditRows />", () => {
     toolTransformProps: fakeToolTransformProps(),
     isActive: () => false,
     botOnline: true,
+    arduinoBusy: false,
+    defaultAxes: "XY",
+    dispatch: jest.fn(),
+    movementState: fakeMovementState(),
   });
 
   it("handles missing tool", () => {

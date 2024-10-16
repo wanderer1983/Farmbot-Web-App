@@ -41,7 +41,7 @@ describe("mapStateToProps()", () => {
     ]);
     function checkValue(input: number, value: boolean) {
       state.bot.hardware.pins = { 13: { value: input, mode: 0 } };
-      const peripheralPin = mapStateToProps(state).peripherals[0];
+      const peripheralPin = mapStateToProps(state).peripheralValues[0];
       expect(peripheralPin.label).toEqual("LED");
       expect(peripheralPin.value).toEqual(value);
     }
@@ -49,7 +49,7 @@ describe("mapStateToProps()", () => {
     checkValue(-1, false);
     checkValue(1, true);
     checkValue(2, true);
-    expect(mapStateToProps(state).peripherals[1])
+    expect(mapStateToProps(state).peripheralValues[1])
       .toEqual({ label: "none", value: false });
   });
 
@@ -167,8 +167,8 @@ describe("getPlants()", () => {
 
   it("returns plant templates", () => {
     const resources = fakeResources();
-    const savedGardenUuid = Object.keys(resources.index.byKind["SavedGarden"])[0];
-    resources.consumers.farm_designer.openedSavedGarden = savedGardenUuid;
+    const savedGardenId = 1;
+    resources.consumers.farm_designer.openedSavedGarden = savedGardenId;
     expect(getPlants(resources).length).toEqual(1);
   });
 

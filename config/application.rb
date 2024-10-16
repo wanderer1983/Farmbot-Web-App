@@ -24,10 +24,14 @@ module FarmBot
     config.load_defaults 6.0
     config.active_storage.service = gcs_enabled ?
       :google : :local
-    config.cache_store = :redis_cache_store, { url: REDIS_URL }
+    config.cache_store = :redis_cache_store, { url: REDIS_URL, ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE } }
     config.middleware.use Rack::Attack
     config.active_record.schema_format = :sql
     config.active_record.belongs_to_required_by_default = false
+    config.active_record.yaml_column_permitted_classes = [
+      ActiveSupport::HashWithIndifferentAccess,
+      Symbol,
+    ]
     config.active_job.queue_adapter = :delayed_job
     config.action_dispatch.perform_deep_munge = false
     I18n.enforce_available_locales = false
@@ -82,11 +86,11 @@ module FarmBot
         "browser-http-intake.logs.datadoghq.com",
         "#{ENV.fetch("API_HOST")}:#{API_PORT}",
         "#{ENV.fetch("API_HOST")}:3808",
+        "blob:", # 3D
       ]
       config.csp = {
         default_src: %w(https: 'self'),
         base_uri: %w('self'),
-        block_all_mixed_content: false, # :( Some webcam feeds use http://
         connect_src: connect_src,
         font_src: %w(
           maxcdn.bootstrapcdn.com
@@ -98,7 +102,7 @@ module FarmBot
         ),
         form_action: %w('self'),
         frame_src: %w(*),       # We need "*" to support webcam users.
-        frame_ancestors: %w('none'),
+        frame_ancestors: %w('self' https://farm.bot),
         img_src: %w(* data:),   # We need "*" to support webcam users.
         manifest_src: %w('self'),
         media_src: %w(),
@@ -115,12 +119,14 @@ module FarmBot
         script_src: [
           PARCELJS_URL,
           "www.datadoghq-browser-agent.com",
+          "cdn.rollbar.com",
           "localhost:3808",
           "chrome-extension:",
           "cdnjs.cloudflare.com",
           "'unsafe-inline'",
           "'unsafe-eval'",
           "'self'",
+          "blob:", # 3D
         ],
         style_src: %w(
           maxcdn.bootstrapcdn.com

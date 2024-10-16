@@ -21,7 +21,9 @@ import React from "react";
 import { mount, shallow } from "enzyme";
 import { RawEditGarden as EditGarden, mapStateToProps } from "../garden_edit";
 import { EditGardenProps } from "../interfaces";
-import { fakeSavedGarden } from "../../__test_support__/fake_state/resources";
+import {
+  fakePlantTemplate, fakeSavedGarden,
+} from "../../__test_support__/fake_state/resources";
 import { clickButton } from "../../__test_support__/helpers";
 import { applyGarden, destroySavedGarden } from "../actions";
 import { error } from "../../toast/toast";
@@ -38,6 +40,7 @@ describe("<EditGarden />", () => {
     gardenIsOpen: false,
     dispatch: jest.fn(),
     plantPointerCount: 0,
+    gardenPlants: [fakePlantTemplate()],
   });
 
   it("edits garden name", () => {
@@ -47,6 +50,16 @@ describe("<EditGarden />", () => {
     wrapper.find("BlurableInput").simulate("commit",
       { currentTarget: { value: "new name" } });
     expect(edit).toHaveBeenCalledWith(expect.any(Object), { name: "new name" });
+  });
+
+  it("edits garden notes", () => {
+    const p = fakeProps();
+    p.savedGarden = fakeSavedGarden();
+    const wrapper = shallow(<EditGarden {...p} />);
+    wrapper.find("textarea").simulate("change",
+      { currentTarget: { value: "notes" } });
+    wrapper.find("textarea").simulate("blur");
+    expect(edit).toHaveBeenCalledWith(expect.any(Object), { notes: "notes" });
   });
 
   it("applies garden", () => {
@@ -73,7 +86,7 @@ describe("<EditGarden />", () => {
     const p = fakeProps();
     p.savedGarden = fakeSavedGarden();
     const wrapper = mount(<EditGarden {...p} />);
-    clickButton(wrapper, 1, "delete");
+    wrapper.find(".fa-trash").first().simulate("click");
     expect(destroySavedGarden).toHaveBeenCalledWith(p.savedGarden.uuid);
   });
 
@@ -107,6 +120,13 @@ describe("<EditGarden />", () => {
     const wrapper = mount(<EditGarden {...p} />);
     expect(wrapper.text().toLowerCase()).toContain("edit garden");
   });
+
+  it("expands", () => {
+    const wrapper = mount<EditGarden>(<EditGarden {...fakeProps()} />);
+    expect(wrapper.state().expand).toEqual(false);
+    wrapper.instance().toggleExpand();
+    expect(wrapper.state().expand).toEqual(true);
+  });
 });
 
 describe("mapStateToProps()", () => {
@@ -115,8 +135,8 @@ describe("mapStateToProps()", () => {
     sg.body.id = 1;
     mockPath = Path.mock(Path.savedGardens(1));
     const state = fakeState();
-    state.resources = buildResourceIndex([sg]);
-    state.resources.consumers.farm_designer.openedSavedGarden = sg.uuid;
+    state.resources = buildResourceIndex([sg, fakePlantTemplate()]);
+    state.resources.consumers.farm_designer.openedSavedGarden = sg.body.id;
     const props = mapStateToProps(state);
     expect(props.gardenIsOpen).toEqual(true);
     expect(props.savedGarden).toEqual(sg);
@@ -127,8 +147,8 @@ describe("mapStateToProps()", () => {
     sg.body.id = 1;
     mockPath = Path.mock(Path.savedGardens());
     const state = fakeState();
-    state.resources = buildResourceIndex([sg]);
-    state.resources.consumers.farm_designer.openedSavedGarden = sg.uuid;
+    state.resources = buildResourceIndex([sg, fakePlantTemplate()]);
+    state.resources.consumers.farm_designer.openedSavedGarden = sg.body.id;
     const props = mapStateToProps(state);
     expect(props.gardenIsOpen).toEqual(false);
     expect(props.savedGarden).toEqual(undefined);

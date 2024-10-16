@@ -8,7 +8,7 @@ import { TaggedPlant } from "../farm_designer/map/interfaces";
 import {
   EmptyStateWrapper, EmptyStateGraphic,
 } from "../ui/empty_state_wrapper";
-import { Actions, Content } from "../constants";
+import { Actions, Content, DeviceSetting } from "../constants";
 import {
   DesignerPanel, DesignerPanelContent, DesignerPanelTop,
 } from "../farm_designer/designer_panel";
@@ -26,12 +26,18 @@ import {
 } from "farmbot";
 import { GroupInventoryItem } from "../point_groups/group_inventory_item";
 import { SavedGardenList } from "../saved_gardens/garden_list";
-import { pointGroupSubset } from "./select_plants";
-import { Collapse } from "@blueprintjs/core";
+import { pointGroupSubset, uncategorizedGroupSubset } from "./select_plants";
+import { Collapse, Position } from "@blueprintjs/core";
 import { createGroup } from "../point_groups/actions";
 import { DEFAULT_CRITERIA } from "../point_groups/criteria/interfaces";
 import { deletePoints } from "../api/delete_points";
 import { Path } from "../internal_urls";
+import { WebAppNumberSetting } from "../settings/farm_designer_settings";
+import { NumericSetting } from "../session_keys";
+import { Col, Help, Popover, Row } from "../ui";
+import {
+  GetWebAppConfigValue, getWebAppConfigValue,
+} from "../config_storage/actions";
 
 export interface PlantInventoryProps {
   plants: TaggedPlant[];
@@ -42,8 +48,9 @@ export interface PlantInventoryProps {
   allPoints: TaggedPoint[];
   plantTemplates: TaggedPlantTemplate[];
   plantPointerCount: number;
-  openedSavedGarden: string | undefined;
+  openedSavedGarden: number | undefined;
   plantsPanelState: PlantsPanelState;
+  getConfigValue: GetWebAppConfigValue;
 }
 
 interface PlantInventoryState {
@@ -63,6 +70,7 @@ export function mapStateToProps(props: Everything): PlantInventoryProps {
     plantPointerCount: selectAllPlantPointers(props.resources.index).length,
     openedSavedGarden: props.resources.consumers.farm_designer.openedSavedGarden,
     plantsPanelState: props.app.plantsPanelState,
+    getConfigValue: getWebAppConfigValue(() => props),
   };
 }
 
@@ -103,13 +111,30 @@ export class RawPlants
     const filteredGroups = plantGroups
       .filter(p => p.body.name.toLowerCase()
         .includes(this.state.searchTerm.toLowerCase()));
+    const uncategorizedGroups = uncategorizedGroupSubset(this.props.groups);
     const noSearchResults = this.state.searchTerm && filteredPlants.length == 0;
     return <DesignerPanel panelName={"plant-inventory"} panel={Panel.Plants}>
       <DesignerNavTabs />
-      <DesignerPanelTop panel={Panel.Plants}>
-        <SearchField searchTerm={this.state.searchTerm}
+      <DesignerPanelTop panel={Panel.Plants} withButton={true}>
+        <SearchField nameKey={"plants"}
+          searchTerm={this.state.searchTerm}
           placeholder={t("Search your plants...")}
           onChange={searchTerm => this.setState({ searchTerm })} />
+        <Popover
+          position={Position.BOTTOM}
+          popoverClassName={"plants-panel-settings-menu"}
+          target={<i className={"fa fa-gear fb-icon-button"} />}
+          content={<Row>
+            <Col xs={9}>
+              <label>{t(DeviceSetting.defaultPlantDepth)}</label>
+              <Help text={Content.DEFAULT_PLANT_DEPTH} />
+            </Col>
+            <Col xs={3}>
+              <WebAppNumberSetting dispatch={dispatch}
+                getConfigValue={this.props.getConfigValue}
+                numberSetting={NumericSetting.default_plant_depth} />
+            </Col>
+          </Row>} />
       </DesignerPanelTop>
       <DesignerPanelContent panelName={"plant"}>
         <PanelSection isOpen={plantsPanelState.groups}
@@ -125,15 +150,31 @@ export class RawPlants
           addTitle={t("add new group")}
           addClassName={"plus-group"}
           title={t("Plant Groups")}>
-          {filteredGroups
-            .map(group => <GroupInventoryItem
-              key={group.uuid}
-              group={group}
-              allPoints={this.props.allPoints}
-              hovered={false}
-              dispatch={dispatch}
-              onClick={this.navigate(group.body.id)}
-            />)}
+          <div className={"plant-groups"}>
+            {filteredGroups
+              .map(group => <GroupInventoryItem
+                key={group.uuid}
+                group={group}
+                allPoints={this.props.allPoints}
+                hovered={false}
+                dispatch={dispatch}
+                onClick={this.navigate(group.body.id)}
+              />)}
+          </div>
+          {uncategorizedGroups.length > 0
+            ? <label style={{ marginLeft: "1rem" }}>{t("uncategorized")}</label>
+            : <div />}
+          <div className={"uncategorized-groups"}>
+            {uncategorizedGroups
+              .map(group => <GroupInventoryItem
+                key={group.uuid}
+                group={group}
+                allPoints={this.props.allPoints}
+                hovered={false}
+                dispatch={dispatch}
+                onClick={this.navigate(group.body.id)}
+              />)}
+          </div>
         </PanelSection>
         <PanelSection isOpen={plantsPanelState.savedGardens}
           panel={Panel.Plants}
@@ -143,15 +184,6 @@ export class RawPlants
           addTitle={t("add new saved garden")}
           addClassName={"plus-saved-garden"}
           title={t("Gardens")}>
-          <button className={"fb-button red delete"}
-            title={t("delete all plants in active garden")}
-            onClick={() =>
-              confirm(t("Delete all {{ count }} plants in your main garden?",
-                { count: plants.length })) &&
-              dispatch(deletePoints("plants",
-                { pointer_type: "Plant" }))}>
-            {t("delete all active plants")}
-          </button>
           <SavedGardenList {...this.props} searchTerm={this.state.searchTerm} />
         </PanelSection>
         <PanelSection isOpen={plantsPanelState.plants}
@@ -164,7 +196,22 @@ export class RawPlants
           }}
           addTitle={t("add plant")}
           addClassName={"plus-plant"}
-          title={t("Plants")}>
+          title={t("Plants")}
+          extraHeaderTitle={!!this.props.openedSavedGarden &&
+            <i className={"garden-indicator"}>{t("saved garden")}</i>}
+          extraHeaderContent={
+            !this.props.openedSavedGarden && plantsPanelState.plants &&
+            <button className={"fb-button red delete"}
+              title={t("delete all plants in garden")}
+              onClick={e => {
+                e.stopPropagation();
+                confirm(t("Delete all {{ count }} plants in your main garden?",
+                  { count: plants.length })) &&
+                  dispatch(deletePoints("plants",
+                    { pointer_type: "Plant" }));
+              }}>
+              {t("delete all")}
+            </button>}>
           <EmptyStateWrapper
             notEmpty={plants.length > 0 && !noSearchResults}
             graphic={noSearchResults
@@ -201,15 +248,19 @@ export interface PanelSectionProps {
   addTitle: string;
   addClassName: string;
   children: JSX.Element | JSX.Element[];
+  extraHeaderContent?: JSX.Element | false;
+  extraHeaderTitle?: JSX.Element | false;
 }
 
-export const PanelSection = (props: PanelSectionProps) =>
-  <div className={`panel-section ${props.isOpen ? "open" : ""}`}>
+export const PanelSection = (props: PanelSectionProps) => {
+  const { isOpen } = props;
+  return <div className={`panel-section ${isOpen ? "open" : ""}`}>
     <div className={"section-header"}
       onClick={props.toggleOpen}>
       <label>{`${props.title} (${props.itemCount})`}</label>
-      <i className={`fa fa-caret-${props.isOpen ? "up" : "down"}`} />
-      <div
+      {props.extraHeaderTitle}
+      <i className={`fa fa-caret-${isOpen ? "up" : "down"}`} />
+      {isOpen && <div
         onClick={e => {
           e.stopPropagation();
           props.addNew();
@@ -220,9 +271,11 @@ export const PanelSection = (props: PanelSectionProps) =>
           props.addClassName,
         ].join(" ")}>
         <i className={"fa fa-plus"} title={props.addTitle} />
-      </div>
+      </div>}
+      {props.extraHeaderContent}
     </div>
-    <Collapse isOpen={props.isOpen}>
+    <Collapse isOpen={isOpen}>
       {props.children}
     </Collapse>
   </div>;
+};

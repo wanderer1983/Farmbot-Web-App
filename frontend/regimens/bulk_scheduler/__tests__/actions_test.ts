@@ -5,10 +5,10 @@ import {
 } from "../actions";
 import { fakeState } from "../../../__test_support__/fake_state";
 import {
-  buildResourceIndex,
+  buildResourceIndex, fakeDevice,
 } from "../../../__test_support__/resource_index_builder";
 import { TaggedResource, Coordinate } from "farmbot";
-import { Actions } from "../../../constants";
+import { Actions, Content } from "../../../constants";
 import { Everything } from "../../../interfaces";
 import { ToggleDayParams } from "../interfaces";
 import { newTaggedResource } from "../../../sync/actions";
@@ -40,7 +40,7 @@ describe("commitBulkEditor()", () => {
     const seq = arrayUnwrap(newTaggedResource("Sequence", seqBody));
     const regimenUuid = reg.uuid;
     const sequenceUuid = seq.uuid;
-    const fakeResources: TaggedResource[] = [reg, seq];
+    const fakeResources: TaggedResource[] = [reg, seq, fakeDevice()];
     state.resources.index = buildResourceIndex(fakeResources).index;
 
     state.resources.consumers.regimens.currentRegimen = regimenUuid;
@@ -58,9 +58,9 @@ describe("commitBulkEditor()", () => {
     commitBulkEditor()(dispatch, getState);
     expect(dispatch).not.toHaveBeenCalled();
     if (title) {
-      expect(error).toBeCalledWith(message, title);
+      expect(error).toHaveBeenCalledWith(message, title);
     } else {
-      expect(error).toBeCalledWith(message);
+      expect(error).toHaveBeenCalledWith(message);
     }
   }
 
@@ -106,6 +106,25 @@ describe("commitBulkEditor()", () => {
     expect(error).not.toHaveBeenCalled();
   });
 
+  it("provides warning", () => {
+    console.log = jest.fn();
+    const state = newFakeState();
+    state.resources.consumers.regimens.dailyOffsetMs = 10800000;
+    const getState = () => state;
+    const dispatch = jest.fn();
+    commitBulkEditor()(dispatch, getState);
+    const expected = [
+      { regimen_id, sequence_id, time_offset: 1000 },
+      { sequence_id, time_offset: 10800000 },
+    ];
+    expect(overwrite).toHaveBeenCalledWith(expect.any(Object),
+      expect.objectContaining({
+        regimen_items: expect.arrayContaining(expected)
+      }));
+    expect(error).not.toHaveBeenCalled();
+    expect(warning).toHaveBeenCalledWith(Content.WITHIN_HOUR_OF_OS_UPDATE);
+  });
+
   it("merges variables", () => {
     console.log = jest.fn();
     const state = newFakeState();
@@ -141,8 +160,8 @@ describe("setTimeOffset()", () => {
 
   it("throws error for NaN", () => {
     expect(() => setTimeOffset(NaN))
-      .toThrowError("Bad time input on regimen page: null");
-    expect(warning).toBeCalledWith(
+      .toThrow("Bad time input on regimen page: null");
+    expect(warning).toHaveBeenCalledWith(
       "Time is not properly formatted.", { title: "Bad Input" });
   });
 });

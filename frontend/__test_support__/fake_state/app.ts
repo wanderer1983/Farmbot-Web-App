@@ -1,6 +1,16 @@
 import { AppState } from "../../reducer";
+import { fakeMovementState } from "../fake_bot_data";
 import {
-  plantsPanelState, pointsPanelState, settingsPanelState, weedsPanelState,
+  controlsState,
+  curvesPanelState,
+  jobsState,
+  metricPanelState,
+  plantsPanelState,
+  pointsPanelState,
+  popUpsState,
+  sequencesPanelState,
+  settingsPanelState,
+  weedsPanelState,
 } from "../panel_state";
 
 export const app: AppState = {
@@ -9,6 +19,13 @@ export const app: AppState = {
   plantsPanelState: plantsPanelState(),
   weedsPanelState: weedsPanelState(),
   pointsPanelState: pointsPanelState(),
-  controlsPopupOpen: false,
+  curvesPanelState: curvesPanelState(),
+  sequencesPanelState: sequencesPanelState(),
+  metricPanelState: metricPanelState(),
   toasts: {},
+  movement: fakeMovementState(),
+  controls: controlsState(),
+  jobs: jobsState(),
+  popups: popUpsState(),
+  hotkeyGuide: false,
 };

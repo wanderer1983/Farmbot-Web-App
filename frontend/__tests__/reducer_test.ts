@@ -1,7 +1,17 @@
 import { Actions } from "../constants";
 import { appReducer } from "../reducer";
 import {
-  PlantsPanelState, PointsPanelState, SettingsPanelState, WeedsPanelState,
+  ControlsState,
+  CurvesPanelState,
+  JobsAndLogsState,
+  MetricPanelState,
+  MovementState,
+  PlantsPanelState,
+  PointsPanelState,
+  PopupsState,
+  SequencesPanelState,
+  SettingsPanelState,
+  WeedsPanelState,
 } from "../interfaces";
 import { app } from "../__test_support__/fake_state/app";
 import { fakeToast, fakeToasts } from "../__test_support__/fake_toasts";
@@ -72,12 +82,108 @@ describe("resource reducer", () => {
       .toBe(!state.pointsPanelState.groups);
   });
 
-  it("sets controls popup state", () => {
-    const newState = appReducer(app, {
-      type: Actions.OPEN_CONTROLS_POPUP,
-      payload: true,
+  it("toggles curves panel options", () => {
+    const payload: keyof CurvesPanelState = "water";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.TOGGLE_CURVES_PANEL_OPTION,
+      payload,
     });
-    expect(newState.controlsPopupOpen).toEqual(true);
+    expect(newState.curvesPanelState.water)
+      .toBe(!state.curvesPanelState.water);
+  });
+
+  it("toggles sequences panel options", () => {
+    const payload: keyof SequencesPanelState = "featured";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.TOGGLE_SEQUENCES_PANEL_OPTION,
+      payload,
+    });
+    expect(newState.sequencesPanelState.featured)
+      .toBe(!state.sequencesPanelState.featured);
+  });
+
+  it("sets metric panel options", () => {
+    const payload: keyof MetricPanelState = "history";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.SET_METRIC_PANEL_OPTION,
+      payload,
+    });
+    expect(newState.metricPanelState.realtime).toBeFalsy();
+    expect(newState.metricPanelState.network).toBeFalsy();
+    expect(newState.metricPanelState.history).toBeTruthy();
+  });
+
+  it("sets controls panel options", () => {
+    const payload: keyof ControlsState = "webcams";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.SET_CONTROLS_PANEL_OPTION,
+      payload,
+    });
+    expect(newState.controls.move).toBeFalsy();
+    expect(newState.controls.peripherals).toBeFalsy();
+    expect(newState.controls.webcams).toBeTruthy();
+  });
+
+  it("sets jobs panel options", () => {
+    const payload: keyof JobsAndLogsState = "logs";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.SET_JOBS_PANEL_OPTION,
+      payload,
+    });
+    expect(newState.jobs.jobs).toBeFalsy();
+    expect(newState.jobs.logs).toBeTruthy();
+  });
+
+  it("toggles popup", () => {
+    const payload: keyof PopupsState = "controls";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.TOGGLE_POPUP,
+      payload,
+    });
+    expect(newState.popups.controls).toBeTruthy();
+    expect(newState.popups.jobs).toBeFalsy();
+    expect(newState.popups.connectivity).toBeFalsy();
+  });
+
+  it("opens popup", () => {
+    const payload: keyof PopupsState = "jobs";
+    const state = app;
+    state.popups.controls = true;
+    const newState = appReducer(state, {
+      type: Actions.OPEN_POPUP,
+      payload,
+    });
+    expect(newState.popups.controls).toBeFalsy();
+    expect(newState.popups.jobs).toBeTruthy();
+    expect(newState.popups.connectivity).toBeFalsy();
+  });
+
+  it("closes popup", () => {
+    const payload: keyof PopupsState = "connectivity";
+    const state = app;
+    const newState = appReducer(state, {
+      type: Actions.CLOSE_POPUP,
+      payload,
+    });
+    expect(newState.popups.controls).toBeFalsy();
+    expect(newState.popups.jobs).toBeFalsy();
+    expect(newState.popups.connectivity).toBeFalsy();
+  });
+
+  it("toggle hotkey guide", () => {
+    const state = app;
+    expect(state.hotkeyGuide).toBeFalsy();
+    const newState = appReducer(state, {
+      type: Actions.TOGGLE_HOTKEY_GUIDE,
+      payload: undefined,
+    });
+    expect(newState.hotkeyGuide).toBeTruthy();
   });
 
   it("adds toast", () => {
@@ -100,5 +206,17 @@ describe("resource reducer", () => {
       payload: toastToRemove.id,
     });
     expect(newState.toasts).toEqual({ [toastToKeep.id]: toastToKeep });
+  });
+
+  it("sets movement state", () => {
+    const payload: MovementState = {
+      start: { x: 0, y: 0, z: 0 },
+      distance: { x: 0, y: 1, z: 0 },
+    };
+    const newState = appReducer(app, {
+      type: Actions.START_MOVEMENT,
+      payload,
+    });
+    expect(newState.movement).toEqual(payload);
   });
 });

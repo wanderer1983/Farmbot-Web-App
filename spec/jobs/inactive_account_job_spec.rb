@@ -31,13 +31,10 @@ describe InactiveAccountJob do
     expect(mail.body.encoded).to include("in about 3 years.")
     expect(mail.body.encoded).to include(yes.email)
 
-    # === Wind back the clock to simulate inactivty.
+    # === Wind back the clock to simulate inactivity.
     yes.update!(inactivity_warning_sent_at: 15.days.ago)
     run_jobs_now { InactiveAccountJob.new.perform }
     expect(User.where(id: yes.id).count).to eq(0)
     expect(not_sure.reload.last_sign_in_at).to be
   end
-
-  it "does not delete an account during the waiting period"
-  it "finishes deletion"
 end
